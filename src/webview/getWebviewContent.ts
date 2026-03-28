@@ -103,7 +103,7 @@ export function getWebviewContent(webview: vscode.Webview, nonce: string): strin
         }
         .btn-danger {
             background: var(--vscode-inputValidation-errorBackground);
-            color: var(--vscode-errorForeground);
+            color: #ffffff;
             border: 1px solid var(--vscode-inputValidation-errorBorder);
         }
         .actions-bar {
@@ -173,6 +173,11 @@ export function getWebviewContent(webview: vscode.Webview, nonce: string): strin
             background: var(--vscode-inputValidation-errorBackground);
             border: 1px solid var(--vscode-inputValidation-errorBorder);
         }
+        .output.neutral {
+            background: var(--vscode-textBlockQuote-background);
+            border: 1px solid var(--vscode-input-border);
+            color: var(--vscode-foreground);
+        }
         .hidden { display: none; }
         .spinner {
             display: inline-block;
@@ -230,7 +235,7 @@ export function getWebviewContent(webview: vscode.Webview, nonce: string): strin
         <h2>Quick Actions</h2>
         <div class="actions-bar">
             <button class="btn-action" id="btnMigrate"><span class="icon">&#9654;</span> Run Migrations</button>
-            <button class="btn-action" id="btnSeed"><span class="icon">&#9881;</span> Run Seeders</button>
+            <button class="btn-action" id="btnSeed"><span class="icon">&#9881;</span> Fresh + Seed</button>
             <button class="btn-action" id="btnTest"><span class="icon">&#10003;</span> Run Tests</button>
             <button class="btn-action" id="btnRoutes"><span class="icon">&#9776;</span> List Routes</button>
             <button class="btn-action" id="btnDocs"><span class="icon">&#9741;</span> Open API Docs</button>
@@ -408,9 +413,16 @@ export function getWebviewContent(webview: vscode.Webview, nonce: string): strin
                     case 'previewResult':
                         showPreview(msg.files);
                         break;
-                    case 'actionResult':
-                        showOutput(msg.output, !msg.success);
+                    case 'actionResult': {
+                        var section = document.getElementById('outputSection');
+                        var content = document.getElementById('outputContent');
+                        if (section) { section.classList.remove('hidden'); }
+                        if (content) {
+                            content.className = 'output ' + (msg.success ? 'neutral' : 'error');
+                            content.textContent = msg.output;
+                        }
                         break;
+                    }
                 }
             });
 

@@ -95,9 +95,16 @@ export class GeneratorPanel {
             case 'migrate':
                 result = await this.artisan.migrate();
                 break;
-            case 'seed':
+            case 'seed': {
+                const confirm = await vscode.window.showWarningMessage(
+                    'This will drop all tables and re-run all migrations + seeders. All existing data will be lost.',
+                    { modal: true },
+                    'Continue'
+                );
+                if (confirm !== 'Continue') { return; }
                 result = await this.artisan.seed();
                 break;
+            }
             case 'test':
                 result = await this.artisan.test();
                 break;

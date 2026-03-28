@@ -47,7 +47,7 @@ export class ArtisanRunner {
     }
 
     async seed(): Promise<ArtisanResult> {
-        return this.run(['artisan', 'db:seed']);
+        return this.run(['artisan', 'migrate:fresh', '--seed']);
     }
 
     async test(): Promise<ArtisanResult> {
@@ -71,26 +71,15 @@ export class ArtisanRunner {
                     env: { ...process.env, FORCE_COLOR: '0' },
                 },
                 (error, stdout, stderr) => {
-                    const output = stdout.toString();
-                    const errorOutput = stderr.toString();
-
-                    if (error) {
-                        resolve({
-                            success: false,
-                            output,
-                            errors: [errorOutput || error.message],
-                        });
-                        return;
-                    }
-
-                    const hasError =
-                        output.toLowerCase().includes('error') ||
-                        errorOutput.toLowerCase().includes('error');
+                    const stripAnsi = (s: string) => s.replace(/\x1B\[[0-9;]*m/g, '');
+                    const output = stripAnsi(stdout.toString());
+                    const errorOutput = stripAnsi(stderr.toString());
+                    const fullOutput = output || errorOutput;
 
                     resolve({
-                        success: !hasError,
-                        output,
-                        errors: hasError ? [errorOutput || output] : [],
+                        success: !error,
+                        output: fullOutput,
+                        errors: error ? [fullOutput] : [],
                     });
                 }
             );
