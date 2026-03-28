@@ -1,0 +1,108 @@
+{
+  "name": "laravel-api-generator",
+  "displayName": "Laravel API Generator",
+  "description": "Generate complete REST APIs for Laravel with a visual interface",
+  "version": "0.1.0",
+  "publisher": "nameless",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other",
+    "Snippets"
+  ],
+  "keywords": [
+    "laravel",
+    "api",
+    "generator",
+    "crud",
+    "rest"
+  ],
+  "activationEvents": [
+    "workspaceContains:artisan"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "laravelApiGenerator.generate",
+        "title": "Generate Full API",
+        "category": "Laravel API Generator",
+        "icon": "$(add)"
+      },
+      {
+        "command": "laravelApiGenerator.delete",
+        "title": "Delete Full API",
+        "category": "Laravel API Generator",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "laravelApiGenerator.refresh",
+        "title": "Refresh Entities",
+        "category": "Laravel API Generator",
+        "icon": "$(refresh)"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "laravelApiGenerator",
+          "title": "Laravel API Generator",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "laravelApiGenerator": [
+        {
+          "id": "laravelApiGenerator.entities",
+          "name": "Generated Entities"
+        }
+      ]
+    },
+    "menus": {
+      "view/item/context": [
+        {
+          "command": "laravelApiGenerator.delete",
+          "when": "view == laravelApiGenerator.entities && viewItem == entity",
+          "group": "inline"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "laravelApiGenerator.generate",
+          "when": "view == laravelApiGenerator.entities",
+          "group": "navigation@1"
+        },
+        {
+          "command": "laravelApiGenerator.refresh",
+          "when": "view == laravelApiGenerator.entities",
+          "group": "navigation@2"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Laravel API Generator",
+      "properties": {
+        "laravelApiGenerator.phpPath": {
+          "type": "string",
+          "default": "php",
+          "description": "Path to the PHP executable"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.80.0",
+    "typescript": "^5.3.0",
+    "@vscode/vsce": "^2.22.0"
+  }
+}
