@@ -54,13 +54,22 @@ export class GeneratorPanel {
         GeneratorPanel.currentPanel.onDidGenerate = onDidGenerate;
     }
 
-    private async handleMessage(message: { type: string; payload: EntityConfig }): Promise<void> {
+    private async handleMessage(message: { type: string; payload?: EntityConfig; action?: string }): Promise<void> {
         switch (message.type) {
             case 'generate':
-                await this.handleGenerate(message.payload);
+                if (message.payload) {
+                    await this.handleGenerate(message.payload);
+                }
                 break;
             case 'preview':
-                this.handlePreview(message.payload);
+                if (message.payload) {
+                    this.handlePreview(message.payload);
+                }
+                break;
+            case 'action':
+                if (message.action) {
+                    await this.handleAction(message.action);
+                }
                 break;
         }
     }
@@ -78,6 +87,35 @@ export class GeneratorPanel {
         if (result.success && this.onDidGenerate) {
             this.onDidGenerate();
         }
+    }
+
+    private async handleAction(action: string): Promise<void> {
+        let result;
+        switch (action) {
+            case 'migrate':
+                result = await this.artisan.migrate();
+                break;
+            case 'seed':
+                result = await this.artisan.seed();
+                break;
+            case 'test':
+                result = await this.artisan.test();
+                break;
+            case 'routes':
+                result = await this.artisan.routes();
+                break;
+            case 'docs':
+                vscode.env.openExternal(vscode.Uri.parse('http://localhost:8000/docs/api'));
+                return;
+            default:
+                return;
+        }
+
+        this.panel.webview.postMessage({
+            type: 'actionResult',
+            success: result.success,
+            output: result.output || result.errors.join('\n'),
+        });
     }
 
     private handlePreview(config: EntityConfig): void {

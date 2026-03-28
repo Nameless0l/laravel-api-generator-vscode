@@ -42,7 +42,23 @@ export class ArtisanRunner {
         return this.run(args);
     }
 
-    private run(args: string[]): Promise<ArtisanResult> {
+    async migrate(): Promise<ArtisanResult> {
+        return this.run(['artisan', 'migrate']);
+    }
+
+    async seed(): Promise<ArtisanResult> {
+        return this.run(['artisan', 'db:seed']);
+    }
+
+    async test(): Promise<ArtisanResult> {
+        return this.run(['artisan', 'test'], 60000);
+    }
+
+    async routes(): Promise<ArtisanResult> {
+        return this.run(['artisan', 'route:list', '--path=api']);
+    }
+
+    private run(args: string[], timeout: number = 30000): Promise<ArtisanResult> {
         const phpPath = this.getPhpPath();
 
         return new Promise((resolve) => {
@@ -51,7 +67,7 @@ export class ArtisanRunner {
                 args,
                 {
                     cwd: this.workspaceRoot,
-                    timeout: 30000,
+                    timeout,
                     env: { ...process.env, FORCE_COLOR: '0' },
                 },
                 (error, stdout, stderr) => {

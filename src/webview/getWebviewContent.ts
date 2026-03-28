@@ -101,6 +101,37 @@ export function getWebviewContent(webview: vscode.Webview, nonce: string): strin
             padding: 6px;
             margin-top: 4px;
         }
+        .btn-danger {
+            background: var(--vscode-inputValidation-errorBackground);
+            color: var(--vscode-errorForeground);
+            border: 1px solid var(--vscode-inputValidation-errorBorder);
+        }
+        .actions-bar {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            padding: 12px 0;
+            border-top: 1px solid var(--vscode-input-border);
+            margin-top: 8px;
+        }
+        .btn-action {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            background: var(--vscode-button-secondaryBackground);
+            color: var(--vscode-button-secondaryForeground);
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+        .btn-action:hover {
+            background: var(--vscode-button-secondaryHoverBackground);
+        }
+        .btn-action .icon {
+            font-size: 1.1em;
+        }
         .options {
             display: flex;
             gap: 16px;
@@ -190,8 +221,20 @@ export function getWebviewContent(webview: vscode.Webview, nonce: string): strin
     </div>
 
     <div class="section">
-        <button class="btn btn-secondary" id="btnPreview">Preview Files</button>
         <button class="btn btn-primary" id="btnGenerate">Generate API</button>
+        <button class="btn btn-secondary" id="btnPreview">Preview Files</button>
+        <button class="btn btn-danger" id="btnReset">Reset</button>
+    </div>
+
+    <div class="section">
+        <h2>Quick Actions</h2>
+        <div class="actions-bar">
+            <button class="btn-action" id="btnMigrate"><span class="icon">&#9654;</span> Run Migrations</button>
+            <button class="btn-action" id="btnSeed"><span class="icon">&#9881;</span> Run Seeders</button>
+            <button class="btn-action" id="btnTest"><span class="icon">&#10003;</span> Run Tests</button>
+            <button class="btn-action" id="btnRoutes"><span class="icon">&#9776;</span> List Routes</button>
+            <button class="btn-action" id="btnDocs"><span class="icon">&#9741;</span> Open API Docs</button>
+        </div>
     </div>
 
     <div id="previewSection" class="section hidden">
@@ -314,6 +357,39 @@ export function getWebviewContent(webview: vscode.Webview, nonce: string): strin
                 vscode.postMessage({ type: 'generate', payload: config });
             });
 
+            // Reset form
+            document.getElementById('btnReset').addEventListener('click', function() {
+                document.getElementById('entityName').value = '';
+                document.getElementById('fieldsContainer').innerHTML = '';
+                document.getElementById('optAuth').checked = false;
+                document.getElementById('optPostman').checked = false;
+                document.getElementById('optSoftDeletes').checked = false;
+                document.getElementById('previewSection').classList.add('hidden');
+                document.getElementById('outputSection').classList.add('hidden');
+                addField();
+            });
+
+            // Quick actions
+            document.getElementById('btnMigrate').addEventListener('click', function() {
+                vscode.postMessage({ type: 'action', action: 'migrate' });
+            });
+
+            document.getElementById('btnSeed').addEventListener('click', function() {
+                vscode.postMessage({ type: 'action', action: 'seed' });
+            });
+
+            document.getElementById('btnTest').addEventListener('click', function() {
+                vscode.postMessage({ type: 'action', action: 'test' });
+            });
+
+            document.getElementById('btnRoutes').addEventListener('click', function() {
+                vscode.postMessage({ type: 'action', action: 'routes' });
+            });
+
+            document.getElementById('btnDocs').addEventListener('click', function() {
+                vscode.postMessage({ type: 'action', action: 'docs' });
+            });
+
             // Messages from extension
             window.addEventListener('message', function(event) {
                 var msg = event.data;
@@ -331,6 +407,9 @@ export function getWebviewContent(webview: vscode.Webview, nonce: string): strin
                         break;
                     case 'previewResult':
                         showPreview(msg.files);
+                        break;
+                    case 'actionResult':
+                        showOutput(msg.output, !msg.success);
                         break;
                 }
             });
