@@ -1,74 +1,161 @@
-import { EntityConfig } from '../types';
+import { EntityConfig } from "../types";
 
 interface FieldMapping {
-    phpType: string;
-    validation: string;
-    fake: string;
+  phpType: string;
+  validation: string;
+  fake: string;
 }
 
 const TYPE_MAP: Record<string, FieldMapping> = {
-    string:    { phpType: 'string',             validation: 'required|string|max:255', fake: "fake()->word()" },
-    text:      { phpType: 'string',             validation: 'required|string',         fake: "fake()->sentence()" },
-    integer:   { phpType: 'int',                validation: 'required|integer',        fake: "fake()->randomNumber()" },
-    int:       { phpType: 'int',                validation: 'required|integer',        fake: "fake()->randomNumber()" },
-    bigint:    { phpType: 'int',                validation: 'required|integer',        fake: "fake()->randomNumber()" },
-    float:     { phpType: 'float',              validation: 'required|numeric',        fake: "fake()->randomFloat(2, 1, 1000)" },
-    decimal:   { phpType: 'float',              validation: 'required|numeric',        fake: "fake()->randomFloat(2, 1, 1000)" },
-    boolean:   { phpType: 'bool',               validation: 'required|boolean',        fake: "fake()->boolean()" },
-    bool:      { phpType: 'bool',               validation: 'required|boolean',        fake: "fake()->boolean()" },
-    json:      { phpType: 'array',              validation: 'required|json',           fake: "json_encode(['key' => 'value'])" },
-    date:      { phpType: 'string',             validation: 'required|date',           fake: "fake()->dateTime()->format('Y-m-d H:i:s')" },
-    datetime:  { phpType: 'string',             validation: 'required|date',           fake: "fake()->dateTime()->format('Y-m-d H:i:s')" },
-    timestamp: { phpType: 'string',             validation: 'required|date',           fake: "fake()->dateTime()->format('Y-m-d H:i:s')" },
-    time:      { phpType: 'string',             validation: 'required|date',           fake: "fake()->dateTime()->format('H:i:s')" },
-    uuid:      { phpType: 'string',             validation: 'required|uuid',           fake: "fake()->uuid()" },
+  string: {
+    phpType: "string",
+    validation: "required|string|max:255",
+    fake: "fake()->word()",
+  },
+  text: {
+    phpType: "string",
+    validation: "required|string",
+    fake: "fake()->sentence()",
+  },
+  integer: {
+    phpType: "int",
+    validation: "required|integer",
+    fake: "fake()->randomNumber()",
+  },
+  int: {
+    phpType: "int",
+    validation: "required|integer",
+    fake: "fake()->randomNumber()",
+  },
+  bigint: {
+    phpType: "int",
+    validation: "required|integer",
+    fake: "fake()->randomNumber()",
+  },
+  float: {
+    phpType: "float",
+    validation: "required|numeric",
+    fake: "fake()->randomFloat(2, 1, 1000)",
+  },
+  decimal: {
+    phpType: "float",
+    validation: "required|numeric",
+    fake: "fake()->randomFloat(2, 1, 1000)",
+  },
+  boolean: {
+    phpType: "bool",
+    validation: "required|boolean",
+    fake: "fake()->boolean()",
+  },
+  bool: {
+    phpType: "bool",
+    validation: "required|boolean",
+    fake: "fake()->boolean()",
+  },
+  json: {
+    phpType: "array",
+    validation: "required|json",
+    fake: "json_encode(['key' => 'value'])",
+  },
+  date: {
+    phpType: "string",
+    validation: "required|date",
+    fake: "fake()->dateTime()->format('Y-m-d H:i:s')",
+  },
+  datetime: {
+    phpType: "string",
+    validation: "required|date",
+    fake: "fake()->dateTime()->format('Y-m-d H:i:s')",
+  },
+  timestamp: {
+    phpType: "string",
+    validation: "required|date",
+    fake: "fake()->dateTime()->format('Y-m-d H:i:s')",
+  },
+  time: {
+    phpType: "string",
+    validation: "required|date",
+    fake: "fake()->dateTime()->format('Y-m-d H:i:s')",
+  },
+  uuid: {
+    phpType: "string",
+    validation: "required|uuid",
+    fake: "fake()->uuid()",
+  },
 };
 
 const DB_TYPE_MAP: Record<string, string> = {
-    string: 'string', text: 'text', integer: 'integer', int: 'integer',
-    bigint: 'bigInteger', float: 'decimal', decimal: 'decimal',
-    boolean: 'boolean', bool: 'boolean', json: 'json',
-    date: 'timestamp', datetime: 'timestamp', timestamp: 'timestamp',
-    time: 'timestamp', uuid: 'uuid',
+  string: "string",
+  text: "text",
+  integer: "integer",
+  int: "integer",
+  bigint: "bigInteger",
+  float: "decimal",
+  decimal: "decimal",
+  boolean: "boolean",
+  bool: "boolean",
+  json: "json",
+  date: "timestamp",
+  datetime: "timestamp",
+  timestamp: "timestamp",
+  time: "timestamp",
+  uuid: "uuid",
 };
 
 export class StubPreview {
-    generatePreview(config: EntityConfig): Record<string, string> {
-        const name = config.name;
-        const lcName = name.charAt(0).toLowerCase() + name.slice(1);
-        const tableName = this.pluralSnake(name);
+  generatePreview(config: EntityConfig): Record<string, string> {
+    const name = config.name;
+    const lcName = name.charAt(0).toLowerCase() + name.slice(1);
+    const tableName = this.pluralSnake(name);
 
-        return {
-            Model: this.genModel(name, config),
-            Controller: this.genController(name, lcName),
-            Service: this.genService(name, lcName),
-            DTO: this.genDTO(name, config),
-            Request: this.genRequest(name, config),
-            Resource: this.genResource(name, config),
-            Migration: this.genMigration(tableName, config),
-            Factory: this.genFactory(name, config),
-        };
+    return {
+      Model: this.genModel(name, config),
+      Controller: this.genController(name, lcName),
+      Service: this.genService(name, lcName),
+      DTO: this.genDTO(name, config),
+      Request: this.genRequest(name, config),
+      Resource: this.genResource(name, config),
+      Migration: this.genMigration(tableName, config),
+      Factory: this.genFactory(name, config),
+    };
+  }
+
+  private genModel(name: string, config: EntityConfig): string {
+    const fillable = config.fields
+      .map((f) => `        '${f.name}',`)
+      .join("\n");
+    const casts = config.fields
+      .filter((f) =>
+        [
+          "boolean",
+          "bool",
+          "json",
+          "integer",
+          "int",
+          "float",
+          "decimal",
+        ].includes(f.type),
+      )
+      .map((f) => {
+        const cast = ["boolean", "bool"].includes(f.type)
+          ? "boolean"
+          : ["integer", "int"].includes(f.type)
+            ? "integer"
+            : ["float", "decimal"].includes(f.type)
+              ? "float"
+              : "array";
+        return `        '${f.name}' => '${cast}',`;
+      })
+      .join("\n");
+
+    let traits = "";
+    let imports = "";
+    if (config.options.softDeletes) {
+      imports = "use Illuminate\\Database\\Eloquent\\SoftDeletes;\n";
+      traits = "\n    use SoftDeletes;";
     }
 
-    private genModel(name: string, config: EntityConfig): string {
-        const fillable = config.fields.map(f => `        '${f.name}',`).join('\n');
-        const casts = config.fields
-            .filter(f => ['boolean', 'bool', 'json', 'integer', 'int', 'float', 'decimal'].includes(f.type))
-            .map(f => {
-                const cast = ['boolean', 'bool'].includes(f.type) ? 'boolean' :
-                    ['integer', 'int'].includes(f.type) ? 'integer' :
-                    ['float', 'decimal'].includes(f.type) ? 'float' : 'array';
-                return `        '${f.name}' => '${cast}',`;
-            }).join('\n');
-
-        let traits = '';
-        let imports = '';
-        if (config.options.softDeletes) {
-            imports = 'use Illuminate\\Database\\Eloquent\\SoftDeletes;\n';
-            traits = '\n    use SoftDeletes;';
-        }
-
-        return `<?php
+    return `<?php
 
 declare(strict_types=1);
 
@@ -84,11 +171,11 @@ class ${name} extends Model
     protected $fillable = [
 ${fillable}
     ];
-${casts ? `\n    protected $casts = [\n${casts}\n    ];\n` : ''}}`;
-    }
+${casts ? `\n    protected $casts = [\n${casts}\n    ];\n` : ""}}`;
+  }
 
-    private genController(name: string, lcName: string): string {
-        return `<?php
+  private genController(name: string, lcName: string): string {
+    return `<?php
 
 declare(strict_types=1);
 
@@ -138,10 +225,10 @@ class ${name}Controller extends Controller
         return response(null, 204);
     }
 }`;
-    }
+  }
 
-    private genService(name: string, lcName: string): string {
-        return `<?php
+  private genService(name: string, lcName: string): string {
+    return `<?php
 
 declare(strict_types=1);
 
@@ -185,19 +272,23 @@ class ${name}Service
         return $${lcName}->delete();
     }
 }`;
-    }
+  }
 
-    private genDTO(name: string, config: EntityConfig): string {
-        const attrs = config.fields.map(f => {
-            const t = TYPE_MAP[f.type]?.phpType || 'string';
-            return `        public ?${t} $${f.name},`;
-        }).join('\n');
+  private genDTO(name: string, config: EntityConfig): string {
+    const attrs = config.fields
+      .map((f) => {
+        const t = TYPE_MAP[f.type]?.phpType || "string";
+        return `        public ?${t} $${f.name},`;
+      })
+      .join("\n");
 
-        const fromReq = config.fields.map(f => {
-            return `            $request->input('${f.name}'),`;
-        }).join('\n');
+    const fromReq = config.fields
+      .map((f) => {
+        return `            $request->input('${f.name}'),`;
+      })
+      .join("\n");
 
-        return `<?php
+    return `<?php
 
 declare(strict_types=1);
 
@@ -218,15 +309,17 @@ ${fromReq}
         );
     }
 }`;
-    }
+  }
 
-    private genRequest(name: string, config: EntityConfig): string {
-        const rules = config.fields.map(f => {
-            const v = TYPE_MAP[f.type]?.validation || 'required|string';
-            return `            '${f.name}' => '${v}',`;
-        }).join('\n');
+  private genRequest(name: string, config: EntityConfig): string {
+    const rules = config.fields
+      .map((f) => {
+        const v = TYPE_MAP[f.type]?.validation || "required|string";
+        return `            '${f.name}' => '${v}',`;
+      })
+      .join("\n");
 
-        return `<?php
+    return `<?php
 
 declare(strict_types=1);
 
@@ -248,12 +341,14 @@ ${rules}
         ];
     }
 }`;
-    }
+  }
 
-    private genResource(name: string, config: EntityConfig): string {
-        const fields = config.fields.map(f => `            '${f.name}' => $this->${f.name},`).join('\n');
+  private genResource(name: string, config: EntityConfig): string {
+    const fields = config.fields
+      .map((f) => `            '${f.name}' => $this->${f.name},`)
+      .join("\n");
 
-        return `<?php
+    return `<?php
 
 declare(strict_types=1);
 
@@ -274,17 +369,21 @@ ${fields}
         ];
     }
 }`;
-    }
+  }
 
-    private genMigration(tableName: string, config: EntityConfig): string {
-        const fields = config.fields.map(f => {
-            const dbType = DB_TYPE_MAP[f.type] || 'string';
-            return `            $table->${dbType}('${f.name}');`;
-        }).join('\n');
+  private genMigration(tableName: string, config: EntityConfig): string {
+    const fields = config.fields
+      .map((f) => {
+        const dbType = DB_TYPE_MAP[f.type] || "string";
+        return `            $table->${dbType}('${f.name}');`;
+      })
+      .join("\n");
 
-        const sd = config.options.softDeletes ? '\n            $table->softDeletes();' : '';
+    const sd = config.options.softDeletes
+      ? "\n            $table->softDeletes();"
+      : "";
 
-        return `<?php
+    return `<?php
 
 use Illuminate\\Database\\Migrations\\Migration;
 use Illuminate\\Database\\Schema\\Blueprint;
@@ -306,15 +405,17 @@ ${fields}
         Schema::dropIfExists('${tableName}');
     }
 };`;
-    }
+  }
 
-    private genFactory(name: string, config: EntityConfig): string {
-        const fields = config.fields.map(f => {
-            const fake = TYPE_MAP[f.type]?.fake || "fake()->word()";
-            return `            '${f.name}' => ${fake},`;
-        }).join('\n');
+  private genFactory(name: string, config: EntityConfig): string {
+    const fields = config.fields
+      .map((f) => {
+        const fake = TYPE_MAP[f.type]?.fake || "fake()->word()";
+        return `            '${f.name}' => ${fake},`;
+      })
+      .join("\n");
 
-        return `<?php
+    return `<?php
 
 namespace Database\\Factories;
 
@@ -332,16 +433,21 @@ ${fields}
         ];
     }
 }`;
-    }
+  }
 
-    private pluralSnake(name: string): string {
-        const snake = name.replace(/([a-z])([A-Z])/g, '$1_$2').toLowerCase();
-        if (snake.endsWith('y')) {
-            return snake.slice(0, -1) + 'ies';
-        }
-        if (snake.endsWith('s') || snake.endsWith('x') || snake.endsWith('sh') || snake.endsWith('ch')) {
-            return snake + 'es';
-        }
-        return snake + 's';
+  private pluralSnake(name: string): string {
+    const snake = name.replace(/([a-z])([A-Z])/g, "$1_$2").toLowerCase();
+    if (snake.endsWith("y")) {
+      return snake.slice(0, -1) + "ies";
     }
+    if (
+      snake.endsWith("s") ||
+      snake.endsWith("x") ||
+      snake.endsWith("sh") ||
+      snake.endsWith("ch")
+    ) {
+      return snake + "es";
+    }
+    return snake + "s";
+  }
 }
