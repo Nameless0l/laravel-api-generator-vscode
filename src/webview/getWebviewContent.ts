@@ -533,10 +533,10 @@ export function getWebviewContent(webview: vscode.Webview, nonce: string): strin
                     .replace(/&/g, '&amp;')
                     .replace(/</g, '&lt;')
                     .replace(/>/g, '&gt;')
-                    .replace(/(\\$[a-zA-Z_][a-zA-Z0-9_]*)/g, '<span class="php-variable">$1</span>')
-                    .replace(/'([^']*)'/g, "'<span class=\"php-string\">$1</span>'")
-                    .replace(/\\b(class|function|public|private|protected|readonly|return|use|namespace|new|static|self|array|string|int|float|bool|true|false|null|extends|implements|if|foreach|as|in_array)\\b/g, '<span class="php-keyword">$1</span>')
-                    .replace(/(\/\/[^\\n]*)/g, '<span class="php-comment">$1</span>');
+                    .replace(/(\\$[a-zA-Z_][a-zA-Z0-9_]*)/g, '<span class=php-variable>$1</span>')
+                    .replace(/'([^']*)'/g, "'<span class=php-string>$1</span>'")
+                    .replace(/\\b(class|function|public|private|protected|readonly|return|use|namespace|new|static|self|array|string|int|float|bool|true|false|null|extends|implements|if|foreach|as|in_array)\\b/g, '<span class=php-keyword>$1</span>')
+                    .replace(/(\/\/[^\\n]*)/g, '<span class=php-comment>$1</span>');
             }
 
             function showCodePreview(code) {
