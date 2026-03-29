@@ -3,6 +3,8 @@ import { LaravelDetector } from './services/laravelDetector';
 import { EntityTreeProvider } from './providers/entityTreeProvider';
 import { registerGenerateCommand } from './commands/generateApi';
 import { registerDeleteCommand } from './commands/deleteApi';
+import { registerGoToRelatedCommand } from './commands/goToRelated';
+import { registerDiagramCommand } from './commands/showDiagram';
 
 export function activate(context: vscode.ExtensionContext): void {
     const root = LaravelDetector.getWorkspaceRoot();
@@ -21,6 +23,8 @@ export function activate(context: vscode.ExtensionContext): void {
     context.subscriptions.push(
         registerGenerateCommand(refresh),
         registerDeleteCommand(refresh),
+        registerGoToRelatedCommand(),
+        registerDiagramCommand(),
         vscode.commands.registerCommand('laravelApiGenerator.refresh', refresh)
     );
 }
