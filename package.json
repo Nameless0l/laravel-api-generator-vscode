@@ -3,7 +3,7 @@
   "displayName": "Laravel API Generator",
   "description": "Generate complete REST APIs for Laravel with a visual interface",
   "version": "0.1.0",
-  "publisher": "nameless",
+  "publisher": "LocAronMBASSIEWOLO",
   "engines": {
     "vscode": "^1.80.0"
   },
@@ -41,6 +41,30 @@
         "title": "Refresh Entities",
         "category": "Laravel API Generator",
         "icon": "$(refresh)"
+      },
+      {
+        "command": "laravelApiGenerator.goToRelated",
+        "title": "Go to Related File",
+        "category": "Laravel API Generator"
+      },
+      {
+        "command": "laravelApiGenerator.diagram",
+        "title": "Show Entity Diagram",
+        "category": "Laravel API Generator",
+        "icon": "$(type-hierarchy)"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "php",
+        "path": "./snippets/laravel-api-generator.json"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "laravelApiGenerator.goToRelated",
+        "key": "alt+r",
+        "when": "editorTextFocus"
       }
     ],
     "viewsContainers": {
@@ -75,9 +99,14 @@
           "group": "navigation@1"
         },
         {
-          "command": "laravelApiGenerator.refresh",
+          "command": "laravelApiGenerator.diagram",
           "when": "view == laravelApiGenerator.entities",
           "group": "navigation@2"
+        },
+        {
+          "command": "laravelApiGenerator.refresh",
+          "when": "view == laravelApiGenerator.entities",
+          "group": "navigation@3"
         }
       ]
     },

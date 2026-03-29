@@ -1,8 +1,11 @@
 import * as vscode from 'vscode';
 import * as crypto from 'crypto';
 import { getWebviewContent } from './getWebviewContent';
+import * as fs from 'fs';
+import * as path from 'path';
 import { ArtisanRunner } from '../services/artisanRunner';
 import { EntityScanner } from '../services/entityScanner';
+import { StubPreview } from '../services/stubPreview';
 import { EntityConfig } from '../types';
 
 export class GeneratorPanel {
@@ -54,7 +57,7 @@ export class GeneratorPanel {
         GeneratorPanel.currentPanel.onDidGenerate = onDidGenerate;
     }
 
-    private async handleMessage(message: { type: string; payload?: EntityConfig; action?: string }): Promise<void> {
+    private async handleMessage(message: { type: string; payload?: EntityConfig; action?: string; name?: string }): Promise<void> {
         switch (message.type) {
             case 'generate':
                 if (message.payload) {
@@ -69,6 +72,20 @@ export class GeneratorPanel {
             case 'action':
                 if (message.action) {
                     await this.handleAction(message.action);
+                }
+                break;
+            case 'requestPreviewCode':
+                if (message.payload) {
+                    this.handlePreviewCode(message.payload);
+                }
+                break;
+            case 'checkEntityExists':
+                if (message.name) {
+                    const modelPath = path.join(this.workspaceRoot, 'app', 'Models', `${message.name}.php`);
+                    this.panel.webview.postMessage({
+                        type: 'entityExistsResult',
+                        exists: fs.existsSync(modelPath),
+                    });
                 }
                 break;
         }
@@ -133,6 +150,15 @@ export class GeneratorPanel {
         this.panel.webview.postMessage({
             type: 'previewResult',
             files,
+        });
+    }
+
+    private handlePreviewCode(config: EntityConfig): void {
+        const preview = new StubPreview();
+        const code = preview.generatePreview(config);
+        this.panel.webview.postMessage({
+            type: 'previewCodeResult',
+            code,
         });
     }
 
