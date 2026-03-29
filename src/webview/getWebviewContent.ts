@@ -178,6 +178,69 @@ export function getWebviewContent(webview: vscode.Webview, nonce: string): strin
             border: 1px solid var(--vscode-input-border);
             color: var(--vscode-foreground);
         }
+        .validation-error {
+            color: var(--vscode-errorForeground);
+            font-size: 0.8em;
+            margin-top: 3px;
+        }
+        .validation-warning {
+            color: var(--vscode-editorWarning-foreground, #cca700);
+            font-size: 0.8em;
+            margin-top: 3px;
+        }
+        input.invalid {
+            border-color: var(--vscode-inputValidation-errorBorder) !important;
+        }
+        .code-preview {
+            margin-top: 12px;
+        }
+        .tab-bar {
+            display: flex;
+            gap: 0;
+            border-bottom: 1px solid var(--vscode-panel-border);
+            overflow-x: auto;
+        }
+        .tab-btn {
+            padding: 6px 14px;
+            background: none;
+            border: none;
+            border-bottom: 2px solid transparent;
+            color: var(--vscode-descriptionForeground);
+            cursor: pointer;
+            font-size: 0.82em;
+            white-space: nowrap;
+        }
+        .tab-btn:hover {
+            color: var(--vscode-foreground);
+        }
+        .tab-btn.active {
+            color: var(--vscode-foreground);
+            border-bottom-color: var(--vscode-textLink-foreground);
+        }
+        .tab-content {
+            display: none;
+            max-height: 400px;
+            overflow: auto;
+            background: var(--vscode-textBlockQuote-background);
+            border: 1px solid var(--vscode-panel-border);
+            border-top: none;
+            border-radius: 0 0 3px 3px;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .tab-content pre {
+            margin: 0;
+            padding: 12px;
+            font-family: var(--vscode-editor-font-family);
+            font-size: 0.82em;
+            white-space: pre;
+            line-height: 1.5;
+        }
+        .php-keyword { color: var(--vscode-symbolIcon-keywordForeground, #569cd6); }
+        .php-string { color: var(--vscode-symbolIcon-stringForeground, #ce9178); }
+        .php-variable { color: var(--vscode-symbolIcon-variableForeground, #9cdcfe); }
+        .php-comment { color: var(--vscode-symbolIcon-enumeratorMemberForeground, #6a9955); }
         .hidden { display: none; }
         .spinner {
             display: inline-block;
@@ -199,6 +262,8 @@ export function getWebviewContent(webview: vscode.Webview, nonce: string): strin
     <div class="section">
         <label for="entityName">Entity Name (PascalCase)</label>
         <input type="text" id="entityName" placeholder="e.g. Product, BlogPost, UserProfile" />
+        <div id="entityNameError" class="validation-error"></div>
+        <div id="entityNameWarning" class="validation-warning"></div>
     </div>
 
     <div class="section">
@@ -245,6 +310,14 @@ export function getWebviewContent(webview: vscode.Webview, nonce: string): strin
     <div id="previewSection" class="section hidden">
         <h2>Files to generate</h2>
         <div id="previewContent" class="preview"></div>
+    </div>
+
+    <div id="codePreviewSection" class="section hidden">
+        <h2>Code Preview</h2>
+        <div class="code-preview">
+            <div class="tab-bar" id="codeTabs"></div>
+            <div id="codeTabContents"></div>
+        </div>
     </div>
 
     <div id="outputSection" class="section hidden">
@@ -395,6 +468,110 @@ export function getWebviewContent(webview: vscode.Webview, nonce: string): strin
                 vscode.postMessage({ type: 'action', action: 'docs' });
             });
 
+            // === VALIDATION ===
+            var reservedNames = ['User','Auth','Admin','App','Config','Cache','Session','Request','Response','Route','View','Event','Job','Mail','Queue','Log','Gate','Policy','Middleware','Kernel','Console','Http','Provider','Test'];
+            var reservedFields = ['id','created_at','updated_at','deleted_at','password','remember_token','email_verified_at'];
+            var entityExistsTimer = null;
+
+            function validateEntityName() {
+                var input = document.getElementById('entityName');
+                var errorEl = document.getElementById('entityNameError');
+                var name = input.value.trim();
+                errorEl.textContent = '';
+                input.classList.remove('invalid');
+
+                if (name && !/^[A-Z][a-zA-Z0-9]*$/.test(name)) {
+                    errorEl.textContent = 'Must be PascalCase (start with uppercase, alphanumeric only)';
+                    input.classList.add('invalid');
+                    return false;
+                }
+                if (reservedNames.indexOf(name) !== -1) {
+                    errorEl.textContent = '"' + name + '" is a reserved Laravel name';
+                    input.classList.add('invalid');
+                    return false;
+                }
+                // Check entity exists (debounced)
+                if (name.length > 1) {
+                    clearTimeout(entityExistsTimer);
+                    entityExistsTimer = setTimeout(function() {
+                        vscode.postMessage({ type: 'checkEntityExists', name: name });
+                    }, 500);
+                }
+                return name.length > 0;
+            }
+
+            document.getElementById('entityName').addEventListener('input', function() {
+                validateEntityName();
+                requestCodePreview();
+            });
+
+            // === CODE PREVIEW ===
+            var previewTimer = null;
+
+            function requestCodePreview() {
+                clearTimeout(previewTimer);
+                previewTimer = setTimeout(function() {
+                    var config = getConfig();
+                    if (config.name && config.fields.length > 0) {
+                        vscode.postMessage({ type: 'requestPreviewCode', payload: config });
+                    } else {
+                        document.getElementById('codePreviewSection').classList.add('hidden');
+                    }
+                }, 600);
+            }
+
+            // Listen for field changes
+            document.getElementById('fieldsContainer').addEventListener('input', function() {
+                requestCodePreview();
+            });
+            document.getElementById('fieldsContainer').addEventListener('change', function() {
+                requestCodePreview();
+            });
+
+            function highlightPhp(code) {
+                return code
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/(\\$[a-zA-Z_][a-zA-Z0-9_]*)/g, '<span class="php-variable">$1</span>')
+                    .replace(/'([^']*)'/g, "'<span class=\"php-string\">$1</span>'")
+                    .replace(/\\b(class|function|public|private|protected|readonly|return|use|namespace|new|static|self|array|string|int|float|bool|true|false|null|extends|implements|if|foreach|as|in_array)\\b/g, '<span class="php-keyword">$1</span>')
+                    .replace(/(\/\/[^\\n]*)/g, '<span class="php-comment">$1</span>');
+            }
+
+            function showCodePreview(code) {
+                var section = document.getElementById('codePreviewSection');
+                var tabBar = document.getElementById('codeTabs');
+                var contents = document.getElementById('codeTabContents');
+                section.classList.remove('hidden');
+
+                var tabs = Object.keys(code);
+                tabBar.innerHTML = '';
+                contents.innerHTML = '';
+
+                tabs.forEach(function(tab, i) {
+                    var btn = document.createElement('button');
+                    btn.className = 'tab-btn' + (i === 0 ? ' active' : '');
+                    btn.textContent = tab;
+                    btn.dataset.tab = tab;
+                    btn.addEventListener('click', function() {
+                        document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+                        document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
+                        btn.classList.add('active');
+                        document.getElementById('tabContent-' + tab).classList.add('active');
+                    });
+                    tabBar.appendChild(btn);
+
+                    var div = document.createElement('div');
+                    div.className = 'tab-content' + (i === 0 ? ' active' : '');
+                    div.id = 'tabContent-' + tab;
+                    var pre = document.createElement('pre');
+                    pre.innerHTML = highlightPhp(code[tab]);
+                    div.appendChild(pre);
+                    contents.appendChild(div);
+                });
+            }
+
             // Messages from extension
             window.addEventListener('message', function(event) {
                 var msg = event.data;
@@ -420,6 +597,18 @@ export function getWebviewContent(webview: vscode.Webview, nonce: string): strin
                         if (content) {
                             content.className = 'output ' + (msg.success ? 'neutral' : 'error');
                             content.textContent = msg.output;
+                        }
+                        break;
+                    }
+                    case 'previewCodeResult':
+                        showCodePreview(msg.code);
+                        break;
+                    case 'entityExistsResult': {
+                        var warnEl = document.getElementById('entityNameWarning');
+                        if (msg.exists) {
+                            warnEl.textContent = 'Entity already exists. Files will be overwritten.';
+                        } else {
+                            warnEl.textContent = '';
                         }
                         break;
                     }
