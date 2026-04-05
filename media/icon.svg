@@ -1,11 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-  <!-- Curly braces for API/JSON -->
-  <path d="M4 4C2.5 4 2 5 2 6.5L2 9.5C2 10.5 1 11 0.5 11.5C1 12 2 12.5 2 13.5L2 17C2 18.5 2.5 20 4 20"/>
-  <path d="M20 4C21.5 4 22 5 22 6.5L22 9.5C22 10.5 23 11 23.5 11.5C23 12 22 12.5 22 13.5L22 17C22 18.5 21.5 20 20 20"/>
-
-  <!-- Laravel "L" inside -->
-  <path d="M8 7L8 15L13 15" stroke-width="2"/>
-
-  <!-- Lightning bolt for generation -->
-  <polygon points="15,6 13,11 15.5,11 13.5,17 18,10 15.5,10 17,6" fill="currentColor" stroke="none"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" viewBox="0 0 24 24"><path d="M4 4C2.5 4 2 5 2 6.5L2 9.5C2 10.5 1 11 0.5 11.5C1 12 2 12.5 2 13.5L2 17C2 18.5 2.5 20 4 20"/><path d="M20 4C21.5 4 22 5 22 6.5L22 9.5C22 10.5 23 11 23.5 11.5C23 12 22 12.5 22 13.5L22 17C22 18.5 21.5 20 20 20"/><path stroke-width="2" d="M8 7L8 15L13 15"/><polygon fill="currentColor" stroke="none" points="15 6 13 11 15.5 11 13.5 17 18 10 15.5 10 17 6"/></svg>
