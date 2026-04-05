@@ -2,7 +2,7 @@
   "name": "laravel-api-generator",
   "displayName": "Laravel API Generator",
   "description": "Generate complete REST APIs for Laravel with a visual interface",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "publisher": "Nameless0l",
   "license": "MIT",
   "icon": "media/icon-marketplace.png",
@@ -18,17 +18,21 @@
     "vscode": "^1.80.0"
   },
   "categories": [
-    "Other",
-    "Snippets"
+    "Programming Languages",
+    "Snippets",
+    "Other"
   ],
   "keywords": [
     "laravel",
-    "api",
-    "generator",
-    "crud",
-    "rest",
     "php",
-    "artisan"
+    "api",
+    "crud",
+    "rest api",
+    "code generator",
+    "artisan",
+    "eloquent",
+    "scaffold",
+    "backend"
   ],
   "activationEvents": [
     "workspaceContains:artisan"
