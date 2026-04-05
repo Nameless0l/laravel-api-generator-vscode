@@ -1,32 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
-  <!-- Background circle -->
-  <circle cx="64" cy="64" r="60" fill="#1a1a2e" stroke="#e74c3c" stroke-width="3"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Curly braces for API/JSON -->
+  <path d="M4 4C2.5 4 2 5 2 6.5L2 9.5C2 10.5 1 11 0.5 11.5C1 12 2 12.5 2 13.5L2 17C2 18.5 2.5 20 4 20"/>
+  <path d="M20 4C21.5 4 22 5 22 6.5L22 9.5C22 10.5 23 11 23.5 11.5C23 12 22 12.5 22 13.5L22 17C22 18.5 21.5 20 20 20"/>
 
-  <!-- Laravel-style "L" shape -->
-  <path d="M38 30 L38 82 L62 82" fill="none" stroke="#e74c3c" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Laravel "L" inside -->
+  <path d="M8 7L8 15L13 15" stroke-width="2"/>
 
-  <!-- API text -->
-  <text x="72" y="80" font-family="Arial, sans-serif" font-weight="bold" font-size="24" fill="#3498db">API</text>
-
-  <!-- Gear/cog (top right) -->
-  <g transform="translate(92, 36)" fill="none" stroke="#f39c12" stroke-width="2.5">
-    <circle cx="0" cy="0" r="7"/>
-    <line x1="0" y1="-12" x2="0" y2="-8"/>
-    <line x1="0" y1="8" x2="0" y2="12"/>
-    <line x1="-12" y1="0" x2="-8" y2="0"/>
-    <line x1="8" y1="0" x2="12" y2="0"/>
-    <line x1="-8.5" y1="-8.5" x2="-5.7" y2="-5.7"/>
-    <line x1="5.7" y1="5.7" x2="8.5" y2="8.5"/>
-    <line x1="8.5" y1="-8.5" x2="5.7" y2="-5.7"/>
-    <line x1="-5.7" y1="5.7" x2="-8.5" y2="8.5"/>
-  </g>
-
-  <!-- Lightning bolt (speed/generation) -->
-  <polygon points="56,20 48,42 56,42 50,58 66,36 58,36 64,20" fill="#f1c40f" opacity="0.9"/>
-
-  <!-- Bottom dots (endpoints) -->
-  <circle cx="40" cy="100" r="4" fill="#2ecc71"/>
-  <circle cx="56" cy="100" r="4" fill="#3498db"/>
-  <circle cx="72" cy="100" r="4" fill="#e74c3c"/>
-  <circle cx="88" cy="100" r="4" fill="#f39c12"/>
+  <!-- Lightning bolt for generation -->
+  <polygon points="15,6 13,11 15.5,11 13.5,17 18,10 15.5,10 17,6" fill="currentColor" stroke="none"/>
 </svg>

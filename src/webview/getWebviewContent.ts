@@ -241,17 +241,51 @@ export function getWebviewContent(webview: vscode.Webview, nonce: string): strin
         .php-string { color: var(--vscode-symbolIcon-stringForeground, #ce9178); }
         .php-variable { color: var(--vscode-symbolIcon-variableForeground, #9cdcfe); }
         .php-comment { color: var(--vscode-symbolIcon-enumeratorMemberForeground, #6a9955); }
+        .json-entities {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .json-entity-card {
+            background: var(--vscode-textBlockQuote-background);
+            border: 1px solid var(--vscode-panel-border);
+            border-radius: 4px;
+            padding: 10px 14px;
+            min-width: 180px;
+            max-width: 280px;
+        }
+        .json-entity-card h3 {
+            font-size: 0.95em;
+            margin-bottom: 6px;
+            color: var(--vscode-textLink-foreground);
+        }
+        .json-entity-card .fields-list,
+        .json-entity-card .relations-list {
+            font-size: 0.8em;
+            color: var(--vscode-descriptionForeground);
+            line-height: 1.5;
+        }
+        .json-entity-card .relations-list {
+            margin-top: 4px;
+            color: var(--vscode-editorWarning-foreground, #cca700);
+        }
         .hidden { display: none; }
         .spinner {
             display: inline-block;
-            width: 16px;
-            height: 16px;
+            width: 14px;
+            height: 14px;
             border: 2px solid var(--vscode-foreground);
             border-top-color: transparent;
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
             vertical-align: middle;
-            margin-right: 8px;
+        }
+        .btn .spinner, .btn-action .spinner {
+            margin-right: 6px;
+        }
+        .btn:disabled, .btn-action:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
     </style>
@@ -293,7 +327,18 @@ export function getWebviewContent(webview: vscode.Webview, nonce: string): strin
     <div class="section">
         <button class="btn btn-primary" id="btnGenerate">Generate API</button>
         <button class="btn btn-secondary" id="btnPreview">Preview Files</button>
+        <button class="btn btn-secondary" id="btnImportJson">Import JSON</button>
         <button class="btn btn-danger" id="btnReset">Reset</button>
+    </div>
+
+    <div id="jsonPreviewSection" class="section hidden">
+        <h2>JSON Import Preview</h2>
+        <div id="jsonFileName" style="font-size:0.85em;margin-bottom:8px;color:var(--vscode-descriptionForeground);"></div>
+        <div id="jsonEntities" class="json-entities"></div>
+        <div style="margin-top:12px;">
+            <button class="btn btn-primary" id="btnGenerateJson">Generate All from JSON</button>
+            <button class="btn btn-secondary" id="btnCancelJson">Cancel</button>
+        </div>
     </div>
 
     <div class="section">
@@ -386,6 +431,30 @@ export function getWebviewContent(webview: vscode.Webview, nonce: string): strin
                 };
             }
 
+            // Loading state management
+            var buttonOriginalHTML = {};
+
+            function setLoading(btnId, loadingText) {
+                var btn = document.getElementById(btnId);
+                if (!btn) return;
+                buttonOriginalHTML[btnId] = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner"></span> ' + loadingText;
+            }
+
+            function clearLoading(btnId) {
+                var btn = document.getElementById(btnId);
+                if (!btn || !buttonOriginalHTML[btnId]) return;
+                btn.disabled = false;
+                btn.innerHTML = buttonOriginalHTML[btnId];
+            }
+
+            function clearAllActionLoading() {
+                ['btnMigrate', 'btnSeed', 'btnTest', 'btnRoutes'].forEach(function(id) {
+                    clearLoading(id);
+                });
+            }
+
             function showOutput(text, isError) {
                 const section = document.getElementById('outputSection');
                 const content = document.getElementById('outputContent');
@@ -428,10 +497,7 @@ export function getWebviewContent(webview: vscode.Webview, nonce: string): strin
                     return;
                 }
 
-                var btn = document.getElementById('btnGenerate');
-                btn.disabled = true;
-                btn.textContent = 'Generating...';
-
+                setLoading('btnGenerate', 'Generating...');
                 vscode.postMessage({ type: 'generate', payload: config });
             });
 
@@ -447,20 +513,38 @@ export function getWebviewContent(webview: vscode.Webview, nonce: string): strin
                 addField();
             });
 
+            // JSON Import
+            document.getElementById('btnImportJson').addEventListener('click', function() {
+                vscode.postMessage({ type: 'importJson' });
+            });
+
+            document.getElementById('btnGenerateJson').addEventListener('click', function() {
+                setLoading('btnGenerateJson', 'Generating...');
+                vscode.postMessage({ type: 'action', action: 'generateJson' });
+            });
+
+            document.getElementById('btnCancelJson').addEventListener('click', function() {
+                document.getElementById('jsonPreviewSection').classList.add('hidden');
+            });
+
             // Quick actions
             document.getElementById('btnMigrate').addEventListener('click', function() {
+                setLoading('btnMigrate', 'Running Migrations...');
                 vscode.postMessage({ type: 'action', action: 'migrate' });
             });
 
             document.getElementById('btnSeed').addEventListener('click', function() {
+                setLoading('btnSeed', 'Seeding Database...');
                 vscode.postMessage({ type: 'action', action: 'seed' });
             });
 
             document.getElementById('btnTest').addEventListener('click', function() {
+                setLoading('btnTest', 'Running Tests...');
                 vscode.postMessage({ type: 'action', action: 'test' });
             });
 
             document.getElementById('btnRoutes').addEventListener('click', function() {
+                setLoading('btnRoutes', 'Loading Routes...');
                 vscode.postMessage({ type: 'action', action: 'routes' });
             });
 
@@ -529,14 +613,15 @@ export function getWebviewContent(webview: vscode.Webview, nonce: string): strin
             });
 
             function highlightPhp(code) {
-                return code
-                    .replace(/&/g, '&amp;')
-                    .replace(/</g, '&lt;')
-                    .replace(/>/g, '&gt;')
-                    .replace(/(\\$[a-zA-Z_][a-zA-Z0-9_]*)/g, '<span class=php-variable>$1</span>')
-                    .replace(/'([^']*)'/g, "'<span class=php-string>$1</span>'")
-                    .replace(/\\b(class|function|public|private|protected|readonly|return|use|namespace|new|static|self|array|string|int|float|bool|true|false|null|extends|implements|if|foreach|as|in_array)\\b/g, '<span class=php-keyword>$1</span>')
-                    .replace(/(\/\/[^\\n]*)/g, '<span class=php-comment>$1</span>');
+                var s = code;
+                s = s.replace(/&/g, '&amp;');
+                s = s.replace(new RegExp('<', 'g'), '&lt;');
+                s = s.replace(new RegExp('>', 'g'), '&gt;');
+                s = s.replace(new RegExp('(\\\\$[a-zA-Z_][a-zA-Z0-9_]*)', 'g'), '<span class=php-variable>$1</span>');
+                s = s.replace(/'([^']*)'/g, "'<span class=php-string>$1</span>'");
+                s = s.replace(new RegExp('\\\\b(class|function|public|private|protected|readonly|return|use|namespace|new|static|self|array|string|int|float|bool|true|false|null|extends|implements|if|foreach|as|in_array)\\\\b', 'g'), '<span class=php-keyword>$1</span>');
+                s = s.replace(new RegExp('(//[^\\\\n]*)', 'g'), '<span class=php-comment>$1</span>');
+                return s;
             }
 
             function showCodePreview(code) {
@@ -575,12 +660,10 @@ export function getWebviewContent(webview: vscode.Webview, nonce: string): strin
             // Messages from extension
             window.addEventListener('message', function(event) {
                 var msg = event.data;
-                var btn = document.getElementById('btnGenerate');
 
                 switch (msg.type) {
                     case 'generationResult':
-                        btn.disabled = false;
-                        btn.textContent = 'Generate API';
+                        clearLoading('btnGenerate');
                         if (msg.success) {
                             showOutput(msg.output || 'API generated successfully!', false);
                         } else {
@@ -591,6 +674,7 @@ export function getWebviewContent(webview: vscode.Webview, nonce: string): strin
                         showPreview(msg.files);
                         break;
                     case 'actionResult': {
+                        clearAllActionLoading();
                         var section = document.getElementById('outputSection');
                         var content = document.getElementById('outputContent');
                         if (section) { section.classList.remove('hidden'); }
@@ -603,6 +687,43 @@ export function getWebviewContent(webview: vscode.Webview, nonce: string): strin
                     case 'previewCodeResult':
                         showCodePreview(msg.code);
                         break;
+                    case 'jsonLoaded': {
+                        var jsonSection = document.getElementById('jsonPreviewSection');
+                        var jsonFileName = document.getElementById('jsonFileName');
+                        var jsonEntities = document.getElementById('jsonEntities');
+                        jsonSection.classList.remove('hidden');
+                        jsonFileName.textContent = 'File: ' + msg.fileName + ' (' + msg.entities.length + ' entities)';
+                        jsonEntities.innerHTML = '';
+                        msg.entities.forEach(function(ent) {
+                            var card = document.createElement('div');
+                            card.className = 'json-entity-card';
+                            var title = document.createElement('h3');
+                            title.textContent = ent.name;
+                            card.appendChild(title);
+                            if (ent.fields.length > 0) {
+                                var fl = document.createElement('div');
+                                fl.className = 'fields-list';
+                                fl.textContent = ent.fields.join(', ');
+                                card.appendChild(fl);
+                            }
+                            if (ent.relations.length > 0) {
+                                var rl = document.createElement('div');
+                                rl.className = 'relations-list';
+                                rl.textContent = ent.relations.join(', ');
+                                card.appendChild(rl);
+                            }
+                            jsonEntities.appendChild(card);
+                        });
+                        break;
+                    }
+                    case 'jsonGenerateResult': {
+                        clearLoading('btnGenerateJson');
+                        if (msg.success) {
+                            document.getElementById('jsonPreviewSection').classList.add('hidden');
+                        }
+                        showOutput(msg.output, !msg.success);
+                        break;
+                    }
                     case 'entityExistsResult': {
                         var warnEl = document.getElementById('entityNameWarning');
                         if (msg.exists) {
