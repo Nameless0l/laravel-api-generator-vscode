@@ -2,8 +2,18 @@
   "name": "laravel-api-generator",
   "displayName": "Laravel API Generator",
   "description": "Generate complete REST APIs for Laravel with a visual interface",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "publisher": "LocAronMBASSIEWOLO",
+  "license": "MIT",
+  "icon": "media/icon-marketplace.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Nameless0l/laravel-api-generator-vscode"
+  },
+  "homepage": "https://github.com/Nameless0l/laravel-api-generator-vscode#readme",
+  "bugs": {
+    "url": "https://github.com/Nameless0l/laravel-api-generator-vscode/issues"
+  },
   "engines": {
     "vscode": "^1.80.0"
   },
@@ -16,7 +26,9 @@
     "api",
     "generator",
     "crud",
-    "rest"
+    "rest",
+    "php",
+    "artisan"
   ],
   "activationEvents": [
     "workspaceContains:artisan"
@@ -131,7 +143,7 @@
   "devDependencies": {
     "@types/node": "^20.0.0",
     "@types/vscode": "^1.80.0",
-    "typescript": "^5.3.0",
-    "@vscode/vsce": "^2.22.0"
+    "@vscode/vsce": "^2.22.0",
+    "typescript": "^5.3.0"
   }
 }
