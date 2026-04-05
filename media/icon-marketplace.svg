@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- Background rounded square -->
+  <rect x="4" y="4" width="120" height="120" rx="20" fill="#1e293b"/>
+
+  <!-- Curly braces -->
+  <path d="M28 30C20 30 18 36 18 42L18 52C18 56 14 58 12 60C14 62 18 64 18 68L18 82C18 88 20 98 28 98" fill="none" stroke="#94a3b8" stroke-width="5" stroke-linecap="round"/>
+  <path d="M100 30C108 30 110 36 110 42L110 52C110 56 114 58 116 60C114 62 110 64 110 68L110 82C110 88 108 98 100 98" fill="none" stroke="#94a3b8" stroke-width="5" stroke-linecap="round"/>
+
+  <!-- Laravel "L" -->
+  <path d="M42 40L42 78L64 78" fill="none" stroke="#ef4444" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Lightning bolt -->
+  <polygon points="76,34 68,58 78,58 70,86 94,52 82,52 88,34" fill="#fbbf24"/>
+
+  <!-- Bottom dots (API endpoints) -->
+  <circle cx="38" cy="112" r="5" fill="#22c55e"/>
+  <circle cx="56" cy="112" r="5" fill="#3b82f6"/>
+  <circle cx="74" cy="112" r="5" fill="#ef4444"/>
+  <circle cx="92" cy="112" r="5" fill="#f59e0b"/>
+</svg>

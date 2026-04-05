@@ -79,6 +79,9 @@ export class GeneratorPanel {
                     this.handlePreviewCode(message.payload);
                 }
                 break;
+            case 'importJson':
+                await this.handleImportJson();
+                break;
             case 'checkEntityExists':
                 if (message.name) {
                     const modelPath = path.join(this.workspaceRoot, 'app', 'Models', `${message.name}.php`);
@@ -118,7 +121,14 @@ export class GeneratorPanel {
                     { modal: true },
                     'Continue'
                 );
-                if (confirm !== 'Continue') { return; }
+                if (confirm !== 'Continue') {
+                    this.panel.webview.postMessage({
+                        type: 'actionResult',
+                        success: true,
+                        output: 'Seed cancelled.',
+                    });
+                    return;
+                }
                 result = await this.artisan.seed();
                 break;
             }
@@ -128,6 +138,17 @@ export class GeneratorPanel {
             case 'routes':
                 result = await this.artisan.routes();
                 break;
+            case 'generateJson':
+                result = await this.artisan.generateFromJson();
+                this.panel.webview.postMessage({
+                    type: 'jsonGenerateResult',
+                    success: result.success,
+                    output: result.output || result.errors.join('\n'),
+                });
+                if (result.success && this.onDidGenerate) {
+                    this.onDidGenerate();
+                }
+                return;
             case 'docs':
                 vscode.env.openExternal(vscode.Uri.parse('http://localhost:8000/docs/api'));
                 return;
@@ -151,6 +172,90 @@ export class GeneratorPanel {
             type: 'previewResult',
             files,
         });
+    }
+
+    private async handleImportJson(): Promise<void> {
+        const fileUri = await vscode.window.showOpenDialog({
+            canSelectFiles: true,
+            canSelectMany: false,
+            filters: { 'JSON': ['json'] },
+            title: 'Select class_data.json file',
+        });
+
+        if (!fileUri || fileUri.length === 0) { return; }
+
+        try {
+            const content = fs.readFileSync(fileUri[0].fsPath, 'utf-8');
+            // Validate JSON
+            const parsed = JSON.parse(content);
+
+            // Copy to project root as class_data.json
+            const destPath = path.join(this.workspaceRoot, 'class_data.json');
+            fs.writeFileSync(destPath, JSON.stringify(parsed, null, 2), 'utf-8');
+
+            // Send entities back to webview for preview
+            const entities = this.extractEntitiesFromJson(parsed);
+            this.panel.webview.postMessage({
+                type: 'jsonLoaded',
+                fileName: path.basename(fileUri[0].fsPath),
+                entities,
+            });
+        } catch (e: unknown) {
+            const msg = e instanceof Error ? e.message : 'Unknown error';
+            this.panel.webview.postMessage({
+                type: 'actionResult',
+                success: false,
+                output: `Invalid JSON file: ${msg}`,
+            });
+        }
+    }
+
+    private extractEntitiesFromJson(data: unknown): Array<{ name: string; fields: string[]; relations: string[] }> {
+        const entities: Array<{ name: string; fields: string[]; relations: string[] }> = [];
+
+        let items: Array<Record<string, unknown>>;
+        const d = data as Record<string, unknown>;
+        if (d.data && Array.isArray(d.data)) {
+            items = [d] as Array<Record<string, unknown>>;
+        } else if (Array.isArray(data)) {
+            items = data as Array<Record<string, unknown>>;
+        } else if (d.name) {
+            items = [d] as Array<Record<string, unknown>>;
+        } else {
+            items = Object.values(d) as Array<Record<string, unknown>>;
+        }
+
+        for (const item of items) {
+            const cls = (item.data || item) as Record<string, unknown>;
+            const name = (cls.name as string) || 'Unknown';
+            const attrs = (cls.attributes as Array<Record<string, string>>) || [];
+            const fields = attrs.map((a) => `${a.name}: ${a._type || a.type || 'string'}`);
+
+            const relations: string[] = [];
+            for (const relKey of ['oneToOneRelationships', 'oneToManyRelationships', 'manyToOneRelationships', 'manyToManyRelationships']) {
+                const rels = cls[relKey] as Array<Record<string, string>> | undefined;
+                if (rels) {
+                    for (const r of rels) {
+                        relations.push(`${relKey.replace('Relationships', '')}: ${r.comodel || r.relatedModel}`);
+                    }
+                }
+            }
+            // UML compositions & aggregations
+            for (const relKey of ['compositions', 'aggregations']) {
+                const rels = cls[relKey] as Array<Record<string, string>> | undefined;
+                if (rels) {
+                    for (const r of rels) {
+                        if (r._type || r.comodel) {
+                            relations.push(`${relKey}: ${r._type || r.comodel}`);
+                        }
+                    }
+                }
+            }
+
+            entities.push({ name, fields, relations });
+        }
+
+        return entities;
     }
 
     private handlePreviewCode(config: EntityConfig): void {

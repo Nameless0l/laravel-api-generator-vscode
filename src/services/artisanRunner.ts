@@ -37,6 +37,11 @@ export class ArtisanRunner {
         return this.run(args);
     }
 
+    async generateFromJson(): Promise<ArtisanResult> {
+        const args = ['artisan', 'make:fullapi'];
+        return this.run(args, 120000);
+    }
+
     async delete(entityName: string): Promise<ArtisanResult> {
         const args = ['artisan', 'delete:fullapi', entityName, '--force'];
         return this.run(args);
