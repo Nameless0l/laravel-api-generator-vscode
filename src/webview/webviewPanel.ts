@@ -149,9 +149,24 @@ export class GeneratorPanel {
                     this.onDidGenerate();
                 }
                 return;
-            case 'docs':
-                vscode.env.openExternal(vscode.Uri.parse('http://localhost:8000/docs/api'));
+            case 'docs': {
+                const serve = await this.artisan.startServe();
+                if (serve.success && serve.port) {
+                    vscode.env.openExternal(vscode.Uri.parse(`http://127.0.0.1:${serve.port}/docs/api`));
+                    this.panel.webview.postMessage({
+                        type: 'actionResult',
+                        success: true,
+                        output: `Server running on port ${serve.port}. Opening API docs...`,
+                    });
+                } else {
+                    this.panel.webview.postMessage({
+                        type: 'actionResult',
+                        success: false,
+                        output: serve.error || 'Could not start or find Laravel server.',
+                    });
+                }
                 return;
+            }
             default:
                 return;
         }
@@ -269,6 +284,7 @@ export class GeneratorPanel {
 
     private dispose(): void {
         GeneratorPanel.currentPanel = undefined;
+        this.artisan.stopServe();
         this.panel.dispose();
         while (this.disposables.length) {
             const d = this.disposables.pop();

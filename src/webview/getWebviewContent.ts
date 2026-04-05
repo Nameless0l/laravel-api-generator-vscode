@@ -450,7 +450,7 @@ export function getWebviewContent(webview: vscode.Webview, nonce: string): strin
             }
 
             function clearAllActionLoading() {
-                ['btnMigrate', 'btnSeed', 'btnTest', 'btnRoutes'].forEach(function(id) {
+                ['btnMigrate', 'btnSeed', 'btnTest', 'btnRoutes', 'btnDocs'].forEach(function(id) {
                     clearLoading(id);
                 });
             }
@@ -549,6 +549,7 @@ export function getWebviewContent(webview: vscode.Webview, nonce: string): strin
             });
 
             document.getElementById('btnDocs').addEventListener('click', function() {
+                setLoading('btnDocs', 'Starting Server...');
                 vscode.postMessage({ type: 'action', action: 'docs' });
             });
 

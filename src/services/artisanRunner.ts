@@ -1,9 +1,12 @@
 import * as vscode from 'vscode';
-import { execFile } from 'child_process';
+import { execFile, spawn, ChildProcess } from 'child_process';
+import * as http from 'http';
 import { ArtisanResult, EntityConfig } from '../types';
 
 export class ArtisanRunner {
     private workspaceRoot: string;
+    private serveProcess: ChildProcess | undefined;
+    private servePort: number | undefined;
 
     constructor(workspaceRoot: string) {
         this.workspaceRoot = workspaceRoot;
@@ -61,6 +64,118 @@ export class ArtisanRunner {
 
     async routes(): Promise<ArtisanResult> {
         return this.run(['artisan', 'route:list', '--path=api']);
+    }
+
+    /**
+     * Check if a Laravel server is reachable on the given port.
+     */
+    private checkServerRunning(port: number): Promise<boolean> {
+        return new Promise((resolve) => {
+            const req = http.get(`http://127.0.0.1:${port}`, (res) => {
+                res.resume();
+                resolve(true);
+            });
+            req.on('error', () => resolve(false));
+            req.setTimeout(2000, () => {
+                req.destroy();
+                resolve(false);
+            });
+        });
+    }
+
+    /**
+     * Try common ports to find a running Laravel server.
+     */
+    private async findRunningServer(): Promise<number | null> {
+        const ports = [8000, 8001, 8002, 8003, 8080];
+        for (const port of ports) {
+            if (await this.checkServerRunning(port)) {
+                return port;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Start php artisan serve and return the detected port.
+     */
+    async startServe(): Promise<{ success: boolean; port?: number; error?: string }> {
+        // If we already have a running serve process, return its port
+        if (this.serveProcess && !this.serveProcess.killed && this.servePort) {
+            const still = await this.checkServerRunning(this.servePort);
+            if (still) {
+                return { success: true, port: this.servePort };
+            }
+        }
+
+        // Check if a server is already running on common ports
+        const existingPort = await this.findRunningServer();
+        if (existingPort) {
+            this.servePort = existingPort;
+            return { success: true, port: existingPort };
+        }
+
+        // Start php artisan serve
+        const phpPath = this.getPhpPath();
+        return new Promise((resolve) => {
+            const proc = spawn(phpPath, ['artisan', 'serve'], {
+                cwd: this.workspaceRoot,
+                env: { ...process.env },
+                stdio: ['ignore', 'pipe', 'pipe'],
+            });
+
+            this.serveProcess = proc;
+            let resolved = false;
+
+            const onData = (data: Buffer) => {
+                const text = data.toString();
+                // Laravel outputs: "Server running on [http://127.0.0.1:8000]"
+                const match = text.match(/Server running on \[http:\/\/127\.0\.0\.1:(\d+)\]/);
+                if (match && !resolved) {
+                    resolved = true;
+                    this.servePort = parseInt(match[1], 10);
+                    resolve({ success: true, port: this.servePort });
+                }
+            };
+
+            proc.stdout?.on('data', onData);
+            proc.stderr?.on('data', onData);
+
+            proc.on('error', (err) => {
+                if (!resolved) {
+                    resolved = true;
+                    resolve({ success: false, error: `Failed to start server: ${err.message}` });
+                }
+            });
+
+            proc.on('exit', (code) => {
+                if (!resolved) {
+                    resolved = true;
+                    resolve({ success: false, error: `Server exited with code ${code}` });
+                }
+                this.serveProcess = undefined;
+                this.servePort = undefined;
+            });
+
+            // Timeout after 10 seconds
+            setTimeout(() => {
+                if (!resolved) {
+                    resolved = true;
+                    resolve({ success: false, error: 'Server start timed out after 10s' });
+                }
+            }, 10000);
+        });
+    }
+
+    /**
+     * Stop the serve process if we started one.
+     */
+    stopServe(): void {
+        if (this.serveProcess && !this.serveProcess.killed) {
+            this.serveProcess.kill();
+            this.serveProcess = undefined;
+            this.servePort = undefined;
+        }
     }
 
     private run(args: string[], timeout: number = 30000): Promise<ArtisanResult> {
