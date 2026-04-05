@@ -192,9 +192,12 @@ export class ArtisanRunner {
                 },
                 (error, stdout, stderr) => {
                     const stripAnsi = (s: string) => s.replace(/\x1B\[[0-9;]*m/g, '');
-                    const output = stripAnsi(stdout.toString());
-                    const errorOutput = stripAnsi(stderr.toString());
-                    const fullOutput = output || errorOutput;
+                    const output = stripAnsi(stdout.toString()).trim();
+                    const errorOutput = stripAnsi(stderr.toString()).trim();
+
+                    // Combine both stdout and stderr to never lose output
+                    const parts = [output, errorOutput].filter(Boolean);
+                    const fullOutput = parts.join('\n') || (error ? `Command failed: ${error.message}` : '');
 
                     resolve({
                         success: !error,
