@@ -9,20 +9,24 @@ export class LaravelDetector {
     }
 
     static isPackageInstalled(workspaceRoot: string): boolean {
+        return this.hasComposerPackage(workspaceRoot, 'nameless/laravel-api-generator');
+    }
+
+    static isScrambleInstalled(workspaceRoot: string): boolean {
+        return this.hasComposerPackage(workspaceRoot, 'dedoc/scramble');
+    }
+
+    private static hasComposerPackage(workspaceRoot: string, packageName: string): boolean {
         const composerPath = path.join(workspaceRoot, 'composer.json');
         if (!fs.existsSync(composerPath)) {
             return false;
         }
-
         try {
             const content = fs.readFileSync(composerPath, 'utf-8');
             const composer = JSON.parse(content);
             const require = composer.require || {};
             const requireDev = composer['require-dev'] || {};
-            return (
-                'nameless/laravel-api-generator' in require ||
-                'nameless/laravel-api-generator' in requireDev
-            );
+            return packageName in require || packageName in requireDev;
         } catch {
             return false;
         }
@@ -36,7 +40,7 @@ export class LaravelDetector {
         return folders[0].uri.fsPath;
     }
 
-    static validate(): { valid: boolean; root?: string; message?: string } {
+    static validate(): { valid: boolean; root?: string; message?: string; packageMissing?: boolean } {
         const root = this.getWorkspaceRoot();
         if (!root) {
             return { valid: false, message: 'No workspace folder open.' };
@@ -48,9 +52,38 @@ export class LaravelDetector {
             return {
                 valid: false,
                 root,
+                packageMissing: true,
                 message: 'nameless/laravel-api-generator is not installed. Run: composer require nameless/laravel-api-generator',
             };
         }
         return { valid: true, root };
+    }
+
+    static async validateOrPromptInstall(): Promise<{ valid: boolean; root?: string }> {
+        const check = this.validate();
+
+        if (check.packageMissing && check.root) {
+            const action = await vscode.window.showWarningMessage(
+                'Laravel API Generator package is not installed in this project.',
+                'Install via Composer',
+                'Cancel'
+            );
+            if (action === 'Install via Composer') {
+                const terminal = vscode.window.createTerminal({
+                    name: 'Laravel API Generator',
+                    cwd: check.root,
+                });
+                terminal.sendText('composer require nameless/laravel-api-generator');
+                terminal.show();
+            }
+            return { valid: false };
+        }
+
+        if (!check.valid) {
+            vscode.window.showErrorMessage(check.message || 'Cannot detect Laravel project.');
+            return { valid: false };
+        }
+
+        return { valid: true, root: check.root };
     }
 }

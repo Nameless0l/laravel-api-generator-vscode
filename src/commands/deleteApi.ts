@@ -7,9 +7,8 @@ export function registerDeleteCommand(onDidDelete: () => void): vscode.Disposabl
     return vscode.commands.registerCommand(
         'laravelApiGenerator.delete',
         async (item?: EntityTreeItem) => {
-            const check = LaravelDetector.validate();
+            const check = await LaravelDetector.validateOrPromptInstall();
             if (!check.valid || !check.root) {
-                vscode.window.showErrorMessage(check.message || 'Cannot detect Laravel project.');
                 return;
             }
 
