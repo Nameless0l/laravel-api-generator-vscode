@@ -6,6 +6,7 @@ import * as path from 'path';
 import { ArtisanRunner } from '../services/artisanRunner';
 import { EntityScanner } from '../services/entityScanner';
 import { StubPreview } from '../services/stubPreview';
+import { LaravelDetector } from '../services/laravelDetector';
 import { EntityConfig } from '../types';
 
 export class GeneratorPanel {
@@ -150,6 +151,27 @@ export class GeneratorPanel {
                 }
                 return;
             case 'docs': {
+                if (!LaravelDetector.isScrambleInstalled(this.workspaceRoot)) {
+                    const action = await vscode.window.showWarningMessage(
+                        'Scramble (dedoc/scramble) is not installed. It is required to generate API documentation.',
+                        'Install via Composer',
+                        'Cancel'
+                    );
+                    if (action === 'Install via Composer') {
+                        const terminal = vscode.window.createTerminal({
+                            name: 'Laravel API Generator',
+                            cwd: this.workspaceRoot,
+                        });
+                        terminal.sendText('composer require dedoc/scramble');
+                        terminal.show();
+                    }
+                    this.panel.webview.postMessage({
+                        type: 'actionResult',
+                        success: false,
+                        output: 'Scramble is not installed. Please install it first.',
+                    });
+                    return;
+                }
                 const serve = await this.artisan.startServe();
                 if (serve.success && serve.port) {
                     vscode.env.openExternal(vscode.Uri.parse(`http://127.0.0.1:${serve.port}/docs/api`));
