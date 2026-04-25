@@ -7,6 +7,7 @@ import { ArtisanRunner } from '../services/artisanRunner';
 import { EntityScanner } from '../services/entityScanner';
 import { StubPreview } from '../services/stubPreview';
 import { LaravelDetector } from '../services/laravelDetector';
+import { parseOpenApi } from '../services/openApiImporter';
 import { EntityConfig } from '../types';
 import { t, getLocaleData } from '../i18n';
 
@@ -83,6 +84,9 @@ export class GeneratorPanel {
                 break;
             case 'importJson':
                 await this.handleImportJson();
+                break;
+            case 'importOpenApi':
+                await this.handleImportOpenApi();
                 break;
             case 'checkEntityExists':
                 if (message.name) {
@@ -173,7 +177,12 @@ export class GeneratorPanel {
             }
         }
 
-        const result = await this.artisan.generate(config);
+        let result;
+        if (config.relationships && config.relationships.length > 0) {
+            result = await this.generateWithRelationships(config);
+        } else {
+            result = await this.artisan.generate(config);
+        }
 
         this.panel.webview.postMessage({
             type: 'generationResult',
@@ -188,6 +197,55 @@ export class GeneratorPanel {
                 this.onDidGenerate();
             }
         }
+    }
+
+    /**
+     * When the user adds relationships in the UI, route the generation through
+     * the package's JSON pipeline by writing a synthetic class_data.json.
+     */
+    private async generateWithRelationships(config: EntityConfig): Promise<{
+        success: boolean;
+        output: string;
+        errors: string[];
+    }> {
+        const relationships = config.relationships ?? [];
+
+        const buckets: Record<string, Array<{ comodel: string; role: string }>> = {
+            oneToOneRelationships: [],
+            oneToManyRelationships: [],
+            manyToOneRelationships: [],
+            manyToManyRelationships: [],
+        };
+
+        for (const rel of relationships) {
+            const entry = { comodel: rel.target, role: rel.role || rel.target.toLowerCase() };
+            if (rel.type === 'belongsTo') {
+                buckets.manyToOneRelationships.push(entry);
+            } else if (rel.type === 'hasMany') {
+                buckets.oneToManyRelationships.push(entry);
+            } else if (rel.type === 'hasOne') {
+                buckets.oneToOneRelationships.push(entry);
+            } else {
+                buckets.manyToManyRelationships.push(entry);
+            }
+        }
+
+        const classData = [
+            {
+                name: config.name,
+                attributes: config.fields.map((f) => ({
+                    name: f.name,
+                    _type: f.type,
+                    required: true,
+                })),
+                ...buckets,
+            },
+        ];
+
+        const destPath = path.join(this.workspaceRoot, 'class_data.json');
+        fs.writeFileSync(destPath, JSON.stringify(classData, null, 2), 'utf-8');
+
+        return this.artisan.generateFromJson();
     }
 
     /**
@@ -649,6 +707,65 @@ export class GeneratorPanel {
             return word.slice(0, -1);
         }
         return word;
+    }
+
+    private async handleImportOpenApi(): Promise<void> {
+        const fileUri = await vscode.window.showOpenDialog({
+            canSelectFiles: true,
+            canSelectMany: false,
+            filters: { 'OpenAPI / Swagger JSON': ['json'] },
+            title: 'Select an OpenAPI / Swagger JSON spec',
+        });
+
+        if (!fileUri || fileUri.length === 0) {
+            return;
+        }
+
+        try {
+            const raw = fs.readFileSync(fileUri[0].fsPath, 'utf-8');
+            const result = parseOpenApi(raw);
+
+            if (result.entities.length === 0) {
+                this.panel.webview.postMessage({
+                    type: 'actionResult',
+                    success: false,
+                    output: 'No usable schemas were found in the OpenAPI document.',
+                });
+                return;
+            }
+
+            // Reuse the JSON pipeline: write a class_data.json the package can consume
+            const destPath = path.join(this.workspaceRoot, 'class_data.json');
+            fs.writeFileSync(destPath, JSON.stringify(result.entities, null, 2), 'utf-8');
+
+            const entities = result.entities.map((ent) => ({
+                name: ent.name,
+                fields: ent.attributes.map((a) => `${a.name}: ${a._type}`),
+                relations: [
+                    ...ent.manyToOneRelationships.map((r) => `belongsTo: ${r.comodel}`),
+                    ...ent.oneToManyRelationships.map((r) => `hasMany: ${r.comodel}`),
+                ],
+            }));
+
+            this.panel.webview.postMessage({
+                type: 'jsonLoaded',
+                fileName: `${path.basename(fileUri[0].fsPath)} (OpenAPI)`,
+                entities,
+            });
+
+            if (result.skipped.length > 0) {
+                vscode.window.showInformationMessage(
+                    `OpenAPI imported. Skipped ${result.skipped.length} schema(s): ${result.skipped.join(', ')}`
+                );
+            }
+        } catch (e: unknown) {
+            const msg = e instanceof Error ? e.message : 'Unknown error';
+            this.panel.webview.postMessage({
+                type: 'actionResult',
+                success: false,
+                output: `Invalid OpenAPI JSON: ${msg}`,
+            });
+        }
     }
 
     private async handleImportJson(): Promise<void> {

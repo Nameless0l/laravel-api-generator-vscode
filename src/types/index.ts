@@ -3,6 +3,12 @@ export interface Field {
     type: string;
 }
 
+export interface Relationship {
+    type: 'belongsTo' | 'hasMany' | 'hasOne' | 'belongsToMany';
+    target: string;
+    role: string;
+}
+
 export interface GenerateOptions {
     auth: boolean;
     postman: boolean;
@@ -12,6 +18,7 @@ export interface GenerateOptions {
 export interface EntityConfig {
     name: string;
     fields: Field[];
+    relationships?: Relationship[];
     options: GenerateOptions;
 }
 
@@ -21,9 +28,17 @@ export interface ArtisanResult {
     errors: string[];
 }
 
+export interface EntityRelation {
+    name: string;
+    type: string;
+    target: string;
+}
+
 export interface GeneratedEntity {
     name: string;
     files: EntityFile[];
+    fields?: string[];
+    relations?: EntityRelation[];
 }
 
 export interface EntityFile {

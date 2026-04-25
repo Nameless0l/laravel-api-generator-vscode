@@ -1,6 +1,6 @@
 import * as path from 'path';
 import * as fs from 'fs';
-import { GeneratedEntity, EntityFile } from '../types';
+import { GeneratedEntity, EntityFile, EntityRelation } from '../types';
 
 export class EntityScanner {
     private workspaceRoot: string;
@@ -30,11 +30,48 @@ export class EntityScanner {
             const hasService = files.some((f) => f.type === 'Service' && f.exists);
 
             if (hasController && hasService) {
-                entities.push({ name, files });
+                const modelInfo = this.parseModel(name);
+                entities.push({ name, files, fields: modelInfo.fields, relations: modelInfo.relations });
             }
         }
 
         return entities;
+    }
+
+    /**
+     * Extract fillable + relationship methods from a generated model file.
+     */
+    private parseModel(name: string): { fields: string[]; relations: EntityRelation[] } {
+        const modelPath = path.join(this.workspaceRoot, 'app', 'Models', `${name}.php`);
+        if (!fs.existsSync(modelPath)) {
+            return { fields: [], relations: [] };
+        }
+
+        const content = fs.readFileSync(modelPath, 'utf-8');
+
+        // Extract fillable: $fillable = [ 'a', 'b', ... ];
+        const fields: string[] = [];
+        const fillableMatch = content.match(/protected\s+\$fillable\s*=\s*\[([\s\S]*?)\];/);
+        if (fillableMatch) {
+            const inner = fillableMatch[1];
+            const re = /['"]([^'"]+)['"]/g;
+            let m: RegExpExecArray | null;
+            while ((m = re.exec(inner)) !== null) {
+                fields.push(m[1]);
+            }
+        }
+
+        // Extract relationship methods: public function name(): RelType { return $this->relType(Target::class) }
+        const relations: EntityRelation[] = [];
+        const relRegex = /public\s+function\s+(\w+)\s*\(\s*\)\s*(?::\s*[\w\\]+)?\s*\{[^}]*?\$this->(belongsTo|hasMany|hasOne|belongsToMany|morphTo|morphMany)\s*\(\s*([\w\\]+)::class/g;
+        let rm: RegExpExecArray | null;
+        while ((rm = relRegex.exec(content)) !== null) {
+            const [, methodName, relType, target] = rm;
+            const cleanTarget = target.split('\\').pop() || target;
+            relations.push({ name: methodName, type: relType, target: cleanTarget });
+        }
+
+        return { fields, relations };
     }
 
     getEntityFiles(name: string): EntityFile[] {
