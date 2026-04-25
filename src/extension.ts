@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { initLocale } from './i18n';
 import { LaravelDetector } from './services/laravelDetector';
 import { EntityTreeProvider } from './providers/entityTreeProvider';
 import { registerGenerateCommand } from './commands/generateApi';
@@ -8,6 +9,17 @@ import { registerDiagramCommand } from './commands/showDiagram';
 import { registerRegenerateFileCommand } from './commands/regenerateFile';
 
 export function activate(context: vscode.ExtensionContext): void {
+    initLocale();
+
+    // Re-init when the locale setting changes
+    context.subscriptions.push(
+        vscode.workspace.onDidChangeConfiguration((e) => {
+            if (e.affectsConfiguration('laravelApiGenerator.locale')) {
+                initLocale();
+            }
+        })
+    );
+
     const root = LaravelDetector.getWorkspaceRoot();
 
     let treeProvider: EntityTreeProvider | undefined;

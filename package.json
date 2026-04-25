@@ -2,7 +2,7 @@
   "name": "laravel-api-generator",
   "displayName": "Laravel API Generator",
   "description": "Generate complete REST APIs for Laravel with a visual interface",
-  "version": "0.3.2",
+  "version": "0.4.0",
   "publisher": "Nameless0l",
   "license": "MIT",
   "icon": "media/icon-marketplace.png",
@@ -144,6 +144,17 @@
           "type": "string",
           "default": "php",
           "description": "Path to the PHP executable"
+        },
+        "laravelApiGenerator.locale": {
+          "type": "string",
+          "enum": ["auto", "en", "fr"],
+          "default": "auto",
+          "enumDescriptions": [
+            "Follow VS Code display language",
+            "English",
+            "Français"
+          ],
+          "description": "Display language for the Laravel API Generator UI and messages"
         }
       }
     }

@@ -1,10 +1,59 @@
 import * as vscode from 'vscode';
 import { FIELD_TYPES } from '../types';
 
-export function getWebviewContent(webview: vscode.Webview, nonce: string): string {
+interface LocaleData {
+    ui: {
+        quickStart: string;
+        quickStartHint: string;
+        presets: {
+            blogPost: string;
+            userProfile: string;
+            product: string;
+            comment: string;
+            task: string;
+            article: string;
+        };
+        entityName: string;
+        entityNamePlaceholder: string;
+        fields: string;
+        fieldName: string;
+        addField: string;
+        removeField: string;
+        dragToReorder: string;
+        options: string;
+        optAuth: string;
+        optPostman: string;
+        optSoftDeletes: string;
+        generate: string;
+        preview: string;
+        importJson: string;
+        importFromDb: string;
+        reset: string;
+        filesToGenerate: string;
+        quickActions: string;
+        runMigrations: string;
+        freshSeed: string;
+        runTests: string;
+        listRoutes: string;
+        openApiDocs: string;
+        customizeStubs: string;
+        readingDatabase: string;
+        generating: string;
+        starting: string;
+        publishing: string;
+    };
+    [key: string]: unknown;
+}
+
+export function getWebviewContent(
+    webview: vscode.Webview,
+    nonce: string,
+    locale: LocaleData
+): string {
     const typeOptions = FIELD_TYPES.map(
         (t) => `<option value="${t}">${t}</option>`
     ).join('\n');
+    const L = locale.ui;
 
     return /*html*/ `<!DOCTYPE html>
 <html lang="en">
@@ -306,55 +355,55 @@ export function getWebviewContent(webview: vscode.Webview, nonce: string): strin
     <h1>Laravel API Generator</h1>
 
     <div class="section">
-        <label for="presetSelect">Quick Start (preset)</label>
+        <label for="presetSelect">${L.quickStart}</label>
         <select id="presetSelect">
-            <option value="">— Choose a preset to autofill —</option>
-            <option value="blogPost">Blog Post</option>
-            <option value="userProfile">User Profile</option>
-            <option value="product">E-commerce Product</option>
-            <option value="comment">Comment</option>
-            <option value="task">Task</option>
-            <option value="article">Article (with Soft Deletes)</option>
+            <option value="">${L.quickStartHint}</option>
+            <option value="blogPost">${locale.ui.presets.blogPost}</option>
+            <option value="userProfile">${locale.ui.presets.userProfile}</option>
+            <option value="product">${locale.ui.presets.product}</option>
+            <option value="comment">${locale.ui.presets.comment}</option>
+            <option value="task">${locale.ui.presets.task}</option>
+            <option value="article">${locale.ui.presets.article}</option>
         </select>
     </div>
 
     <div class="section">
-        <label for="entityName">Entity Name (PascalCase)</label>
-        <input type="text" id="entityName" placeholder="e.g. Product, BlogPost, UserProfile" />
+        <label for="entityName">${L.entityName}</label>
+        <input type="text" id="entityName" placeholder="${L.entityNamePlaceholder}" />
         <div id="entityNameError" class="validation-error"></div>
         <div id="entityNameWarning" class="validation-warning"></div>
     </div>
 
     <div class="section">
-        <h2>Fields</h2>
+        <h2>${L.fields}</h2>
         <div id="fieldsContainer"></div>
-        <button class="btn btn-add" id="btnAddField">+ Add Field</button>
+        <button class="btn btn-add" id="btnAddField">${L.addField}</button>
     </div>
 
     <div class="section">
-        <h2>Options</h2>
+        <h2>${L.options}</h2>
         <div class="options">
             <div class="option-item">
                 <input type="checkbox" id="optAuth" />
-                <label for="optAuth">Auth (Sanctum)</label>
+                <label for="optAuth">${L.optAuth}</label>
             </div>
             <div class="option-item">
                 <input type="checkbox" id="optPostman" />
-                <label for="optPostman">Postman Collection</label>
+                <label for="optPostman">${L.optPostman}</label>
             </div>
             <div class="option-item">
                 <input type="checkbox" id="optSoftDeletes" />
-                <label for="optSoftDeletes">Soft Deletes</label>
+                <label for="optSoftDeletes">${L.optSoftDeletes}</label>
             </div>
         </div>
     </div>
 
     <div class="section">
-        <button class="btn btn-primary" id="btnGenerate">Generate API</button>
-        <button class="btn btn-secondary" id="btnPreview">Preview Files</button>
-        <button class="btn btn-secondary" id="btnImportJson">Import JSON</button>
-        <button class="btn btn-secondary" id="btnImportFromDb">Import from Database</button>
-        <button class="btn btn-danger" id="btnReset">Reset</button>
+        <button class="btn btn-primary" id="btnGenerate">${L.generate}</button>
+        <button class="btn btn-secondary" id="btnPreview">${L.preview}</button>
+        <button class="btn btn-secondary" id="btnImportJson">${L.importJson}</button>
+        <button class="btn btn-secondary" id="btnImportFromDb">${L.importFromDb}</button>
+        <button class="btn btn-danger" id="btnReset">${L.reset}</button>
     </div>
 
     <div id="jsonPreviewSection" class="section hidden">
@@ -368,19 +417,19 @@ export function getWebviewContent(webview: vscode.Webview, nonce: string): strin
     </div>
 
     <div class="section">
-        <h2>Quick Actions</h2>
+        <h2>${L.quickActions}</h2>
         <div class="actions-bar">
-            <button class="btn-action" id="btnMigrate"><span class="icon">&#9654;</span> Run Migrations</button>
-            <button class="btn-action" id="btnSeed"><span class="icon">&#9881;</span> Fresh + Seed</button>
-            <button class="btn-action" id="btnTest"><span class="icon">&#10003;</span> Run Tests</button>
-            <button class="btn-action" id="btnRoutes"><span class="icon">&#9776;</span> List Routes</button>
-            <button class="btn-action" id="btnDocs"><span class="icon">&#9741;</span> Open API Docs</button>
-            <button class="btn-action" id="btnPublishStubs"><span class="icon">&#9998;</span> Customize Stubs</button>
+            <button class="btn-action" id="btnMigrate"><span class="icon">&#9654;</span> ${L.runMigrations}</button>
+            <button class="btn-action" id="btnSeed"><span class="icon">&#9881;</span> ${L.freshSeed}</button>
+            <button class="btn-action" id="btnTest"><span class="icon">&#10003;</span> ${L.runTests}</button>
+            <button class="btn-action" id="btnRoutes"><span class="icon">&#9776;</span> ${L.listRoutes}</button>
+            <button class="btn-action" id="btnDocs"><span class="icon">&#9741;</span> ${L.openApiDocs}</button>
+            <button class="btn-action" id="btnPublishStubs"><span class="icon">&#9998;</span> ${L.customizeStubs}</button>
         </div>
     </div>
 
     <div id="previewSection" class="section hidden">
-        <h2>Files to generate</h2>
+        <h2>${L.filesToGenerate}</h2>
         <div id="previewContent" class="preview"></div>
     </div>
 
@@ -410,12 +459,12 @@ export function getWebviewContent(webview: vscode.Webview, nonce: string): strin
                 const dragHandle = document.createElement('span');
                 dragHandle.className = 'drag-handle';
                 dragHandle.textContent = '\\u2630'; // hamburger / drag icon
-                dragHandle.title = 'Drag to reorder';
+                dragHandle.title = '${L.dragToReorder}';
 
                 const nameInput = document.createElement('input');
                 nameInput.type = 'text';
                 nameInput.className = 'field-name';
-                nameInput.placeholder = 'field name';
+                nameInput.placeholder = '${L.fieldName}';
                 nameInput.value = name || '';
 
                 const typeSelect = document.createElement('select');
@@ -425,7 +474,7 @@ export function getWebviewContent(webview: vscode.Webview, nonce: string): strin
 
                 const removeBtn = document.createElement('button');
                 removeBtn.textContent = '\\u00D7';
-                removeBtn.title = 'Remove field';
+                removeBtn.title = '${L.removeField}';
                 removeBtn.addEventListener('click', function() {
                     row.remove();
                 });
@@ -540,7 +589,7 @@ export function getWebviewContent(webview: vscode.Webview, nonce: string): strin
                     return;
                 }
 
-                setLoading('btnGenerate', 'Generating...');
+                setLoading('btnGenerate', '${L.generating}');
                 vscode.postMessage({ type: 'generate', payload: config });
             });
 
@@ -647,12 +696,12 @@ export function getWebviewContent(webview: vscode.Webview, nonce: string): strin
 
             // Database Import
             document.getElementById('btnImportFromDb').addEventListener('click', function() {
-                setLoading('btnImportFromDb', 'Reading database...');
+                setLoading('btnImportFromDb', '${L.readingDatabase}');
                 vscode.postMessage({ type: 'action', action: 'importFromDb' });
             });
 
             document.getElementById('btnGenerateJson').addEventListener('click', function() {
-                setLoading('btnGenerateJson', 'Generating...');
+                setLoading('btnGenerateJson', '${L.generating}');
                 vscode.postMessage({ type: 'action', action: 'generateJson' });
             });
 
@@ -662,32 +711,32 @@ export function getWebviewContent(webview: vscode.Webview, nonce: string): strin
 
             // Quick actions
             document.getElementById('btnMigrate').addEventListener('click', function() {
-                setLoading('btnMigrate', 'Running Migrations...');
+                setLoading('btnMigrate', '${L.runMigrations}...');
                 vscode.postMessage({ type: 'action', action: 'migrate' });
             });
 
             document.getElementById('btnSeed').addEventListener('click', function() {
-                setLoading('btnSeed', 'Seeding Database...');
+                setLoading('btnSeed', '${L.freshSeed}...');
                 vscode.postMessage({ type: 'action', action: 'seed' });
             });
 
             document.getElementById('btnTest').addEventListener('click', function() {
-                setLoading('btnTest', 'Running Tests...');
+                setLoading('btnTest', '${L.runTests}...');
                 vscode.postMessage({ type: 'action', action: 'test' });
             });
 
             document.getElementById('btnRoutes').addEventListener('click', function() {
-                setLoading('btnRoutes', 'Loading Routes...');
+                setLoading('btnRoutes', '${L.listRoutes}...');
                 vscode.postMessage({ type: 'action', action: 'routes' });
             });
 
             document.getElementById('btnDocs').addEventListener('click', function() {
-                setLoading('btnDocs', 'Starting Server...');
+                setLoading('btnDocs', '${L.starting}');
                 vscode.postMessage({ type: 'action', action: 'docs' });
             });
 
             document.getElementById('btnPublishStubs').addEventListener('click', function() {
-                setLoading('btnPublishStubs', 'Publishing...');
+                setLoading('btnPublishStubs', '${L.publishing}');
                 vscode.postMessage({ type: 'action', action: 'publishStubs' });
             });
 

@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
+import { t } from '../i18n';
 
 export class LaravelDetector {
     static isLaravelProject(workspaceRoot: string): boolean {
@@ -67,12 +68,13 @@ export class LaravelDetector {
         const check = this.validate();
 
         if (check.packageMissing && check.root) {
+            const installLabel = t('package.installViaComposer');
             const action = await vscode.window.showWarningMessage(
-                'Laravel API Generator package is not installed in this project.',
-                'Install via Composer',
-                'Cancel'
+                t('package.missing'),
+                installLabel,
+                t('common.cancel')
             );
-            if (action === 'Install via Composer') {
+            if (action === installLabel) {
                 const terminal = vscode.window.createTerminal({
                     name: 'Laravel API Generator',
                     cwd: check.root,

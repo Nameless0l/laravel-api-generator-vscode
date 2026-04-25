@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { LaravelDetector } from '../services/laravelDetector';
 import { ArtisanRunner } from '../services/artisanRunner';
 import { EntityTreeItem } from '../providers/entityTreeProvider';
+import { t } from '../i18n';
 
 export function registerDeleteCommand(onDidDelete: () => void): vscode.Disposable {
     return vscode.commands.registerCommand(
@@ -16,7 +17,7 @@ export function registerDeleteCommand(onDidDelete: () => void): vscode.Disposabl
 
             if (!entityName) {
                 entityName = await vscode.window.showInputBox({
-                    prompt: 'Enter the entity name to delete',
+                    prompt: t('delete.promptName'),
                     placeHolder: 'e.g. Product',
                 });
             }
@@ -25,13 +26,14 @@ export function registerDeleteCommand(onDidDelete: () => void): vscode.Disposabl
                 return;
             }
 
+            const deleteLabel = t('delete.deleteAction');
             const confirm = await vscode.window.showWarningMessage(
-                `Delete all files for "${entityName}"? This cannot be undone.`,
+                t('delete.confirm', entityName),
                 { modal: true },
-                'Delete'
+                deleteLabel
             );
 
-            if (confirm !== 'Delete') {
+            if (confirm !== deleteLabel) {
                 return;
             }
 
@@ -39,11 +41,11 @@ export function registerDeleteCommand(onDidDelete: () => void): vscode.Disposabl
             const result = await artisan.delete(entityName);
 
             if (result.success) {
-                vscode.window.showInformationMessage(`"${entityName}" API deleted successfully.`);
+                vscode.window.showInformationMessage(t('delete.success', entityName));
                 onDidDelete();
             } else {
                 vscode.window.showErrorMessage(
-                    `Failed to delete "${entityName}": ${result.errors.join(', ')}`
+                    t('delete.failed', entityName, result.errors.join(', '))
                 );
             }
         }
