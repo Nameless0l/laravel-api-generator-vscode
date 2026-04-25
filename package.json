@@ -2,7 +2,7 @@
   "name": "laravel-api-generator",
   "displayName": "Laravel API Generator",
   "description": "Generate complete REST APIs for Laravel with a visual interface",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "publisher": "Nameless0l",
   "license": "MIT",
   "icon": "media/icon-marketplace.png",
@@ -51,6 +51,12 @@
         "title": "Delete Full API",
         "category": "Laravel API Generator",
         "icon": "$(trash)"
+      },
+      {
+        "command": "laravelApiGenerator.regenerateFile",
+        "title": "Regenerate File(s)...",
+        "category": "Laravel API Generator",
+        "icon": "$(sync)"
       },
       {
         "command": "laravelApiGenerator.refresh",
@@ -103,9 +109,14 @@
     "menus": {
       "view/item/context": [
         {
+          "command": "laravelApiGenerator.regenerateFile",
+          "when": "view == laravelApiGenerator.entities && viewItem == entity",
+          "group": "inline@1"
+        },
+        {
           "command": "laravelApiGenerator.delete",
           "when": "view == laravelApiGenerator.entities && viewItem == entity",
-          "group": "inline"
+          "group": "inline@2"
         }
       ],
       "view/title": [

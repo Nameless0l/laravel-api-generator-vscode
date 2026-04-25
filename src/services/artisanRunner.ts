@@ -71,6 +71,43 @@ export class ArtisanRunner {
     }
 
     /**
+     * List user-facing tables in the project's database.
+     */
+    async introspectTables(): Promise<ArtisanResult> {
+        return this.run(['artisan', 'api-generator:introspect']);
+    }
+
+    /**
+     * Describe one table (columns, types, soft_deletes flag).
+     */
+    async introspectTable(tableName: string): Promise<ArtisanResult> {
+        return this.run(['artisan', 'api-generator:introspect', `--table=${tableName}`]);
+    }
+
+    /**
+     * Regenerate one or more artifacts of an existing entity.
+     * Requires the entity's migration to exist so we can rebuild the field list.
+     */
+    async regenerate(
+        entityName: string,
+        types: string[],
+        fields: string,
+        softDeletes: boolean
+    ): Promise<ArtisanResult> {
+        const args = [
+            'artisan',
+            'make:fullapi',
+            entityName,
+            `--fields=${fields}`,
+            `--only=${types.join(',')}`,
+        ];
+        if (softDeletes) {
+            args.push('--soft-deletes');
+        }
+        return this.run(args);
+    }
+
+    /**
      * Check if a Laravel server is reachable on the given port.
      */
     private checkServerRunning(port: number): Promise<boolean> {
