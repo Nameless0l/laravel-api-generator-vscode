@@ -3,6 +3,7 @@ import { LaravelDetector } from '../services/laravelDetector';
 import { ArtisanRunner } from '../services/artisanRunner';
 import { MigrationIntrospector } from '../services/migrationIntrospector';
 import { EntityTreeItem } from '../providers/entityTreeProvider';
+import { t } from '../i18n';
 
 interface RegenerableType {
     label: string;
@@ -36,7 +37,7 @@ export function registerRegenerateFileCommand(onDidRegenerate: () => void): vsco
             let entityName = item?.entityName;
             if (!entityName) {
                 entityName = await vscode.window.showInputBox({
-                    prompt: 'Entity name to regenerate',
+                    prompt: t('regenerate.promptName'),
                     placeHolder: 'e.g. Article',
                 });
             }
@@ -48,29 +49,25 @@ export function registerRegenerateFileCommand(onDidRegenerate: () => void): vsco
             const schema = introspector.introspect(entityName);
 
             if (!schema) {
-                vscode.window.showErrorMessage(
-                    `No migration found for "${entityName}". Cannot regenerate without the schema.`
-                );
+                vscode.window.showErrorMessage(t('regenerate.noMigration', entityName));
                 return;
             }
 
             if (schema.fields.length === 0) {
-                vscode.window.showWarningMessage(
-                    `Migration for "${entityName}" was found but no fields could be parsed.`
-                );
+                vscode.window.showWarningMessage(t('regenerate.noFields', entityName));
                 return;
             }
 
             const picks = await vscode.window.showQuickPick(
-                REGENERABLE_TYPES.map((t) => ({
-                    label: t.label,
-                    description: t.description.replace('{Name}', entityName!),
-                    artisanType: t.artisanType,
+                REGENERABLE_TYPES.map((rt) => ({
+                    label: rt.label,
+                    description: rt.description.replace('{Name}', entityName!),
+                    artisanType: rt.artisanType,
                 })),
                 {
                     canPickMany: true,
-                    placeHolder: `Select files to regenerate for "${entityName}"`,
-                    title: 'Regenerate Files',
+                    placeHolder: t('regenerate.pickPlaceholder', entityName),
+                    title: t('regenerate.pickTitle'),
                 }
             );
 
@@ -83,13 +80,14 @@ export function registerRegenerateFileCommand(onDidRegenerate: () => void): vsco
                 .map((f) => `${f.name}:${f.type}`)
                 .join(',');
 
+            const regenerateLabel = t('regenerate.regenerateAction');
             const confirm = await vscode.window.showWarningMessage(
-                `Regenerate ${picks.length} file(s) for "${entityName}"? Existing files will be overwritten.`,
+                t('regenerate.confirm', picks.length, entityName),
                 { modal: true },
-                'Regenerate'
+                regenerateLabel
             );
 
-            if (confirm !== 'Regenerate') {
+            if (confirm !== regenerateLabel) {
                 return;
             }
 
@@ -103,12 +101,12 @@ export function registerRegenerateFileCommand(onDidRegenerate: () => void): vsco
 
             if (result.success) {
                 vscode.window.showInformationMessage(
-                    `Regenerated ${picks.length} file(s) for "${entityName}".`
+                    t('regenerate.success', picks.length, entityName)
                 );
                 onDidRegenerate();
             } else {
                 vscode.window.showErrorMessage(
-                    `Failed to regenerate: ${result.errors.join(', ') || result.output}`
+                    t('regenerate.failed', result.errors.join(', ') || result.output)
                 );
             }
         }

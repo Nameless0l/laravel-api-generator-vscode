@@ -8,6 +8,7 @@ import { EntityScanner } from '../services/entityScanner';
 import { StubPreview } from '../services/stubPreview';
 import { LaravelDetector } from '../services/laravelDetector';
 import { EntityConfig } from '../types';
+import { t, getLocaleData } from '../i18n';
 
 export class GeneratorPanel {
     public static currentPanel: GeneratorPanel | undefined;
@@ -26,7 +27,7 @@ export class GeneratorPanel {
         this.scanner = new EntityScanner(workspaceRoot);
 
         const nonce = crypto.randomBytes(16).toString('hex');
-        this.panel.webview.html = getWebviewContent(this.panel.webview, nonce);
+        this.panel.webview.html = getWebviewContent(this.panel.webview, nonce, getLocaleData());
 
         this.panel.webview.onDidReceiveMessage(
             (message) => this.handleMessage(message),
@@ -118,18 +119,18 @@ export class GeneratorPanel {
                 .slice(0, 5)
                 .map((f) => `  • ${path.relative(this.workspaceRoot, f.path)}`)
                 .join('\n');
-            const more = existingFiles.length > 5 ? `\n  ...and ${existingFiles.length - 5} more` : '';
+            const more = existingFiles.length > 5 ? t('generate.andMore', existingFiles.length - 5) : '';
+            const overwriteLabel = t('generate.overwrite');
             const choice = await vscode.window.showWarningMessage(
-                `"${config.name}" already exists. The following files will be overwritten:\n\n${fileList}${more}`,
+                t('generate.willOverwrite', config.name, fileList + more),
                 { modal: true },
-                'Overwrite',
-                'Cancel'
+                overwriteLabel
             );
-            if (choice !== 'Overwrite') {
+            if (choice !== overwriteLabel) {
                 this.panel.webview.postMessage({
                     type: 'generationResult',
                     success: false,
-                    output: 'Generation cancelled to avoid overwriting existing files.',
+                    output: t('generate.cancelledOverwrite'),
                     errors: [],
                 });
                 return;
@@ -137,13 +138,14 @@ export class GeneratorPanel {
         }
 
         if (config.options.auth && !LaravelDetector.isSanctumInstalled(this.workspaceRoot)) {
+            const installLabel = t('package.installViaComposer');
+            const noAuthLabel = t('package.generateWithoutAuth');
             const action = await vscode.window.showWarningMessage(
-                'Auth option requires Laravel Sanctum (laravel/sanctum) which is not installed in this project.',
-                'Install via Composer',
-                'Generate without Auth',
-                'Cancel'
+                t('package.sanctumMissing'),
+                installLabel,
+                noAuthLabel
             );
-            if (action === 'Install via Composer') {
+            if (action === installLabel) {
                 const terminal = vscode.window.createTerminal({
                     name: 'Laravel API Generator',
                     cwd: this.workspaceRoot,
@@ -153,18 +155,18 @@ export class GeneratorPanel {
                 this.panel.webview.postMessage({
                     type: 'generationResult',
                     success: false,
-                    output: 'Sanctum installation started. Re-run generation once it completes.',
+                    output: t('package.sanctumInstallStarted'),
                     errors: [],
                 });
                 return;
             }
-            if (action === 'Generate without Auth') {
+            if (action === noAuthLabel) {
                 config = { ...config, options: { ...config.options, auth: false } };
             } else {
                 this.panel.webview.postMessage({
                     type: 'generationResult',
                     success: false,
-                    output: 'Generation cancelled.',
+                    output: t('generate.cancelledOverwrite'),
                     errors: [],
                 });
                 return;
@@ -221,14 +223,16 @@ export class GeneratorPanel {
             .map((r) => `  • ${r.stub}.stub — missing {{${r.missing.join('}}, {{')}}}`)
             .join('\n');
 
+        const openLabel = t('generate.openStubsFolder');
+        const anywayLabel = t('generate.generateAnyway');
         const action = await vscode.window.showWarningMessage(
-            `Some customized stubs are missing required placeholders. Generation will produce broken code.\n\n${lines}`,
+            t('generate.stubsInvalidTitle', lines),
             { modal: true },
-            'Open Stubs Folder',
-            'Generate Anyway'
+            openLabel,
+            anywayLabel
         );
 
-        if (action === 'Open Stubs Folder') {
+        if (action === openLabel) {
             await vscode.commands.executeCommand(
                 'revealInExplorer',
                 vscode.Uri.file(
@@ -238,13 +242,13 @@ export class GeneratorPanel {
             this.panel.webview.postMessage({
                 type: 'generationResult',
                 success: false,
-                output: 'Generation cancelled. Fix the stubs and try again.',
+                output: t('generate.fixStubsCancelled'),
                 errors: [],
             });
             return true;
         }
 
-        if (action === 'Generate Anyway') {
+        if (action === anywayLabel) {
             return false;
         }
 
@@ -252,7 +256,7 @@ export class GeneratorPanel {
         this.panel.webview.postMessage({
             type: 'generationResult',
             success: false,
-            output: 'Generation cancelled due to invalid stubs.',
+            output: t('generate.stubsCancelled'),
             errors: [],
         });
         return true;
@@ -285,22 +289,22 @@ export class GeneratorPanel {
 
         const examplePath = path.join(this.workspaceRoot, '.env.example');
         const hasExample = fs.existsSync(examplePath);
+        const copyLabel = t('env.copyFromExample');
+        const cancelLabel = t('common.cancel');
 
         const choice = await vscode.window.showWarningMessage(
-            '.env file not found in this project. Database commands will fail without it.',
-            ...(hasExample ? ['Copy from .env.example', 'Cancel'] : ['Cancel'])
+            t('env.missing'),
+            ...(hasExample ? [copyLabel, cancelLabel] : [cancelLabel])
         );
 
-        if (choice === 'Copy from .env.example' && hasExample) {
+        if (choice === copyLabel && hasExample) {
             try {
                 fs.copyFileSync(examplePath, envPath);
-                vscode.window.showInformationMessage(
-                    '.env created from .env.example. Review your DB credentials before running migrations.'
-                );
+                vscode.window.showInformationMessage(t('env.createdFromExample'));
                 return true;
             } catch (e: unknown) {
                 const msg = e instanceof Error ? e.message : 'Unknown error';
-                vscode.window.showErrorMessage(`Failed to copy .env.example: ${msg}`);
+                vscode.window.showErrorMessage(t('env.copyFailed', msg));
                 return false;
             }
         }
@@ -315,7 +319,7 @@ export class GeneratorPanel {
                     this.panel.webview.postMessage({
                         type: 'actionResult',
                         success: false,
-                        output: 'Migration cancelled: .env file is required.',
+                        output: t('env.migrateCancelled'),
                     });
                     return;
                 }
@@ -326,7 +330,7 @@ export class GeneratorPanel {
                     this.panel.webview.postMessage({
                         type: 'actionResult',
                         success: false,
-                        output: 'Seed cancelled: .env file is required.',
+                        output: t('env.seedCancelled'),
                     });
                     return;
                 }
@@ -377,13 +381,16 @@ export class GeneratorPanel {
                 const alreadyPublished = fs.existsSync(stubsDir);
 
                 if (alreadyPublished) {
+                    const openLabel = t('stubs.openFolder');
+                    const resetLabel = t('stubs.resetToDefaults');
+                    const cancelLabel = t('common.cancel');
                     const choice = await vscode.window.showInformationMessage(
-                        'Stubs are already published. What do you want to do?',
-                        'Open Folder',
-                        'Reset to Defaults',
-                        'Cancel'
+                        t('stubs.alreadyPublished'),
+                        openLabel,
+                        resetLabel,
+                        cancelLabel
                     );
-                    if (choice === 'Open Folder') {
+                    if (choice === openLabel) {
                         await vscode.commands.executeCommand(
                             'revealInExplorer',
                             vscode.Uri.file(stubsDir)
@@ -391,21 +398,22 @@ export class GeneratorPanel {
                         this.panel.webview.postMessage({
                             type: 'actionResult',
                             success: true,
-                            output: 'Opened stubs folder.',
+                            output: t('stubs.openedFolder'),
                         });
                         return;
                     }
-                    if (choice === 'Reset to Defaults') {
+                    if (choice === resetLabel) {
+                        const resetActionLabel = t('stubs.reset');
                         const confirm = await vscode.window.showWarningMessage(
-                            'This will delete all your customized stubs and restore defaults. Continue?',
+                            t('stubs.resetConfirm'),
                             { modal: true },
-                            'Reset'
+                            resetActionLabel
                         );
-                        if (confirm !== 'Reset') {
+                        if (confirm !== resetActionLabel) {
                             this.panel.webview.postMessage({
                                 type: 'actionResult',
                                 success: true,
-                                output: 'Reset cancelled.',
+                                output: t('stubs.resetCancelled'),
                             });
                             return;
                         }
@@ -416,7 +424,7 @@ export class GeneratorPanel {
                             this.panel.webview.postMessage({
                                 type: 'actionResult',
                                 success: false,
-                                output: `Failed to delete stubs: ${msg}`,
+                                output: t('stubs.deleteFailed', msg),
                             });
                             return;
                         }
@@ -424,7 +432,7 @@ export class GeneratorPanel {
                         this.panel.webview.postMessage({
                             type: 'actionResult',
                             success: true,
-                            output: 'Cancelled.',
+                            output: t('stubs.cancelled'),
                         });
                         return;
                     }
@@ -442,20 +450,21 @@ export class GeneratorPanel {
                     success: result.success,
                     output: result.success
                         ? alreadyPublished
-                            ? 'Stubs reset to defaults.'
-                            : 'Stubs published to stubs/vendor/laravel-api-generator/. You can now edit them freely.'
+                            ? t('stubs.resetDone')
+                            : t('stubs.publishedDone')
                         : result.errors.join('\n'),
                 });
                 return;
             }
             case 'docs': {
                 if (!LaravelDetector.isScrambleInstalled(this.workspaceRoot)) {
+                    const installLabel = t('package.installViaComposer');
                     const action = await vscode.window.showWarningMessage(
-                        'Scramble (dedoc/scramble) is not installed. It is required to generate API documentation.',
-                        'Install via Composer',
-                        'Cancel'
+                        t('package.scrambleMissing'),
+                        installLabel,
+                        t('common.cancel')
                     );
-                    if (action === 'Install via Composer') {
+                    if (action === installLabel) {
                         const terminal = vscode.window.createTerminal({
                             name: 'Laravel API Generator',
                             cwd: this.workspaceRoot,
@@ -466,7 +475,7 @@ export class GeneratorPanel {
                     this.panel.webview.postMessage({
                         type: 'actionResult',
                         success: false,
-                        output: 'Scramble is not installed. Please install it first.',
+                        output: t('package.scrambleNotInstalled'),
                     });
                     return;
                 }
@@ -519,14 +528,14 @@ export class GeneratorPanel {
         };
 
         if (!(await this.ensureEnvReady())) {
-            finishLoading('Database introspection cancelled: .env file is required.', false);
+            finishLoading(t('env.dbImportCancelled'), false);
             return;
         }
 
         const tablesResult = await this.artisan.introspectTables();
         if (!tablesResult.success) {
             finishLoading(
-                `Could not list tables:\n${tablesResult.output || tablesResult.errors.join('\n')}`,
+                t('db.couldNotListTables', tablesResult.output || tablesResult.errors.join('\n')),
                 false
             );
             return;
@@ -537,18 +546,12 @@ export class GeneratorPanel {
             tables = JSON.parse(this.extractJson(tablesResult.output));
         } catch (e: unknown) {
             const msg = e instanceof Error ? e.message : 'Unknown error';
-            finishLoading(
-                `Could not parse tables JSON: ${msg}\n\nRaw output:\n${tablesResult.output}`,
-                false
-            );
+            finishLoading(t('db.couldNotParse', msg, tablesResult.output), false);
             return;
         }
 
         if (tables.length === 0) {
-            finishLoading(
-                'No user tables were found in the database. Run your migrations first.',
-                false
-            );
+            finishLoading(t('db.noTables'), false);
             return;
         }
 
@@ -556,33 +559,33 @@ export class GeneratorPanel {
         this.panel.webview.postMessage({ type: 'clearLoading', id: 'btnImportFromDb' });
 
         const tablePick = await vscode.window.showQuickPick(
-            tables.map((t) => ({
-                label: t.name,
-                description: `${t.columns} column(s)`,
-                tableName: t.name,
+            tables.map((tbl) => ({
+                label: tbl.name,
+                description: `${tbl.columns} column(s)`,
+                tableName: tbl.name,
             })),
             {
-                placeHolder: 'Pick a table to generate an API for',
-                title: 'Generate from existing table',
+                placeHolder: t('db.pickTablePlaceholder'),
+                title: t('db.pickTableTitle'),
             }
         );
 
         if (!tablePick) {
-            finishLoading('Database import cancelled.', true);
+            finishLoading(t('db.importCancelled'), true);
             return;
         }
 
         const detailResult = await vscode.window.withProgress(
             {
                 location: vscode.ProgressLocation.Notification,
-                title: `Reading schema for "${tablePick.tableName}"...`,
+                title: t('db.readingSchema', tablePick.tableName),
                 cancellable: false,
             },
             () => this.artisan.introspectTable(tablePick.tableName)
         );
 
         if (!detailResult.success) {
-            finishLoading(`Could not describe table:\n${detailResult.output}`, false);
+            finishLoading(t('db.couldNotDescribe', detailResult.output), false);
             return;
         }
 
@@ -595,10 +598,7 @@ export class GeneratorPanel {
             detail = JSON.parse(this.extractJson(detailResult.output));
         } catch (e: unknown) {
             const msg = e instanceof Error ? e.message : 'Unknown error';
-            finishLoading(
-                `Could not parse table description: ${msg}\n\nRaw output:\n${detailResult.output}`,
-                false
-            );
+            finishLoading(t('db.couldNotParseDescription', msg, detailResult.output), false);
             return;
         }
 

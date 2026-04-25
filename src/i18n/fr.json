@@ -1,0 +1,121 @@
+{
+  "common": {
+    "cancel": "Annuler",
+    "ok": "OK",
+    "yes": "Oui",
+    "no": "Non",
+    "loading": "Chargement..."
+  },
+  "package": {
+    "missing": "Le package Laravel API Generator n'est pas installé dans ce projet.",
+    "installViaComposer": "Installer via Composer",
+    "scrambleMissing": "Scramble (dedoc/scramble) n'est pas installé. Il est requis pour générer la documentation d'API.",
+    "scrambleNotInstalled": "Scramble n'est pas installé. Veuillez l'installer d'abord.",
+    "sanctumMissing": "L'option Auth nécessite Laravel Sanctum (laravel/sanctum) qui n'est pas installé dans ce projet.",
+    "generateWithoutAuth": "Générer sans Auth",
+    "sanctumInstallStarted": "Installation de Sanctum lancée. Relancez la génération une fois terminée."
+  },
+  "env": {
+    "missing": "Fichier .env introuvable dans ce projet. Les commandes de base de données échoueront sans lui.",
+    "copyFromExample": "Copier depuis .env.example",
+    "createdFromExample": ".env créé depuis .env.example. Vérifiez vos identifiants DB avant les migrations.",
+    "copyFailed": "Échec de la copie de .env.example : {0}",
+    "migrateCancelled": "Migration annulée : le fichier .env est requis.",
+    "seedCancelled": "Seed annulé : le fichier .env est requis.",
+    "dbImportCancelled": "Introspection de la base annulée : le fichier .env est requis."
+  },
+  "generate": {
+    "willOverwrite": "\"{0}\" existe déjà. Les fichiers suivants seront écrasés :\n\n{1}",
+    "andMore": "\n  ...et {0} de plus",
+    "overwrite": "Écraser",
+    "cancelledOverwrite": "Génération annulée pour éviter d'écraser des fichiers existants.",
+    "stubsInvalidTitle": "Certains stubs personnalisés n'ont pas les placeholders requis. La génération produira du code cassé.\n\n{0}",
+    "openStubsFolder": "Ouvrir le dossier de stubs",
+    "generateAnyway": "Générer quand même",
+    "fixStubsCancelled": "Génération annulée. Corrigez les stubs et réessayez.",
+    "stubsCancelled": "Génération annulée à cause de stubs invalides."
+  },
+  "stubs": {
+    "alreadyPublished": "Les stubs sont déjà publiés. Que voulez-vous faire ?",
+    "openFolder": "Ouvrir le dossier",
+    "resetToDefaults": "Réinitialiser aux valeurs par défaut",
+    "openedFolder": "Dossier de stubs ouvert.",
+    "resetConfirm": "Cela supprimera tous vos stubs personnalisés et restaurera les valeurs par défaut. Continuer ?",
+    "reset": "Réinitialiser",
+    "resetCancelled": "Réinitialisation annulée.",
+    "resetDone": "Stubs réinitialisés aux valeurs par défaut.",
+    "publishedDone": "Stubs publiés dans stubs/vendor/laravel-api-generator/. Vous pouvez maintenant les éditer librement.",
+    "deleteFailed": "Échec de la suppression des stubs : {0}",
+    "cancelled": "Annulé."
+  },
+  "regenerate": {
+    "promptName": "Nom de l'entité à régénérer",
+    "noMigration": "Aucune migration trouvée pour \"{0}\". Impossible de régénérer sans le schéma.",
+    "noFields": "Migration pour \"{0}\" trouvée mais aucun champ n'a pu être analysé.",
+    "pickPlaceholder": "Sélectionnez les fichiers à régénérer pour \"{0}\"",
+    "pickTitle": "Régénérer des fichiers",
+    "confirm": "Régénérer {0} fichier(s) pour \"{1}\" ? Les fichiers existants seront écrasés.",
+    "regenerateAction": "Régénérer",
+    "success": "{0} fichier(s) régénéré(s) pour \"{1}\".",
+    "failed": "Échec de la régénération : {0}"
+  },
+  "db": {
+    "couldNotListTables": "Impossible de lister les tables :\n{0}",
+    "couldNotParse": "Impossible d'analyser le JSON des tables : {0}\n\nSortie brute :\n{1}",
+    "noTables": "Aucune table utilisateur trouvée dans la base. Lancez d'abord vos migrations.",
+    "pickTablePlaceholder": "Choisissez une table pour générer une API",
+    "pickTableTitle": "Générer depuis une table existante",
+    "importCancelled": "Import depuis la base annulé.",
+    "readingSchema": "Lecture du schéma pour \"{0}\"...",
+    "couldNotDescribe": "Impossible de décrire la table :\n{0}",
+    "couldNotParseDescription": "Impossible d'analyser la description de la table : {0}\n\nSortie brute :\n{1}",
+    "imported": "\"{0}\" importé depuis la base avec {1} champ(s). Vérifiez puis cliquez sur Générer l'API."
+  },
+  "delete": {
+    "promptName": "Entrez le nom de l'entité à supprimer",
+    "confirm": "Supprimer tous les fichiers de \"{0}\" ? Cette action est irréversible.",
+    "deleteAction": "Supprimer",
+    "success": "API \"{0}\" supprimée avec succès.",
+    "failed": "Échec de la suppression de \"{0}\" : {1}"
+  },
+  "ui": {
+    "quickStart": "Démarrage rapide (preset)",
+    "quickStartHint": "— Choisissez un preset pour pré-remplir —",
+    "presets": {
+      "blogPost": "Article de blog",
+      "userProfile": "Profil utilisateur",
+      "product": "Produit e-commerce",
+      "comment": "Commentaire",
+      "task": "Tâche",
+      "article": "Article (avec Soft Deletes)"
+    },
+    "entityName": "Nom de l'entité (PascalCase)",
+    "entityNamePlaceholder": "ex. Product, BlogPost, UserProfile",
+    "fields": "Champs",
+    "fieldName": "nom du champ",
+    "addField": "+ Ajouter un champ",
+    "removeField": "Supprimer le champ",
+    "dragToReorder": "Glisser pour réordonner",
+    "options": "Options",
+    "optAuth": "Auth (Sanctum)",
+    "optPostman": "Collection Postman",
+    "optSoftDeletes": "Soft Deletes",
+    "generate": "Générer l'API",
+    "preview": "Aperçu des fichiers",
+    "importJson": "Importer JSON",
+    "importFromDb": "Importer depuis la base",
+    "reset": "Réinitialiser",
+    "filesToGenerate": "Fichiers à générer",
+    "quickActions": "Actions rapides",
+    "runMigrations": "Lancer les migrations",
+    "freshSeed": "Fresh + Seed",
+    "runTests": "Lancer les tests",
+    "listRoutes": "Lister les routes",
+    "openApiDocs": "Ouvrir la doc API",
+    "customizeStubs": "Personnaliser les stubs",
+    "readingDatabase": "Lecture de la base...",
+    "generating": "Génération...",
+    "starting": "Démarrage du serveur...",
+    "publishing": "Publication..."
+  }
+}

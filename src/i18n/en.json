@@ -1,0 +1,121 @@
+{
+  "common": {
+    "cancel": "Cancel",
+    "ok": "OK",
+    "yes": "Yes",
+    "no": "No",
+    "loading": "Loading..."
+  },
+  "package": {
+    "missing": "Laravel API Generator package is not installed in this project.",
+    "installViaComposer": "Install via Composer",
+    "scrambleMissing": "Scramble (dedoc/scramble) is not installed. It is required to generate API documentation.",
+    "scrambleNotInstalled": "Scramble is not installed. Please install it first.",
+    "sanctumMissing": "Auth option requires Laravel Sanctum (laravel/sanctum) which is not installed in this project.",
+    "generateWithoutAuth": "Generate without Auth",
+    "sanctumInstallStarted": "Sanctum installation started. Re-run generation once it completes."
+  },
+  "env": {
+    "missing": ".env file not found in this project. Database commands will fail without it.",
+    "copyFromExample": "Copy from .env.example",
+    "createdFromExample": ".env created from .env.example. Review your DB credentials before running migrations.",
+    "copyFailed": "Failed to copy .env.example: {0}",
+    "migrateCancelled": "Migration cancelled: .env file is required.",
+    "seedCancelled": "Seed cancelled: .env file is required.",
+    "dbImportCancelled": "Database introspection cancelled: .env file is required."
+  },
+  "generate": {
+    "willOverwrite": "\"{0}\" already exists. The following files will be overwritten:\n\n{1}",
+    "andMore": "\n  ...and {0} more",
+    "overwrite": "Overwrite",
+    "cancelledOverwrite": "Generation cancelled to avoid overwriting existing files.",
+    "stubsInvalidTitle": "Some customized stubs are missing required placeholders. Generation will produce broken code.\n\n{0}",
+    "openStubsFolder": "Open Stubs Folder",
+    "generateAnyway": "Generate Anyway",
+    "fixStubsCancelled": "Generation cancelled. Fix the stubs and try again.",
+    "stubsCancelled": "Generation cancelled due to invalid stubs."
+  },
+  "stubs": {
+    "alreadyPublished": "Stubs are already published. What do you want to do?",
+    "openFolder": "Open Folder",
+    "resetToDefaults": "Reset to Defaults",
+    "openedFolder": "Opened stubs folder.",
+    "resetConfirm": "This will delete all your customized stubs and restore defaults. Continue?",
+    "reset": "Reset",
+    "resetCancelled": "Reset cancelled.",
+    "resetDone": "Stubs reset to defaults.",
+    "publishedDone": "Stubs published to stubs/vendor/laravel-api-generator/. You can now edit them freely.",
+    "deleteFailed": "Failed to delete stubs: {0}",
+    "cancelled": "Cancelled."
+  },
+  "regenerate": {
+    "promptName": "Entity name to regenerate",
+    "noMigration": "No migration found for \"{0}\". Cannot regenerate without the schema.",
+    "noFields": "Migration for \"{0}\" was found but no fields could be parsed.",
+    "pickPlaceholder": "Select files to regenerate for \"{0}\"",
+    "pickTitle": "Regenerate Files",
+    "confirm": "Regenerate {0} file(s) for \"{1}\"? Existing files will be overwritten.",
+    "regenerateAction": "Regenerate",
+    "success": "Regenerated {0} file(s) for \"{1}\".",
+    "failed": "Failed to regenerate: {0}"
+  },
+  "db": {
+    "couldNotListTables": "Could not list tables:\n{0}",
+    "couldNotParse": "Could not parse tables JSON: {0}\n\nRaw output:\n{1}",
+    "noTables": "No user tables were found in the database. Run your migrations first.",
+    "pickTablePlaceholder": "Pick a table to generate an API for",
+    "pickTableTitle": "Generate from existing table",
+    "importCancelled": "Database import cancelled.",
+    "readingSchema": "Reading schema for \"{0}\"...",
+    "couldNotDescribe": "Could not describe table:\n{0}",
+    "couldNotParseDescription": "Could not parse table description: {0}\n\nRaw output:\n{1}",
+    "imported": "Imported \"{0}\" from database with {1} field(s). Review and click Generate API."
+  },
+  "delete": {
+    "promptName": "Enter the entity name to delete",
+    "confirm": "Delete all files for \"{0}\"? This cannot be undone.",
+    "deleteAction": "Delete",
+    "success": "\"{0}\" API deleted successfully.",
+    "failed": "Failed to delete \"{0}\": {1}"
+  },
+  "ui": {
+    "quickStart": "Quick Start (preset)",
+    "quickStartHint": "— Choose a preset to autofill —",
+    "presets": {
+      "blogPost": "Blog Post",
+      "userProfile": "User Profile",
+      "product": "E-commerce Product",
+      "comment": "Comment",
+      "task": "Task",
+      "article": "Article (with Soft Deletes)"
+    },
+    "entityName": "Entity Name (PascalCase)",
+    "entityNamePlaceholder": "e.g. Product, BlogPost, UserProfile",
+    "fields": "Fields",
+    "fieldName": "field name",
+    "addField": "+ Add Field",
+    "removeField": "Remove field",
+    "dragToReorder": "Drag to reorder",
+    "options": "Options",
+    "optAuth": "Auth (Sanctum)",
+    "optPostman": "Postman Collection",
+    "optSoftDeletes": "Soft Deletes",
+    "generate": "Generate API",
+    "preview": "Preview Files",
+    "importJson": "Import JSON",
+    "importFromDb": "Import from Database",
+    "reset": "Reset",
+    "filesToGenerate": "Files to generate",
+    "quickActions": "Quick Actions",
+    "runMigrations": "Run Migrations",
+    "freshSeed": "Fresh + Seed",
+    "runTests": "Run Tests",
+    "listRoutes": "List Routes",
+    "openApiDocs": "Open API Docs",
+    "customizeStubs": "Customize Stubs",
+    "readingDatabase": "Reading database...",
+    "generating": "Generating...",
+    "starting": "Starting Server...",
+    "publishing": "Publishing..."
+  }
+}
