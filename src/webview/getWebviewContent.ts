@@ -381,6 +381,12 @@ export function getWebviewContent(
     </div>
 
     <div class="section">
+        <h2>Relationships</h2>
+        <div id="relationsContainer"></div>
+        <button class="btn btn-add" id="btnAddRelation">+ Add Relationship</button>
+    </div>
+
+    <div class="section">
         <h2>${L.options}</h2>
         <div class="options">
             <div class="option-item">
@@ -402,6 +408,7 @@ export function getWebviewContent(
         <button class="btn btn-primary" id="btnGenerate">${L.generate}</button>
         <button class="btn btn-secondary" id="btnPreview">${L.preview}</button>
         <button class="btn btn-secondary" id="btnImportJson">${L.importJson}</button>
+        <button class="btn btn-secondary" id="btnImportOpenApi">Import OpenAPI</button>
         <button class="btn btn-secondary" id="btnImportFromDb">${L.importFromDb}</button>
         <button class="btn btn-danger" id="btnReset">${L.reset}</button>
     </div>
@@ -495,6 +502,44 @@ export function getWebviewContent(
                 container.appendChild(row);
             }
 
+            var REL_TYPES = ['belongsTo', 'hasMany', 'hasOne', 'belongsToMany'];
+
+            function addRelation(type, target, role) {
+                const container = document.getElementById('relationsContainer');
+                const row = document.createElement('div');
+                row.className = 'field-row';
+
+                const typeSelect = document.createElement('select');
+                typeSelect.className = 'rel-type';
+                typeSelect.innerHTML = REL_TYPES.map(function(t) {
+                    return '<option value="' + t + '">' + t + '</option>';
+                }).join('');
+                if (type) { typeSelect.value = type; }
+
+                const targetInput = document.createElement('input');
+                targetInput.type = 'text';
+                targetInput.className = 'rel-target';
+                targetInput.placeholder = 'Target Model (e.g. Author)';
+                targetInput.value = target || '';
+
+                const roleInput = document.createElement('input');
+                roleInput.type = 'text';
+                roleInput.className = 'rel-role';
+                roleInput.placeholder = 'method name (optional)';
+                roleInput.value = role || '';
+
+                const removeBtn = document.createElement('button');
+                removeBtn.textContent = '\\u00D7';
+                removeBtn.title = 'Remove relationship';
+                removeBtn.addEventListener('click', function() { row.remove(); });
+
+                row.appendChild(typeSelect);
+                row.appendChild(targetInput);
+                row.appendChild(roleInput);
+                row.appendChild(removeBtn);
+                container.appendChild(row);
+            }
+
             function getConfig() {
                 const nameEl = document.getElementById('entityName');
                 const name = nameEl ? nameEl.value.trim() : '';
@@ -512,9 +557,26 @@ export function getWebviewContent(
                 const authEl = document.getElementById('optAuth');
                 const postmanEl = document.getElementById('optPostman');
                 const softDeletesEl = document.getElementById('optSoftDeletes');
+
+                const relationships = [];
+                document.querySelectorAll('#relationsContainer .field-row').forEach(function(r) {
+                    const tEl = r.querySelector('.rel-type');
+                    const targetEl = r.querySelector('.rel-target');
+                    const roleEl = r.querySelector('.rel-role');
+                    const target = targetEl ? targetEl.value.trim() : '';
+                    if (target) {
+                        relationships.push({
+                            type: tEl ? tEl.value : 'belongsTo',
+                            target: target,
+                            role: roleEl ? roleEl.value.trim() : '',
+                        });
+                    }
+                });
+
                 return {
                     name: name,
                     fields: fields,
+                    relationships: relationships,
                     options: {
                         auth: authEl ? authEl.checked : false,
                         postman: postmanEl ? postmanEl.checked : false,
@@ -597,6 +659,7 @@ export function getWebviewContent(
             document.getElementById('btnReset').addEventListener('click', function() {
                 document.getElementById('entityName').value = '';
                 document.getElementById('fieldsContainer').innerHTML = '';
+                document.getElementById('relationsContainer').innerHTML = '';
                 document.getElementById('optAuth').checked = false;
                 document.getElementById('optPostman').checked = false;
                 document.getElementById('optSoftDeletes').checked = false;
@@ -689,9 +752,18 @@ export function getWebviewContent(
                 e.target.value = '';
             });
 
+            // Relationships
+            document.getElementById('btnAddRelation').addEventListener('click', function() {
+                addRelation();
+            });
+
             // JSON Import
             document.getElementById('btnImportJson').addEventListener('click', function() {
                 vscode.postMessage({ type: 'importJson' });
+            });
+
+            document.getElementById('btnImportOpenApi').addEventListener('click', function() {
+                vscode.postMessage({ type: 'importOpenApi' });
             });
 
             // Database Import
