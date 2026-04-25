@@ -349,6 +349,7 @@ export function getWebviewContent(webview: vscode.Webview, nonce: string): strin
             <button class="btn-action" id="btnTest"><span class="icon">&#10003;</span> Run Tests</button>
             <button class="btn-action" id="btnRoutes"><span class="icon">&#9776;</span> List Routes</button>
             <button class="btn-action" id="btnDocs"><span class="icon">&#9741;</span> Open API Docs</button>
+            <button class="btn-action" id="btnPublishStubs"><span class="icon">&#9998;</span> Customize Stubs</button>
         </div>
     </div>
 
@@ -450,7 +451,7 @@ export function getWebviewContent(webview: vscode.Webview, nonce: string): strin
             }
 
             function clearAllActionLoading() {
-                ['btnMigrate', 'btnSeed', 'btnTest', 'btnRoutes', 'btnDocs'].forEach(function(id) {
+                ['btnMigrate', 'btnSeed', 'btnTest', 'btnRoutes', 'btnDocs', 'btnPublishStubs'].forEach(function(id) {
                     clearLoading(id);
                 });
             }
@@ -551,6 +552,11 @@ export function getWebviewContent(webview: vscode.Webview, nonce: string): strin
             document.getElementById('btnDocs').addEventListener('click', function() {
                 setLoading('btnDocs', 'Starting Server...');
                 vscode.postMessage({ type: 'action', action: 'docs' });
+            });
+
+            document.getElementById('btnPublishStubs').addEventListener('click', function() {
+                setLoading('btnPublishStubs', 'Publishing...');
+                vscode.postMessage({ type: 'action', action: 'publishStubs' });
             });
 
             // === VALIDATION ===

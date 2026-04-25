@@ -16,6 +16,10 @@ export class LaravelDetector {
         return this.hasComposerPackage(workspaceRoot, 'dedoc/scramble');
     }
 
+    static isSanctumInstalled(workspaceRoot: string): boolean {
+        return this.hasComposerPackage(workspaceRoot, 'laravel/sanctum');
+    }
+
     private static hasComposerPackage(workspaceRoot: string, packageName: string): boolean {
         const composerPath = path.join(workspaceRoot, 'composer.json');
         if (!fs.existsSync(composerPath)) {

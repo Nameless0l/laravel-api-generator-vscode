@@ -66,6 +66,10 @@ export class ArtisanRunner {
         return this.run(['artisan', 'route:list', '--path=api']);
     }
 
+    async publishStubs(): Promise<ArtisanResult> {
+        return this.run(['artisan', 'vendor:publish', '--tag=api-generator-stubs', '--force']);
+    }
+
     /**
      * Check if a Laravel server is reachable on the given port.
      */
