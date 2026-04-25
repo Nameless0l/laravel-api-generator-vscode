@@ -5,6 +5,7 @@ import { registerGenerateCommand } from './commands/generateApi';
 import { registerDeleteCommand } from './commands/deleteApi';
 import { registerGoToRelatedCommand } from './commands/goToRelated';
 import { registerDiagramCommand } from './commands/showDiagram';
+import { registerRegenerateFileCommand } from './commands/regenerateFile';
 
 export function activate(context: vscode.ExtensionContext): void {
     const root = LaravelDetector.getWorkspaceRoot();
@@ -23,6 +24,7 @@ export function activate(context: vscode.ExtensionContext): void {
     context.subscriptions.push(
         registerGenerateCommand(refresh),
         registerDeleteCommand(refresh),
+        registerRegenerateFileCommand(refresh),
         registerGoToRelatedCommand(),
         registerDiagramCommand(),
         vscode.commands.registerCommand('laravelApiGenerator.refresh', refresh)

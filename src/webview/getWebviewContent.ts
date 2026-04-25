@@ -328,6 +328,7 @@ export function getWebviewContent(webview: vscode.Webview, nonce: string): strin
         <button class="btn btn-primary" id="btnGenerate">Generate API</button>
         <button class="btn btn-secondary" id="btnPreview">Preview Files</button>
         <button class="btn btn-secondary" id="btnImportJson">Import JSON</button>
+        <button class="btn btn-secondary" id="btnImportFromDb">Import from Database</button>
         <button class="btn btn-danger" id="btnReset">Reset</button>
     </div>
 
@@ -451,7 +452,7 @@ export function getWebviewContent(webview: vscode.Webview, nonce: string): strin
             }
 
             function clearAllActionLoading() {
-                ['btnMigrate', 'btnSeed', 'btnTest', 'btnRoutes', 'btnDocs', 'btnPublishStubs'].forEach(function(id) {
+                ['btnMigrate', 'btnSeed', 'btnTest', 'btnRoutes', 'btnDocs', 'btnPublishStubs', 'btnImportFromDb'].forEach(function(id) {
                     clearLoading(id);
                 });
             }
@@ -517,6 +518,12 @@ export function getWebviewContent(webview: vscode.Webview, nonce: string): strin
             // JSON Import
             document.getElementById('btnImportJson').addEventListener('click', function() {
                 vscode.postMessage({ type: 'importJson' });
+            });
+
+            // Database Import
+            document.getElementById('btnImportFromDb').addEventListener('click', function() {
+                setLoading('btnImportFromDb', 'Reading database...');
+                vscode.postMessage({ type: 'action', action: 'importFromDb' });
             });
 
             document.getElementById('btnGenerateJson').addEventListener('click', function() {
@@ -729,6 +736,21 @@ export function getWebviewContent(webview: vscode.Webview, nonce: string): strin
                             document.getElementById('jsonPreviewSection').classList.add('hidden');
                         }
                         showOutput(msg.output, !msg.success);
+                        break;
+                    }
+                    case 'clearLoading': {
+                        if (msg.id) { clearLoading(msg.id); }
+                        break;
+                    }
+                    case 'dbImportResult': {
+                        clearLoading('btnImportFromDb');
+                        var ent = msg.entity;
+                        document.getElementById('entityName').value = ent.name;
+                        document.getElementById('fieldsContainer').innerHTML = '';
+                        ent.fields.forEach(function(f) { addField(f.name, f.type); });
+                        var sd = document.getElementById('optSoftDeletes');
+                        if (sd) { sd.checked = !!ent.softDeletes; }
+                        showOutput('Imported "' + ent.name + '" from database with ' + ent.fields.length + ' field(s). Review and click Generate API.', false);
                         break;
                     }
                     case 'entityExistsResult': {

@@ -280,6 +280,10 @@ export class GeneratorPanel {
                     this.onDidGenerate();
                 }
                 return;
+            case 'importFromDb': {
+                await this.handleImportFromDb();
+                return;
+            }
             case 'publishStubs': {
                 const stubsDir = path.join(
                     this.workspaceRoot,
@@ -420,6 +424,148 @@ export class GeneratorPanel {
             type: 'previewResult',
             files,
         });
+    }
+
+    private async handleImportFromDb(): Promise<void> {
+        const finishLoading = (output: string, success: boolean): void => {
+            this.panel.webview.postMessage({
+                type: 'actionResult',
+                success,
+                output,
+            });
+        };
+
+        if (!(await this.ensureEnvReady())) {
+            finishLoading('Database introspection cancelled: .env file is required.', false);
+            return;
+        }
+
+        const tablesResult = await this.artisan.introspectTables();
+        if (!tablesResult.success) {
+            finishLoading(
+                `Could not list tables:\n${tablesResult.output || tablesResult.errors.join('\n')}`,
+                false
+            );
+            return;
+        }
+
+        let tables: Array<{ name: string; columns: number }>;
+        try {
+            tables = JSON.parse(this.extractJson(tablesResult.output));
+        } catch (e: unknown) {
+            const msg = e instanceof Error ? e.message : 'Unknown error';
+            finishLoading(
+                `Could not parse tables JSON: ${msg}\n\nRaw output:\n${tablesResult.output}`,
+                false
+            );
+            return;
+        }
+
+        if (tables.length === 0) {
+            finishLoading(
+                'No user tables were found in the database. Run your migrations first.',
+                false
+            );
+            return;
+        }
+
+        // Stop the button spinner now — we're handing control to the QuickPick UI
+        this.panel.webview.postMessage({ type: 'clearLoading', id: 'btnImportFromDb' });
+
+        const tablePick = await vscode.window.showQuickPick(
+            tables.map((t) => ({
+                label: t.name,
+                description: `${t.columns} column(s)`,
+                tableName: t.name,
+            })),
+            {
+                placeHolder: 'Pick a table to generate an API for',
+                title: 'Generate from existing table',
+            }
+        );
+
+        if (!tablePick) {
+            finishLoading('Database import cancelled.', true);
+            return;
+        }
+
+        const detailResult = await vscode.window.withProgress(
+            {
+                location: vscode.ProgressLocation.Notification,
+                title: `Reading schema for "${tablePick.tableName}"...`,
+                cancellable: false,
+            },
+            () => this.artisan.introspectTable(tablePick.tableName)
+        );
+
+        if (!detailResult.success) {
+            finishLoading(`Could not describe table:\n${detailResult.output}`, false);
+            return;
+        }
+
+        let detail: {
+            table: string;
+            columns: Array<{ name: string; type: string; nullable: boolean }>;
+            soft_deletes: boolean;
+        };
+        try {
+            detail = JSON.parse(this.extractJson(detailResult.output));
+        } catch (e: unknown) {
+            const msg = e instanceof Error ? e.message : 'Unknown error';
+            finishLoading(
+                `Could not parse table description: ${msg}\n\nRaw output:\n${detailResult.output}`,
+                false
+            );
+            return;
+        }
+
+        const entityName = this.tableToEntityName(detail.table);
+        this.panel.webview.postMessage({
+            type: 'dbImportResult',
+            entity: {
+                name: entityName,
+                fields: detail.columns.map((c) => ({ name: c.name, type: c.type })),
+                softDeletes: detail.soft_deletes,
+            },
+        });
+    }
+
+    /**
+     * Pull the JSON document out of artisan output (which can include log noise).
+     */
+    private extractJson(raw: string): string {
+        const start = raw.indexOf('[');
+        const startObj = raw.indexOf('{');
+        const first =
+            start === -1 ? startObj : startObj === -1 ? start : Math.min(start, startObj);
+        if (first === -1) {
+            return raw.trim();
+        }
+        return raw.slice(first).trim();
+    }
+
+    /**
+     * users -> User, blog_posts -> BlogPost, categories -> Category
+     */
+    private tableToEntityName(table: string): string {
+        const singular = this.singularize(table);
+        return singular
+            .split('_')
+            .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+            .join('');
+    }
+
+    private singularize(word: string): string {
+        if (word.endsWith('ies')) {
+            return word.slice(0, -3) + 'y';
+        }
+        if (word.endsWith('ses') || word.endsWith('xes') || word.endsWith('shes') || word.endsWith('ches')) {
+            return word.slice(0, -2);
+        }
+        if (word.endsWith('s') && !word.endsWith('ss')) {
+            return word.slice(0, -1);
+        }
+        return word;
     }
 
     private async handleImportJson(): Promise<void> {
