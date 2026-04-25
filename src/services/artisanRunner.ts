@@ -85,6 +85,13 @@ export class ArtisanRunner {
     }
 
     /**
+     * Validate that user-published stubs still contain the required placeholders.
+     */
+    async validateStubs(): Promise<ArtisanResult> {
+        return this.run(['artisan', 'api-generator:validate-stubs', '--json']);
+    }
+
+    /**
      * Regenerate one or more artifacts of an existing entity.
      * Requires the entity's migration to exist so we can rebuild the field list.
      */

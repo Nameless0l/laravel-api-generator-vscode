@@ -96,6 +96,19 @@ export class GeneratorPanel {
     }
 
     private async handleGenerate(config: EntityConfig): Promise<void> {
+        const stubsDir = path.join(
+            this.workspaceRoot,
+            'stubs',
+            'vendor',
+            'laravel-api-generator'
+        );
+        if (fs.existsSync(stubsDir)) {
+            const cancelled = await this.checkCustomStubsValid();
+            if (cancelled) {
+                return;
+            }
+        }
+
         const existingFiles = this.scanner
             .getEntityFiles(config.name)
             .filter((f) => f.exists);
@@ -173,6 +186,76 @@ export class GeneratorPanel {
                 this.onDidGenerate();
             }
         }
+    }
+
+    /**
+     * Run api-generator:validate-stubs and warn the user if any customized
+     * stub is missing required placeholders. Returns true when the user
+     * decides to abort the generation.
+     */
+    private async checkCustomStubsValid(): Promise<boolean> {
+        const result = await this.artisan.validateStubs();
+        if (!result.success && !result.output) {
+            return false;
+        }
+
+        let payload: {
+            status: string;
+            message: string;
+            results: Array<{ stub: string; status: string; missing: string[] }>;
+        };
+        try {
+            const raw = result.output.trim();
+            const start = raw.indexOf('{');
+            payload = JSON.parse(start >= 0 ? raw.slice(start) : raw);
+        } catch {
+            return false;
+        }
+
+        if (payload.status !== 'invalid') {
+            return false;
+        }
+
+        const broken = payload.results.filter((r) => r.status === 'invalid');
+        const lines = broken
+            .map((r) => `  • ${r.stub}.stub — missing {{${r.missing.join('}}, {{')}}}`)
+            .join('\n');
+
+        const action = await vscode.window.showWarningMessage(
+            `Some customized stubs are missing required placeholders. Generation will produce broken code.\n\n${lines}`,
+            { modal: true },
+            'Open Stubs Folder',
+            'Generate Anyway'
+        );
+
+        if (action === 'Open Stubs Folder') {
+            await vscode.commands.executeCommand(
+                'revealInExplorer',
+                vscode.Uri.file(
+                    path.join(this.workspaceRoot, 'stubs', 'vendor', 'laravel-api-generator')
+                )
+            );
+            this.panel.webview.postMessage({
+                type: 'generationResult',
+                success: false,
+                output: 'Generation cancelled. Fix the stubs and try again.',
+                errors: [],
+            });
+            return true;
+        }
+
+        if (action === 'Generate Anyway') {
+            return false;
+        }
+
+        // undefined = user pressed the modal Cancel / Esc
+        this.panel.webview.postMessage({
+            type: 'generationResult',
+            success: false,
+            output: 'Generation cancelled due to invalid stubs.',
+            errors: [],
+        });
+        return true;
     }
 
     private async openGeneratedFiles(entityName: string): Promise<void> {
