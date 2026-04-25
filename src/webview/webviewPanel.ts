@@ -96,6 +96,68 @@ export class GeneratorPanel {
     }
 
     private async handleGenerate(config: EntityConfig): Promise<void> {
+        const existingFiles = this.scanner
+            .getEntityFiles(config.name)
+            .filter((f) => f.exists);
+
+        if (existingFiles.length > 0) {
+            const fileList = existingFiles
+                .slice(0, 5)
+                .map((f) => `  • ${path.relative(this.workspaceRoot, f.path)}`)
+                .join('\n');
+            const more = existingFiles.length > 5 ? `\n  ...and ${existingFiles.length - 5} more` : '';
+            const choice = await vscode.window.showWarningMessage(
+                `"${config.name}" already exists. The following files will be overwritten:\n\n${fileList}${more}`,
+                { modal: true },
+                'Overwrite',
+                'Cancel'
+            );
+            if (choice !== 'Overwrite') {
+                this.panel.webview.postMessage({
+                    type: 'generationResult',
+                    success: false,
+                    output: 'Generation cancelled to avoid overwriting existing files.',
+                    errors: [],
+                });
+                return;
+            }
+        }
+
+        if (config.options.auth && !LaravelDetector.isSanctumInstalled(this.workspaceRoot)) {
+            const action = await vscode.window.showWarningMessage(
+                'Auth option requires Laravel Sanctum (laravel/sanctum) which is not installed in this project.',
+                'Install via Composer',
+                'Generate without Auth',
+                'Cancel'
+            );
+            if (action === 'Install via Composer') {
+                const terminal = vscode.window.createTerminal({
+                    name: 'Laravel API Generator',
+                    cwd: this.workspaceRoot,
+                });
+                terminal.sendText('composer require laravel/sanctum');
+                terminal.show();
+                this.panel.webview.postMessage({
+                    type: 'generationResult',
+                    success: false,
+                    output: 'Sanctum installation started. Re-run generation once it completes.',
+                    errors: [],
+                });
+                return;
+            }
+            if (action === 'Generate without Auth') {
+                config = { ...config, options: { ...config.options, auth: false } };
+            } else {
+                this.panel.webview.postMessage({
+                    type: 'generationResult',
+                    success: false,
+                    output: 'Generation cancelled.',
+                    errors: [],
+                });
+                return;
+            }
+        }
+
         const result = await this.artisan.generate(config);
 
         this.panel.webview.postMessage({
@@ -105,18 +167,86 @@ export class GeneratorPanel {
             errors: result.errors,
         });
 
-        if (result.success && this.onDidGenerate) {
-            this.onDidGenerate();
+        if (result.success) {
+            await this.openGeneratedFiles(config.name);
+            if (this.onDidGenerate) {
+                this.onDidGenerate();
+            }
         }
+    }
+
+    private async openGeneratedFiles(entityName: string): Promise<void> {
+        const candidates = [
+            path.join(this.workspaceRoot, 'app', 'Models', `${entityName}.php`),
+            path.join(this.workspaceRoot, 'app', 'Http', 'Controllers', `${entityName}Controller.php`),
+        ];
+
+        for (const filePath of candidates) {
+            if (!fs.existsSync(filePath)) {
+                continue;
+            }
+            try {
+                const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(filePath));
+                await vscode.window.showTextDocument(doc, { preview: false });
+            } catch {
+                // Silently skip if open fails
+            }
+        }
+    }
+
+    private async ensureEnvReady(): Promise<boolean> {
+        const envPath = path.join(this.workspaceRoot, '.env');
+        if (fs.existsSync(envPath)) {
+            return true;
+        }
+
+        const examplePath = path.join(this.workspaceRoot, '.env.example');
+        const hasExample = fs.existsSync(examplePath);
+
+        const choice = await vscode.window.showWarningMessage(
+            '.env file not found in this project. Database commands will fail without it.',
+            ...(hasExample ? ['Copy from .env.example', 'Cancel'] : ['Cancel'])
+        );
+
+        if (choice === 'Copy from .env.example' && hasExample) {
+            try {
+                fs.copyFileSync(examplePath, envPath);
+                vscode.window.showInformationMessage(
+                    '.env created from .env.example. Review your DB credentials before running migrations.'
+                );
+                return true;
+            } catch (e: unknown) {
+                const msg = e instanceof Error ? e.message : 'Unknown error';
+                vscode.window.showErrorMessage(`Failed to copy .env.example: ${msg}`);
+                return false;
+            }
+        }
+        return false;
     }
 
     private async handleAction(action: string): Promise<void> {
         let result;
         switch (action) {
             case 'migrate':
+                if (!(await this.ensureEnvReady())) {
+                    this.panel.webview.postMessage({
+                        type: 'actionResult',
+                        success: false,
+                        output: 'Migration cancelled: .env file is required.',
+                    });
+                    return;
+                }
                 result = await this.artisan.migrate();
                 break;
             case 'seed': {
+                if (!(await this.ensureEnvReady())) {
+                    this.panel.webview.postMessage({
+                        type: 'actionResult',
+                        success: false,
+                        output: 'Seed cancelled: .env file is required.',
+                    });
+                    return;
+                }
                 const confirm = await vscode.window.showWarningMessage(
                     'This will drop all tables and re-run all migrations + seeders. All existing data will be lost.',
                     { modal: true },
@@ -150,6 +280,87 @@ export class GeneratorPanel {
                     this.onDidGenerate();
                 }
                 return;
+            case 'publishStubs': {
+                const stubsDir = path.join(
+                    this.workspaceRoot,
+                    'stubs',
+                    'vendor',
+                    'laravel-api-generator'
+                );
+                const alreadyPublished = fs.existsSync(stubsDir);
+
+                if (alreadyPublished) {
+                    const choice = await vscode.window.showInformationMessage(
+                        'Stubs are already published. What do you want to do?',
+                        'Open Folder',
+                        'Reset to Defaults',
+                        'Cancel'
+                    );
+                    if (choice === 'Open Folder') {
+                        await vscode.commands.executeCommand(
+                            'revealInExplorer',
+                            vscode.Uri.file(stubsDir)
+                        );
+                        this.panel.webview.postMessage({
+                            type: 'actionResult',
+                            success: true,
+                            output: 'Opened stubs folder.',
+                        });
+                        return;
+                    }
+                    if (choice === 'Reset to Defaults') {
+                        const confirm = await vscode.window.showWarningMessage(
+                            'This will delete all your customized stubs and restore defaults. Continue?',
+                            { modal: true },
+                            'Reset'
+                        );
+                        if (confirm !== 'Reset') {
+                            this.panel.webview.postMessage({
+                                type: 'actionResult',
+                                success: true,
+                                output: 'Reset cancelled.',
+                            });
+                            return;
+                        }
+                        try {
+                            fs.rmSync(stubsDir, { recursive: true, force: true });
+                        } catch (e: unknown) {
+                            const msg = e instanceof Error ? e.message : 'Unknown error';
+                            this.panel.webview.postMessage({
+                                type: 'actionResult',
+                                success: false,
+                                output: `Failed to delete stubs: ${msg}`,
+                            });
+                            return;
+                        }
+                    } else {
+                        this.panel.webview.postMessage({
+                            type: 'actionResult',
+                            success: true,
+                            output: 'Cancelled.',
+                        });
+                        return;
+                    }
+                }
+
+                result = await this.artisan.publishStubs();
+                if (result.success) {
+                    await vscode.commands.executeCommand(
+                        'revealInExplorer',
+                        vscode.Uri.file(stubsDir)
+                    );
+                }
+                this.panel.webview.postMessage({
+                    type: 'actionResult',
+                    success: result.success,
+                    output: result.success
+                        ? alreadyPublished
+                            ? 'Stubs reset to defaults.'
+                            : 'Stubs published to stubs/vendor/laravel-api-generator/. You can now edit them freely.'
+                        : result.errors.join('\n'),
+                });
+                return;
+            }
             case 'docs': {
                 if (!LaravelDetector.isScrambleInstalled(this.workspaceRoot)) {
                     const action = await vscode.window.showWarningMessage(
