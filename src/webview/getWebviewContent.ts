@@ -59,6 +59,18 @@ export function getWebviewContent(webview: vscode.Webview, nonce: string): strin
             align-items: center;
             margin-bottom: 8px;
         }
+        .field-row.dragging {
+            opacity: 0.5;
+            background: var(--vscode-list-hoverBackground);
+        }
+        .drag-handle {
+            cursor: grab;
+            user-select: none;
+            color: var(--vscode-descriptionForeground);
+            padding: 0 4px;
+            font-size: 1.1em;
+        }
+        .drag-handle:active { cursor: grabbing; }
         .field-row input { flex: 2; }
         .field-row select { flex: 1; }
         .field-row button {
@@ -294,6 +306,19 @@ export function getWebviewContent(webview: vscode.Webview, nonce: string): strin
     <h1>Laravel API Generator</h1>
 
     <div class="section">
+        <label for="presetSelect">Quick Start (preset)</label>
+        <select id="presetSelect">
+            <option value="">— Choose a preset to autofill —</option>
+            <option value="blogPost">Blog Post</option>
+            <option value="userProfile">User Profile</option>
+            <option value="product">E-commerce Product</option>
+            <option value="comment">Comment</option>
+            <option value="task">Task</option>
+            <option value="article">Article (with Soft Deletes)</option>
+        </select>
+    </div>
+
+    <div class="section">
         <label for="entityName">Entity Name (PascalCase)</label>
         <input type="text" id="entityName" placeholder="e.g. Product, BlogPost, UserProfile" />
         <div id="entityNameError" class="validation-error"></div>
@@ -380,6 +405,12 @@ export function getWebviewContent(webview: vscode.Webview, nonce: string): strin
                 const container = document.getElementById('fieldsContainer');
                 const row = document.createElement('div');
                 row.className = 'field-row';
+                row.draggable = true;
+
+                const dragHandle = document.createElement('span');
+                dragHandle.className = 'drag-handle';
+                dragHandle.textContent = '\\u2630'; // hamburger / drag icon
+                dragHandle.title = 'Drag to reorder';
 
                 const nameInput = document.createElement('input');
                 nameInput.type = 'text';
@@ -399,6 +430,16 @@ export function getWebviewContent(webview: vscode.Webview, nonce: string): strin
                     row.remove();
                 });
 
+                // Drag and drop handlers
+                row.addEventListener('dragstart', function(e) {
+                    row.classList.add('dragging');
+                    if (e.dataTransfer) { e.dataTransfer.effectAllowed = 'move'; }
+                });
+                row.addEventListener('dragend', function() {
+                    row.classList.remove('dragging');
+                });
+
+                row.appendChild(dragHandle);
                 row.appendChild(nameInput);
                 row.appendChild(typeSelect);
                 row.appendChild(removeBtn);
@@ -515,6 +556,90 @@ export function getWebviewContent(webview: vscode.Webview, nonce: string): strin
                 addField();
             });
 
+            // Preset autofill
+            var PRESETS = {
+                blogPost: {
+                    name: 'BlogPost',
+                    fields: [
+                        { name: 'title', type: 'string' },
+                        { name: 'slug', type: 'string' },
+                        { name: 'excerpt', type: 'text' },
+                        { name: 'content', type: 'text' },
+                        { name: 'published_at', type: 'datetime' },
+                        { name: 'is_published', type: 'boolean' },
+                    ],
+                    softDeletes: false,
+                },
+                userProfile: {
+                    name: 'UserProfile',
+                    fields: [
+                        { name: 'name', type: 'string' },
+                        { name: 'email', type: 'string' },
+                        { name: 'phone', type: 'string' },
+                        { name: 'avatar', type: 'string' },
+                        { name: 'bio', type: 'text' },
+                        { name: 'birthdate', type: 'date' },
+                    ],
+                    softDeletes: false,
+                },
+                product: {
+                    name: 'Product',
+                    fields: [
+                        { name: 'name', type: 'string' },
+                        { name: 'sku', type: 'string' },
+                        { name: 'description', type: 'text' },
+                        { name: 'price', type: 'decimal' },
+                        { name: 'stock', type: 'integer' },
+                        { name: 'is_active', type: 'boolean' },
+                        { name: 'featured', type: 'boolean' },
+                    ],
+                    softDeletes: true,
+                },
+                comment: {
+                    name: 'Comment',
+                    fields: [
+                        { name: 'author_name', type: 'string' },
+                        { name: 'author_email', type: 'string' },
+                        { name: 'content', type: 'text' },
+                        { name: 'approved', type: 'boolean' },
+                    ],
+                    softDeletes: false,
+                },
+                task: {
+                    name: 'Task',
+                    fields: [
+                        { name: 'title', type: 'string' },
+                        { name: 'description', type: 'text' },
+                        { name: 'due_date', type: 'datetime' },
+                        { name: 'priority', type: 'integer' },
+                        { name: 'status', type: 'string' },
+                        { name: 'completed', type: 'boolean' },
+                    ],
+                    softDeletes: false,
+                },
+                article: {
+                    name: 'Article',
+                    fields: [
+                        { name: 'title', type: 'string' },
+                        { name: 'slug', type: 'string' },
+                        { name: 'content', type: 'text' },
+                        { name: 'views', type: 'integer' },
+                    ],
+                    softDeletes: true,
+                },
+            };
+
+            document.getElementById('presetSelect').addEventListener('change', function(e) {
+                var key = e.target.value;
+                if (!key || !PRESETS[key]) { return; }
+                var preset = PRESETS[key];
+                document.getElementById('entityName').value = preset.name;
+                document.getElementById('fieldsContainer').innerHTML = '';
+                preset.fields.forEach(function(f) { addField(f.name, f.type); });
+                document.getElementById('optSoftDeletes').checked = !!preset.softDeletes;
+                e.target.value = '';
+            });
+
             // JSON Import
             document.getElementById('btnImportJson').addEventListener('click', function() {
                 vscode.postMessage({ type: 'importJson' });
@@ -625,6 +750,32 @@ export function getWebviewContent(webview: vscode.Webview, nonce: string): strin
             document.getElementById('fieldsContainer').addEventListener('change', function() {
                 requestCodePreview();
             });
+
+            // Drag-and-drop reordering of fields
+            (function() {
+                var container = document.getElementById('fieldsContainer');
+                container.addEventListener('dragover', function(e) {
+                    e.preventDefault();
+                    var dragging = container.querySelector('.field-row.dragging');
+                    if (!dragging) { return; }
+                    var siblings = Array.prototype.slice.call(
+                        container.querySelectorAll('.field-row:not(.dragging)')
+                    );
+                    var next = siblings.find(function(sib) {
+                        var box = sib.getBoundingClientRect();
+                        return e.clientY < box.top + box.height / 2;
+                    });
+                    if (next) {
+                        container.insertBefore(dragging, next);
+                    } else {
+                        container.appendChild(dragging);
+                    }
+                });
+                container.addEventListener('drop', function(e) {
+                    e.preventDefault();
+                    requestCodePreview();
+                });
+            })();
 
             function highlightPhp(code) {
                 var s = code;
