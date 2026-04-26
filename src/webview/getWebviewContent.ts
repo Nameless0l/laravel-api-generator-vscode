@@ -30,6 +30,10 @@ interface LocaleData {
         importFromDb: string;
         reset: string;
         filesToGenerate: string;
+        filesSelector: string;
+        filesNote: string;
+        selectAll: string;
+        selectNone: string;
         quickActions: string;
         runMigrations: string;
         freshSeed: string;
@@ -37,6 +41,7 @@ interface LocaleData {
         listRoutes: string;
         openApiDocs: string;
         customizeStubs: string;
+        showSnippets: string;
         readingDatabase: string;
         generating: string;
         starting: string;
@@ -349,6 +354,25 @@ export function getWebviewContent(
             cursor: not-allowed;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
+        .files-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 4px 12px;
+            margin-bottom: 6px;
+        }
+        .files-grid .option-item {
+            font-size: 0.87em;
+        }
+        .files-note {
+            font-size: 0.78em;
+            color: var(--vscode-descriptionForeground);
+            margin-top: 2px;
+        }
+        .files-note a {
+            color: var(--vscode-textLink-foreground);
+            text-decoration: none;
+        }
+        .files-note a:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
@@ -405,6 +429,28 @@ export function getWebviewContent(
     </div>
 
     <div class="section">
+        <h2>${L.filesSelector}</h2>
+        <div class="files-grid">
+            <div class="option-item"><input type="checkbox" id="ft_Model" checked /><label for="ft_Model">Model</label></div>
+            <div class="option-item"><input type="checkbox" id="ft_Controller" checked /><label for="ft_Controller">Controller</label></div>
+            <div class="option-item"><input type="checkbox" id="ft_Service" checked /><label for="ft_Service">Service</label></div>
+            <div class="option-item"><input type="checkbox" id="ft_DTO" checked /><label for="ft_DTO">DTO</label></div>
+            <div class="option-item"><input type="checkbox" id="ft_Request" checked /><label for="ft_Request">Request</label></div>
+            <div class="option-item"><input type="checkbox" id="ft_Resource" checked /><label for="ft_Resource">Resource</label></div>
+            <div class="option-item"><input type="checkbox" id="ft_Policy" checked /><label for="ft_Policy">Policy</label></div>
+            <div class="option-item"><input type="checkbox" id="ft_Migration" checked /><label for="ft_Migration">Migration</label></div>
+            <div class="option-item"><input type="checkbox" id="ft_Factory" checked /><label for="ft_Factory">Factory</label></div>
+            <div class="option-item"><input type="checkbox" id="ft_Seeder" checked /><label for="ft_Seeder">Seeder</label></div>
+            <div class="option-item"><input type="checkbox" id="ft_FeatureTest" checked /><label for="ft_FeatureTest">Feature Test</label></div>
+            <div class="option-item"><input type="checkbox" id="ft_UnitTest" checked /><label for="ft_UnitTest">Unit Test</label></div>
+        </div>
+        <div class="files-note">
+            <a href="#" id="selectAllFiles">${L.selectAll}</a> / <a href="#" id="selectNoneFiles">${L.selectNone}</a>
+            &nbsp;·&nbsp; ${L.filesNote}
+        </div>
+    </div>
+
+    <div class="section">
         <button class="btn btn-primary" id="btnGenerate">${L.generate}</button>
         <button class="btn btn-secondary" id="btnPreview">${L.preview}</button>
         <button class="btn btn-secondary" id="btnImportJson">${L.importJson}</button>
@@ -432,6 +478,7 @@ export function getWebviewContent(
             <button class="btn-action" id="btnRoutes"><span class="icon">&#9776;</span> ${L.listRoutes}</button>
             <button class="btn-action" id="btnDocs"><span class="icon">&#9741;</span> ${L.openApiDocs}</button>
             <button class="btn-action" id="btnPublishStubs"><span class="icon">&#9998;</span> ${L.customizeStubs}</button>
+            <button class="btn-action" id="btnShowSnippets"><span class="icon">&#9783;</span> ${L.showSnippets}</button>
         </div>
     </div>
 
@@ -573,6 +620,13 @@ export function getWebviewContent(
                     }
                 });
 
+                var ALL_FILE_IDS = ['Model','Controller','Service','DTO','Request','Resource','Policy','Migration','Factory','Seeder','FeatureTest','UnitTest'];
+                var selectedTypes = ALL_FILE_IDS.filter(function(id) {
+                    var cb = document.getElementById('ft_' + id);
+                    return cb ? cb.checked : true;
+                });
+                var onlyTypes = (selectedTypes.length === ALL_FILE_IDS.length) ? undefined : selectedTypes;
+
                 return {
                     name: name,
                     fields: fields,
@@ -581,7 +635,8 @@ export function getWebviewContent(
                         auth: authEl ? authEl.checked : false,
                         postman: postmanEl ? postmanEl.checked : false,
                         softDeletes: softDeletesEl ? softDeletesEl.checked : false,
-                    }
+                    },
+                    onlyTypes: onlyTypes,
                 };
             }
 
@@ -604,7 +659,7 @@ export function getWebviewContent(
             }
 
             function clearAllActionLoading() {
-                ['btnMigrate', 'btnSeed', 'btnTest', 'btnRoutes', 'btnDocs', 'btnPublishStubs', 'btnImportFromDb'].forEach(function(id) {
+                ['btnMigrate', 'btnSeed', 'btnTest', 'btnRoutes', 'btnDocs', 'btnPublishStubs', 'btnShowSnippets', 'btnImportFromDb'].forEach(function(id) {
                     clearLoading(id);
                 });
             }
@@ -655,6 +710,25 @@ export function getWebviewContent(
                 vscode.postMessage({ type: 'generate', payload: config });
             });
 
+            // Files to Generate — select all / none
+            var ALL_FILE_IDS_RESET = ['Model','Controller','Service','DTO','Request','Resource','Policy','Migration','Factory','Seeder','FeatureTest','UnitTest'];
+
+            document.getElementById('selectAllFiles').addEventListener('click', function(e) {
+                e.preventDefault();
+                ALL_FILE_IDS_RESET.forEach(function(id) {
+                    var cb = document.getElementById('ft_' + id);
+                    if (cb) { cb.checked = true; }
+                });
+            });
+
+            document.getElementById('selectNoneFiles').addEventListener('click', function(e) {
+                e.preventDefault();
+                ALL_FILE_IDS_RESET.forEach(function(id) {
+                    var cb = document.getElementById('ft_' + id);
+                    if (cb) { cb.checked = false; }
+                });
+            });
+
             // Reset form
             document.getElementById('btnReset').addEventListener('click', function() {
                 document.getElementById('entityName').value = '';
@@ -663,6 +737,11 @@ export function getWebviewContent(
                 document.getElementById('optAuth').checked = false;
                 document.getElementById('optPostman').checked = false;
                 document.getElementById('optSoftDeletes').checked = false;
+                // Reset file type checkboxes to all-checked
+                ALL_FILE_IDS_RESET.forEach(function(id) {
+                    var cb = document.getElementById('ft_' + id);
+                    if (cb) { cb.checked = true; }
+                });
                 document.getElementById('previewSection').classList.add('hidden');
                 document.getElementById('outputSection').classList.add('hidden');
                 addField();
@@ -810,6 +889,10 @@ export function getWebviewContent(
             document.getElementById('btnPublishStubs').addEventListener('click', function() {
                 setLoading('btnPublishStubs', '${L.publishing}');
                 vscode.postMessage({ type: 'action', action: 'publishStubs' });
+            });
+
+            document.getElementById('btnShowSnippets').addEventListener('click', function() {
+                vscode.postMessage({ type: 'action', action: 'showSnippets' });
             });
 
             // === VALIDATION ===

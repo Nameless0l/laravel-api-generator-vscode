@@ -71,6 +71,18 @@
     "couldNotParseDescription": "Impossible d'analyser la description de la table : {0}\n\nSortie brute :\n{1}",
     "imported": "\"{0}\" importé depuis la base avec {1} champ(s). Vérifiez puis cliquez sur Générer l'API."
   },
+  "statusbar": {
+    "entities": "Laravel API : {0}",
+    "tooltip": "Cliquer pour ouvrir la barre latérale Laravel API Generator"
+  },
+  "snippets": {
+    "notFound": "Fichier de snippets introuvable dans l'extension.",
+    "parseFailed": "Échec de l'analyse du fichier de snippets : {0}",
+    "pickTitle": "Laravel API Generator — Snippets",
+    "pickPlaceholder": "Choisissez un snippet à insérer (ou à copier si aucun fichier PHP n'est ouvert)",
+    "inserted": "Snippet inséré : {0}",
+    "copied": "Snippet « {0} » copié dans le presse-papiers."
+  },
   "delete": {
     "promptName": "Entrez le nom de l'entité à supprimer",
     "confirm": "Supprimer tous les fichiers de \"{0}\" ? Cette action est irréversible.",
@@ -106,6 +118,10 @@
     "importFromDb": "Importer depuis la base",
     "reset": "Réinitialiser",
     "filesToGenerate": "Fichiers à générer",
+    "filesSelector": "Fichiers à générer",
+    "filesNote": "La route et le seeder ne sont enregistrés que si tous les fichiers sont sélectionnés.",
+    "selectAll": "Tout",
+    "selectNone": "Aucun",
     "quickActions": "Actions rapides",
     "runMigrations": "Lancer les migrations",
     "freshSeed": "Fresh + Seed",
@@ -113,6 +129,7 @@
     "listRoutes": "Lister les routes",
     "openApiDocs": "Ouvrir la doc API",
     "customizeStubs": "Personnaliser les stubs",
+    "showSnippets": "Snippets",
     "readingDatabase": "Lecture de la base...",
     "generating": "Génération...",
     "starting": "Démarrage du serveur...",

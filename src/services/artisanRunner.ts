@@ -37,11 +37,19 @@ export class ArtisanRunner {
             args.push('--postman');
         }
 
+        // Partial file selection: only pass --only= when user deselected at least one type
+        if (config.onlyTypes && config.onlyTypes.length > 0) {
+            args.push(`--only=${config.onlyTypes.join(',')}`);
+        }
+
         return this.run(args);
     }
 
-    async generateFromJson(): Promise<ArtisanResult> {
+    async generateFromJson(onlyTypes?: string[]): Promise<ArtisanResult> {
         const args = ['artisan', 'make:fullapi'];
+        if (onlyTypes && onlyTypes.length > 0) {
+            args.push(`--only=${onlyTypes.join(',')}`);
+        }
         return this.run(args, 120000);
     }
 
@@ -243,9 +251,20 @@ export class ArtisanRunner {
                     const output = stripAnsi(stdout.toString()).trim();
                     const errorOutput = stripAnsi(stderr.toString()).trim();
 
-                    // Combine both stdout and stderr to never lose output
-                    const parts = [output, errorOutput].filter(Boolean);
-                    const fullOutput = parts.join('\n') || (error ? `Command failed: ${error.message}` : '');
+                    // Combine output sources so we never silently drop diagnostics.
+                    // Node's `error.message` already starts with "Command failed: <cmd>"
+                    // when the process exits non-zero — don't add another prefix.
+                    const parts: string[] = [];
+                    if (output) {
+                        parts.push(output);
+                    }
+                    if (errorOutput) {
+                        parts.push(errorOutput);
+                    }
+                    if (error && !output && !errorOutput) {
+                        parts.push(error.message);
+                    }
+                    const fullOutput = parts.join('\n');
 
                     resolve({
                         success: !error,

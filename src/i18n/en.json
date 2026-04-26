@@ -71,6 +71,18 @@
     "couldNotParseDescription": "Could not parse table description: {0}\n\nRaw output:\n{1}",
     "imported": "Imported \"{0}\" from database with {1} field(s). Review and click Generate API."
   },
+  "statusbar": {
+    "entities": "Laravel API: {0}",
+    "tooltip": "Click to focus the Laravel API Generator sidebar"
+  },
+  "snippets": {
+    "notFound": "Snippets file was not found in the extension.",
+    "parseFailed": "Failed to parse snippets file: {0}",
+    "pickTitle": "Laravel API Generator — Snippets",
+    "pickPlaceholder": "Pick a snippet to insert (or copy if no PHP file is open)",
+    "inserted": "Inserted snippet: {0}",
+    "copied": "Snippet \"{0}\" copied to clipboard."
+  },
   "delete": {
     "promptName": "Enter the entity name to delete",
     "confirm": "Delete all files for \"{0}\"? This cannot be undone.",
@@ -106,6 +118,10 @@
     "importFromDb": "Import from Database",
     "reset": "Reset",
     "filesToGenerate": "Files to generate",
+    "filesSelector": "Files to Generate",
+    "filesNote": "Route & seeder are registered only when all files are selected.",
+    "selectAll": "All",
+    "selectNone": "None",
     "quickActions": "Quick Actions",
     "runMigrations": "Run Migrations",
     "freshSeed": "Fresh + Seed",
@@ -113,6 +129,7 @@
     "listRoutes": "List Routes",
     "openApiDocs": "Open API Docs",
     "customizeStubs": "Customize Stubs",
+    "showSnippets": "Snippets",
     "readingDatabase": "Reading database...",
     "generating": "Generating...",
     "starting": "Starting Server...",

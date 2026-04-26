@@ -2,7 +2,7 @@
   "name": "laravel-api-generator",
   "displayName": "Laravel API Generator",
   "description": "Generate complete REST APIs for Laravel with a visual interface",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "publisher": "Nameless0l",
   "license": "MIT",
   "icon": "media/icon-marketplace.png",
@@ -74,6 +74,12 @@
         "title": "Show Entity Diagram",
         "category": "Laravel API Generator",
         "icon": "$(type-hierarchy)"
+      },
+      {
+        "command": "laravelApiGenerator.showSnippets",
+        "title": "Show Snippets",
+        "category": "Laravel API Generator",
+        "icon": "$(symbol-snippet)"
       }
     ],
     "snippets": [
@@ -131,9 +137,14 @@
           "group": "navigation@2"
         },
         {
-          "command": "laravelApiGenerator.refresh",
+          "command": "laravelApiGenerator.showSnippets",
           "when": "view == laravelApiGenerator.entities",
           "group": "navigation@3"
+        },
+        {
+          "command": "laravelApiGenerator.refresh",
+          "when": "view == laravelApiGenerator.entities",
+          "group": "navigation@4"
         }
       ]
     },
