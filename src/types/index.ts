@@ -20,6 +20,8 @@ export interface EntityConfig {
     fields: Field[];
     relationships?: Relationship[];
     options: GenerateOptions;
+    /** When set, only these artifact types are generated (passes --only= to artisan). */
+    onlyTypes?: string[];
 }
 
 export interface ArtisanResult {

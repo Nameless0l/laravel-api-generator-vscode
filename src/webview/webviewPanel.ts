@@ -8,6 +8,7 @@ import { EntityScanner } from '../services/entityScanner';
 import { StubPreview } from '../services/stubPreview';
 import { LaravelDetector } from '../services/laravelDetector';
 import { parseOpenApi } from '../services/openApiImporter';
+import { analyzeError, presentSuggestion } from '../services/errorAnalyzer';
 import { EntityConfig } from '../types';
 import { t, getLocaleData } from '../i18n';
 
@@ -196,6 +197,12 @@ export class GeneratorPanel {
             if (this.onDidGenerate) {
                 this.onDidGenerate();
             }
+        } else {
+            const combined = result.output || result.errors.join('\n');
+            const suggestion = analyzeError('generate', combined);
+            if (suggestion) {
+                void presentSuggestion(this.workspaceRoot, suggestion);
+            }
         }
     }
 
@@ -245,7 +252,7 @@ export class GeneratorPanel {
         const destPath = path.join(this.workspaceRoot, 'class_data.json');
         fs.writeFileSync(destPath, JSON.stringify(classData, null, 2), 'utf-8');
 
-        return this.artisan.generateFromJson();
+        return this.artisan.generateFromJson(config.onlyTypes);
     }
 
     /**
@@ -429,6 +436,11 @@ export class GeneratorPanel {
                 await this.handleImportFromDb();
                 return;
             }
+            case 'showSnippets': {
+                await vscode.commands.executeCommand('laravelApiGenerator.showSnippets');
+                this.panel.webview.postMessage({ type: 'clearLoading', id: 'btnShowSnippets' });
+                return;
+            }
             case 'publishStubs': {
                 const stubsDir = path.join(
                     this.workspaceRoot,
@@ -558,11 +570,20 @@ export class GeneratorPanel {
                 return;
         }
 
+        const combined = result.output || result.errors.join('\n');
         this.panel.webview.postMessage({
             type: 'actionResult',
             success: result.success,
-            output: result.output || result.errors.join('\n'),
+            output: combined,
         });
+
+        // On failure, surface an actionable suggestion if we recognise the error
+        if (!result.success) {
+            const suggestion = analyzeError(action, combined);
+            if (suggestion) {
+                void presentSuggestion(this.workspaceRoot, suggestion);
+            }
+        }
     }
 
     private handlePreview(config: EntityConfig): void {
