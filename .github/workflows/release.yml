@@ -44,9 +44,9 @@ jobs:
           files: '*.vsix'
 
       - name: Publish to VS Code Marketplace
-        if: startsWith(github.ref, 'refs/tags/') && env.VSCE_PAT != ''
+        if: (startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch') && env.VSCE_PAT != ''
         run: npx vsce publish --packagePath *.vsix -p "$VSCE_PAT"
 
       - name: Publish to Open VSX
-        if: startsWith(github.ref, 'refs/tags/') && env.OVSX_PAT != ''
+        if: (startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch') && env.OVSX_PAT != ''
         run: npx ovsx publish *.vsix -p "$OVSX_PAT"
