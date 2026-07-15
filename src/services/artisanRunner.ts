@@ -36,6 +36,9 @@ export class ArtisanRunner {
         if (config.options.postman) {
             args.push('--postman');
         }
+        if (config.options.queryBuilder) {
+            args.push('--query-builder');
+        }
 
         // Partial file selection: only pass --only= when user deselected at least one type
         if (config.onlyTypes && config.onlyTypes.length > 0) {
@@ -45,12 +48,58 @@ export class ArtisanRunner {
         return this.run(args);
     }
 
-    async generateFromJson(onlyTypes?: string[]): Promise<ArtisanResult> {
+    async generateFromJson(onlyTypes?: string[], queryBuilder?: boolean): Promise<ArtisanResult> {
         const args = ['artisan', 'make:fullapi'];
         if (onlyTypes && onlyTypes.length > 0) {
             args.push(`--only=${onlyTypes.join(',')}`);
         }
+        if (queryBuilder) {
+            args.push('--query-builder');
+        }
         return this.run(args, 120000);
+    }
+
+    /**
+     * Generate complete APIs from the existing database schema (package >= 3.5).
+     */
+    async generateFromDatabase(options: {
+        tables?: string[];
+        withMigrations?: boolean;
+        queryBuilder?: boolean;
+    }): Promise<ArtisanResult> {
+        const args = ['artisan', 'make:fullapi', '--from-database'];
+        if (options.tables && options.tables.length > 0) {
+            args.push(`--tables=${options.tables.join(',')}`);
+        }
+        if (options.withMigrations) {
+            args.push('--with-migrations');
+        }
+        if (options.queryBuilder) {
+            args.push('--query-builder');
+        }
+        return this.run(args, 180000);
+    }
+
+    /**
+     * Generate complete APIs from a declarative YAML/JSON schema file (package >= 3.5).
+     */
+    async generateFromSchema(schemaPath: string, queryBuilder?: boolean): Promise<ArtisanResult> {
+        const args = ['artisan', 'make:fullapi', `--schema=${schemaPath}`];
+        if (queryBuilder) {
+            args.push('--query-builder');
+        }
+        return this.run(args, 180000);
+    }
+
+    /**
+     * Generate complete APIs from a Mermaid erDiagram / classDiagram file (package >= 3.5).
+     */
+    async generateFromMermaid(diagramPath: string, queryBuilder?: boolean): Promise<ArtisanResult> {
+        const args = ['artisan', 'make:fullapi', `--mermaid=${diagramPath}`];
+        if (queryBuilder) {
+            args.push('--query-builder');
+        }
+        return this.run(args, 180000);
     }
 
     async delete(entityName: string): Promise<ArtisanResult> {

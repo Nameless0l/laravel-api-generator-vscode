@@ -2,7 +2,7 @@
   "name": "laravel-api-generator",
   "displayName": "Laravel API Generator",
   "description": "Generate complete REST APIs for Laravel with a visual interface",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "publisher": "Nameless0l",
   "license": "MIT",
   "icon": "media/icon-marketplace.png",
@@ -35,7 +35,9 @@
     "backend"
   ],
   "activationEvents": [
-    "workspaceContains:artisan"
+    "workspaceContains:artisan",
+    "workspaceContains:*/artisan",
+    "workspaceContains:*/*/artisan"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -80,6 +82,24 @@
         "title": "Show Snippets",
         "category": "Laravel API Generator",
         "icon": "$(symbol-snippet)"
+      },
+      {
+        "command": "laravelApiGenerator.generateFromDatabase",
+        "title": "Generate APIs from Database",
+        "category": "Laravel API Generator",
+        "icon": "$(database)"
+      },
+      {
+        "command": "laravelApiGenerator.generateFromSchema",
+        "title": "Generate APIs from Schema File (api-schema.yaml)",
+        "category": "Laravel API Generator",
+        "icon": "$(file-code)"
+      },
+      {
+        "command": "laravelApiGenerator.generateFromMermaid",
+        "title": "Generate APIs from Mermaid Diagram",
+        "category": "Laravel API Generator",
+        "icon": "$(type-hierarchy-sub)"
       }
     ],
     "snippets": [
@@ -91,7 +111,8 @@
     "keybindings": [
       {
         "command": "laravelApiGenerator.goToRelated",
-        "key": "alt+r",
+        "key": "ctrl+alt+r",
+        "mac": "cmd+alt+r",
         "when": "editorTextFocus"
       }
     ],
@@ -112,6 +133,64 @@
         }
       ]
     },
+    "viewsWelcome": [
+      {
+        "view": "laravelApiGenerator.entities",
+        "contents": "No generated APIs found in this project yet.\n[$(add) Generate your first API](command:laravelApiGenerator.generate)\n[$(database) Import from Database](command:laravelApiGenerator.generateFromDatabase)\n[$(file-code) Generate from Schema File](command:laravelApiGenerator.generateFromSchema)\nLearn more in the [documentation](https://github.com/Nameless0l/laravel-api-generator-vscode#readme)."
+      }
+    ],
+    "walkthroughs": [
+      {
+        "id": "laravelApiGenerator.gettingStarted",
+        "title": "Get Started with Laravel API Generator",
+        "description": "Generate complete REST APIs for Laravel — from a form, your database, a schema file or a Mermaid diagram.",
+        "steps": [
+          {
+            "id": "installPackage",
+            "title": "Install the Composer package",
+            "description": "The extension drives the nameless/laravel-api-generator package (v3.5+).\n[Open a Terminal](command:workbench.action.terminal.new)",
+            "media": {
+              "markdown": "media/walkthrough/install.md"
+            }
+          },
+          {
+            "id": "firstApi",
+            "title": "Generate your first API",
+            "description": "Describe an entity in the visual form and generate its 12 files in one click.\n[Open the Generator](command:laravelApiGenerator.generate)",
+            "media": {
+              "markdown": "media/walkthrough/first-api.md"
+            },
+            "completionEvents": [
+              "onCommand:laravelApiGenerator.generate"
+            ]
+          },
+          {
+            "id": "fromDatabase",
+            "title": "Import an existing database",
+            "description": "Point the generator at your schema and get APIs for every table — relationships included.\n[Generate from Database](command:laravelApiGenerator.generateFromDatabase)",
+            "media": {
+              "markdown": "media/walkthrough/from-database.md"
+            },
+            "completionEvents": [
+              "onCommand:laravelApiGenerator.generateFromDatabase",
+              "onCommand:laravelApiGenerator.generateFromSchema",
+              "onCommand:laravelApiGenerator.generateFromMermaid"
+            ]
+          },
+          {
+            "id": "exploreSidebar",
+            "title": "Explore the sidebar",
+            "description": "Browse generated entities, jump between related files and manage your APIs.\n[Show Generated Entities](command:laravelApiGenerator.entities.focus)",
+            "media": {
+              "markdown": "media/walkthrough/explore.md"
+            },
+            "completionEvents": [
+              "onView:laravelApiGenerator.entities"
+            ]
+          }
+        ]
+      }
+    ],
     "menus": {
       "view/item/context": [
         {
@@ -130,6 +209,21 @@
           "command": "laravelApiGenerator.generate",
           "when": "view == laravelApiGenerator.entities",
           "group": "navigation@1"
+        },
+        {
+          "command": "laravelApiGenerator.generateFromDatabase",
+          "when": "view == laravelApiGenerator.entities",
+          "group": "1_sources@1"
+        },
+        {
+          "command": "laravelApiGenerator.generateFromSchema",
+          "when": "view == laravelApiGenerator.entities",
+          "group": "1_sources@2"
+        },
+        {
+          "command": "laravelApiGenerator.generateFromMermaid",
+          "when": "view == laravelApiGenerator.entities",
+          "group": "1_sources@3"
         },
         {
           "command": "laravelApiGenerator.diagram",
@@ -174,8 +268,10 @@
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "lint": "eslint src --ext ts",
-    "package": "vsce package"
+    "test": "npm run compile && node --test \"out/test/*.test.js\"",
+    "package": "vsce package",
+    "publish:marketplace": "vsce publish",
+    "publish:openvsx": "npx ovsx publish"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

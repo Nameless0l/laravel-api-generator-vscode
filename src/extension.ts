@@ -9,6 +9,9 @@ import { registerGoToRelatedCommand } from './commands/goToRelated';
 import { registerDiagramCommand } from './commands/showDiagram';
 import { registerRegenerateFileCommand } from './commands/regenerateFile';
 import { registerShowSnippetsCommand } from './commands/showSnippets';
+import { registerGenerateFromDatabaseCommand } from './commands/generateFromDatabase';
+import { registerGenerateFromSchemaCommand } from './commands/generateFromSchema';
+import { registerGenerateFromMermaidCommand } from './commands/generateFromMermaid';
 
 export function activate(context: vscode.ExtensionContext): void {
     initLocale();
@@ -33,6 +36,31 @@ export function activate(context: vscode.ExtensionContext): void {
         statusBar?.refresh();
     };
 
+    // Auto-refresh when PHP files under app/ change outside our own commands
+    // (e.g. make:fullapi run in a terminal, git pull, manual deletion)
+    if (isLaravel && root) {
+        const watcher = vscode.workspace.createFileSystemWatcher(
+            new vscode.RelativePattern(root, 'app/**/*.php')
+        );
+        let debounce: ReturnType<typeof setTimeout> | undefined;
+        const scheduleRefresh = (): void => {
+            if (debounce) {
+                clearTimeout(debounce);
+            }
+            debounce = setTimeout(refresh, 500);
+        };
+        watcher.onDidCreate(scheduleRefresh);
+        watcher.onDidChange(scheduleRefresh);
+        watcher.onDidDelete(scheduleRefresh);
+        context.subscriptions.push(watcher, {
+            dispose: () => {
+                if (debounce) {
+                    clearTimeout(debounce);
+                }
+            },
+        });
+    }
+
     // Re-init i18n + statusbar when the locale setting changes
     context.subscriptions.push(
         vscode.workspace.onDidChangeConfiguration((e) => {
@@ -40,6 +68,10 @@ export function activate(context: vscode.ExtensionContext): void {
                 initLocale();
                 statusBar?.refresh();
             }
+        }),
+        vscode.workspace.onDidChangeWorkspaceFolders(() => {
+            LaravelDetector.resetCache();
+            refresh();
         })
     );
 
@@ -50,6 +82,9 @@ export function activate(context: vscode.ExtensionContext): void {
         registerGoToRelatedCommand(),
         registerDiagramCommand(),
         registerShowSnippetsCommand(context.extensionPath),
+        registerGenerateFromDatabaseCommand(refresh),
+        registerGenerateFromSchemaCommand(refresh),
+        registerGenerateFromMermaidCommand(refresh),
         vscode.commands.registerCommand('laravelApiGenerator.refresh', refresh)
     );
 }

@@ -252,7 +252,7 @@ export class GeneratorPanel {
         const destPath = path.join(this.workspaceRoot, 'class_data.json');
         fs.writeFileSync(destPath, JSON.stringify(classData, null, 2), 'utf-8');
 
-        return this.artisan.generateFromJson(config.onlyTypes);
+        return this.artisan.generateFromJson(config.onlyTypes, config.options.queryBuilder);
     }
 
     /**

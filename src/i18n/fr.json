@@ -71,6 +71,30 @@
     "couldNotParseDescription": "Impossible d'analyser la description de la table : {0}\n\nSortie brute :\n{1}",
     "imported": "\"{0}\" importé depuis la base avec {1} champ(s). Vérifiez puis cliquez sur Générer l'API."
   },
+  "sources": {
+    "readingDatabase": "Lecture du schéma de la base...",
+    "couldNotListTables": "Impossible de lister les tables :\n{0}",
+    "couldNotParse": "Impossible d'analyser la liste des tables renvoyée par artisan.",
+    "noTables": "Aucune table utilisateur trouvée dans la base. Lancez d'abord vos migrations.",
+    "pickTablesTitle": "Générer les API depuis la base de données",
+    "pickTablesPlaceholder": "Sélectionnez les tables à générer (users est décochée pour protéger User.php)",
+    "columnsCount": "{0} colonne(s)",
+    "optionsTitle": "Options de génération",
+    "optionsPlaceholder": "Fonctionnalités optionnelles (Entrée pour continuer, Échap pour annuler)",
+    "optQueryBuilder": "Utiliser Spatie QueryBuilder pour le filtrage et le tri",
+    "optWithMigrations": "Générer aussi les fichiers de migration (les tables existent déjà)",
+    "generating": "Génération des API...",
+    "success": "API générées avec succès.",
+    "failed": "Échec de la génération :\n{0}",
+    "packageTooOld": "Cette fonctionnalité nécessite nameless/laravel-api-generator >= 3.5. Mettez à jour le paquet Composer puis réessayez.",
+    "updatePackage": "Mettre à jour le paquet",
+    "schemaTitle": "Générer depuis un fichier de schéma",
+    "useDetectedSchema": "Utiliser {0} (trouvé à la racine du projet)",
+    "browseSchema": "Parcourir pour choisir un fichier de schéma...",
+    "mermaidTitle": "Générer depuis un diagramme Mermaid",
+    "useCurrentFile": "Utiliser le fichier actif ({0})",
+    "browseMermaid": "Parcourir pour choisir un fichier Mermaid..."
+  },
   "statusbar": {
     "entities": "Laravel API : {0}",
     "tooltip": "Cliquer pour ouvrir la barre latérale Laravel API Generator"
@@ -112,6 +136,7 @@
     "optAuth": "Auth (Sanctum)",
     "optPostman": "Collection Postman",
     "optSoftDeletes": "Soft Deletes",
+    "optQueryBuilder": "Spatie QueryBuilder",
     "generate": "Générer l'API",
     "preview": "Aperçu des fichiers",
     "importJson": "Importer JSON",

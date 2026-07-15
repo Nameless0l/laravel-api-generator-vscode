@@ -43,19 +43,44 @@ Create API entities through a form instead of CLI flags:
 - **Drag-and-drop fields** -- reorder fields with a hamburger handle, the live preview updates on drop
 - **Dynamic fields** -- add/remove fields with name and type selector (string, integer, text, float, boolean, json, date, datetime, uuid, etc.)
 - **Relationships section** -- add `belongsTo` / `hasMany` / `hasOne` / `belongsToMany` relations directly in the UI; generation routes through the package's JSON pipeline so you get full FK support, foreign-keyed factories and tests
-- **Options toggles** -- Auth (Sanctum), Postman collection export, Soft Deletes
+- **Options toggles** -- Auth (Sanctum), Postman collection export, Soft Deletes, Spatie QueryBuilder
 - **File preview** -- see what files will be generated before running
 - **Real-time code preview** -- live preview of generated code across all file types (Model, Controller, Service, DTO, etc.) with syntax highlighting and tabbed navigation
 - **Conflict warning** -- before regenerating an existing entity, a modal lists every file that will be overwritten so you can opt out
 - **Auto-open generated files** -- after a successful generation, the new Model and Controller open in the editor
 
-### Import from Existing Database
+### Generate APIs from Database (one shot)
 
-The killer feature for legacy projects: scaffold a complete REST API on top of an existing database schema.
+The killer feature for legacy projects (requires package >= 3.5): generate complete REST APIs for **every table at once**, straight from the existing schema.
 
-- Click **Import from Database**
+- Run **Laravel API Generator: Generate APIs from Database** (command palette or sidebar `...` menu)
+- Multi-select the tables (all preselected; `users` is unchecked so `app/Models/User.php` is never overwritten)
+- Pick options: Spatie QueryBuilder filtering, and whether to also generate migration files
+- Foreign keys become `belongsTo`/`hasMany`, pivot tables become `belongsToMany`, `deleted_at` enables Soft Deletes — all automatically
+
+### Generate from a Schema File (api-schema.yaml)
+
+Describe the whole API in a declarative, versionable YAML/JSON file and regenerate everything in one command (requires package >= 3.5):
+
+- Run **Laravel API Generator: Generate APIs from Schema File**
+- The extension auto-detects `api-schema.yaml` / `.yml` / `.json` at the project root, or lets you browse for one
+- Entities are generated parents-first with foreign-key-safe migration ordering and automatic pivot migrations
+
+### Generate from a Mermaid Diagram
+
+Paste a Mermaid `erDiagram` or `classDiagram` — hand-written or produced by an AI assistant — and turn it into a working API (requires package >= 3.5):
+
+- Run **Laravel API Generator: Generate APIs from Mermaid Diagram**
+- Uses the active `.mmd` file, or lets you browse for one
+- Cardinalities (`||--o{`, `"1" --> "*"`) become the right Eloquent relations on both sides
+
+### Import from Existing Database (single table, form pre-fill)
+
+Prefer to review one table before generating?
+
+- Click **Import from Database** in the generator panel
 - The extension lists every user table (system tables like `migrations`, `sessions`, `personal_access_tokens` are filtered out)
-- Pick a table; columns are read with `Schema::getColumnType()` and mapped to the generator's vocabulary (`string`, `integer`, `boolean`, `json`, ...)
+- Pick a table; columns are read and mapped to the generator's vocabulary (`string`, `integer`, `boolean`, `json`, ...)
 - The form is auto-filled with the entity name (singularized + PascalCased), the field list, and the Soft Deletes flag (when `deleted_at` is present)
 - Review and click **Generate API**
 

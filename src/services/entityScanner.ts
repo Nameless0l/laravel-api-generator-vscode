@@ -15,9 +15,11 @@ export class EntityScanner {
             return [];
         }
 
+        // User.php is included too: the Controller + Service requirement
+        // below already filters out Laravel's default (non-generated) User model.
         const modelFiles = fs
             .readdirSync(modelsDir)
-            .filter((f) => f.endsWith('.php') && f !== 'User.php');
+            .filter((f) => f.endsWith('.php'));
 
         const entities: GeneratedEntity[] = [];
 

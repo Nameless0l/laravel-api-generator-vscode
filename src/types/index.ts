@@ -13,6 +13,8 @@ export interface GenerateOptions {
     auth: boolean;
     postman: boolean;
     softDeletes: boolean;
+    /** Generate index endpoints with spatie/laravel-query-builder (package >= 3.5). */
+    queryBuilder?: boolean;
 }
 
 export interface EntityConfig {

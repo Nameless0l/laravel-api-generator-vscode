@@ -71,6 +71,30 @@
     "couldNotParseDescription": "Could not parse table description: {0}\n\nRaw output:\n{1}",
     "imported": "Imported \"{0}\" from database with {1} field(s). Review and click Generate API."
   },
+  "sources": {
+    "readingDatabase": "Reading database schema...",
+    "couldNotListTables": "Could not list tables:\n{0}",
+    "couldNotParse": "Could not parse the table list returned by artisan.",
+    "noTables": "No user tables were found in the database. Run your migrations first.",
+    "pickTablesTitle": "Generate APIs from Database",
+    "pickTablesPlaceholder": "Select the tables to generate APIs for (users is unchecked to protect User.php)",
+    "columnsCount": "{0} column(s)",
+    "optionsTitle": "Generation options",
+    "optionsPlaceholder": "Optional features (press Enter to continue, Esc to cancel)",
+    "optQueryBuilder": "Use Spatie QueryBuilder for index filtering & sorting",
+    "optWithMigrations": "Also generate migration files (tables already exist)",
+    "generating": "Generating APIs...",
+    "success": "APIs generated successfully.",
+    "failed": "Generation failed:\n{0}",
+    "packageTooOld": "This feature requires nameless/laravel-api-generator >= 3.5. Update the Composer package and try again.",
+    "updatePackage": "Update Package",
+    "schemaTitle": "Generate from Schema File",
+    "useDetectedSchema": "Use {0} (found at project root)",
+    "browseSchema": "Browse for a schema file...",
+    "mermaidTitle": "Generate from Mermaid Diagram",
+    "useCurrentFile": "Use current file ({0})",
+    "browseMermaid": "Browse for a Mermaid file..."
+  },
   "statusbar": {
     "entities": "Laravel API: {0}",
     "tooltip": "Click to focus the Laravel API Generator sidebar"
@@ -112,6 +136,7 @@
     "optAuth": "Auth (Sanctum)",
     "optPostman": "Postman Collection",
     "optSoftDeletes": "Soft Deletes",
+    "optQueryBuilder": "Spatie QueryBuilder",
     "generate": "Generate API",
     "preview": "Preview Files",
     "importJson": "Import JSON",

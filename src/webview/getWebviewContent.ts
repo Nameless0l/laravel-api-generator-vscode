@@ -24,6 +24,7 @@ interface LocaleData {
         optAuth: string;
         optPostman: string;
         optSoftDeletes: string;
+        optQueryBuilder: string;
         generate: string;
         preview: string;
         importJson: string;
@@ -425,6 +426,10 @@ export function getWebviewContent(
                 <input type="checkbox" id="optSoftDeletes" />
                 <label for="optSoftDeletes">${L.optSoftDeletes}</label>
             </div>
+            <div class="option-item">
+                <input type="checkbox" id="optQueryBuilder" />
+                <label for="optQueryBuilder">${L.optQueryBuilder}</label>
+            </div>
         </div>
     </div>
 
@@ -604,6 +609,7 @@ export function getWebviewContent(
                 const authEl = document.getElementById('optAuth');
                 const postmanEl = document.getElementById('optPostman');
                 const softDeletesEl = document.getElementById('optSoftDeletes');
+                const queryBuilderEl = document.getElementById('optQueryBuilder');
 
                 const relationships = [];
                 document.querySelectorAll('#relationsContainer .field-row').forEach(function(r) {
@@ -635,6 +641,7 @@ export function getWebviewContent(
                         auth: authEl ? authEl.checked : false,
                         postman: postmanEl ? postmanEl.checked : false,
                         softDeletes: softDeletesEl ? softDeletesEl.checked : false,
+                        queryBuilder: queryBuilderEl ? queryBuilderEl.checked : false,
                     },
                     onlyTypes: onlyTypes,
                 };
@@ -737,6 +744,7 @@ export function getWebviewContent(
                 document.getElementById('optAuth').checked = false;
                 document.getElementById('optPostman').checked = false;
                 document.getElementById('optSoftDeletes').checked = false;
+                document.getElementById('optQueryBuilder').checked = false;
                 // Reset file type checkboxes to all-checked
                 ALL_FILE_IDS_RESET.forEach(function(id) {
                     var cb = document.getElementById('ft_' + id);

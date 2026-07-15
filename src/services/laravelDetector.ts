@@ -37,12 +37,74 @@ export class LaravelDetector {
         }
     }
 
+    private static cachedRoot: string | undefined;
+    private static cacheInitialized = false;
+
     static getWorkspaceRoot(): string | undefined {
         const folders = vscode.workspace.workspaceFolders;
         if (!folders || folders.length === 0) {
             return undefined;
         }
-        return folders[0].uri.fsPath;
+        if (!this.cacheInitialized) {
+            this.cachedRoot = this.findLaravelRoot(folders) ?? folders[0].uri.fsPath;
+            this.cacheInitialized = true;
+        }
+        return this.cachedRoot;
+    }
+
+    /** Reset the cached root (called when workspace folders change). */
+    static resetCache(): void {
+        this.cachedRoot = undefined;
+        this.cacheInitialized = false;
+    }
+
+    /**
+     * Locate the Laravel project: workspace folder roots first, then
+     * up to two levels of subdirectories (monorepos with Laravel in
+     * e.g. backend/ or apps/api/).
+     */
+    private static findLaravelRoot(folders: readonly vscode.WorkspaceFolder[]): string | undefined {
+        for (const folder of folders) {
+            if (this.isLaravelProject(folder.uri.fsPath)) {
+                return folder.uri.fsPath;
+            }
+        }
+        for (const folder of folders) {
+            const nested = this.searchArtisan(folder.uri.fsPath, 2);
+            if (nested) {
+                return nested;
+            }
+        }
+        return undefined;
+    }
+
+    private static searchArtisan(dir: string, depth: number): string | undefined {
+        if (depth <= 0) {
+            return undefined;
+        }
+        const skip = new Set(['node_modules', 'vendor', 'storage', 'public', 'resources', 'dist', 'out']);
+        let entries: fs.Dirent[];
+        try {
+            entries = fs.readdirSync(dir, { withFileTypes: true });
+        } catch {
+            return undefined;
+        }
+        const subdirs = entries.filter(
+            (e) => e.isDirectory() && !e.name.startsWith('.') && !skip.has(e.name)
+        );
+        for (const sub of subdirs) {
+            const candidate = path.join(dir, sub.name);
+            if (this.isLaravelProject(candidate)) {
+                return candidate;
+            }
+        }
+        for (const sub of subdirs) {
+            const found = this.searchArtisan(path.join(dir, sub.name), depth - 1);
+            if (found) {
+                return found;
+            }
+        }
+        return undefined;
     }
 
     static validate(): { valid: boolean; root?: string; message?: string; packageMissing?: boolean } {
