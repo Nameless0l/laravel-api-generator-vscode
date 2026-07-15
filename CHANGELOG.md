@@ -16,7 +16,7 @@ Pairs with `nameless/laravel-api-generator` >= 3.5.
 - **Welcome view** -- when no generated API exists yet, the sidebar now shows a getting-started panel with one-click actions (Generate, Import from Database, Schema File) instead of an empty tree.
 - **Auto-refresh** -- a file watcher on `app/**/*.php` keeps the entity tree and status bar in sync when APIs are generated or deleted outside the extension (terminal, git pull...).
 - **Monorepo support** -- Laravel projects living in a subfolder (e.g. `backend/`, `apps/api/`) are now detected up to two levels below the workspace root.
-- **Release workflow** -- GitHub Action that builds the VSIX on every version tag and can publish to the VS Code Marketplace and Open VSX (see PUBLISHING.md).
+- **Release workflow** -- GitHub Action that builds the VSIX on every version tag and can publish to the VS Code Marketplace and Open VSX (when the VSCE_PAT / OVSX_PAT repository secrets are configured).
 - **Getting Started walkthrough** -- a native VS Code walkthrough (Help > Get Started) covering package installation, the generator form, database import and the sidebar.
 - **Unit tests + CI** -- 11 tests on the pure services (entity scanner, migration introspector) using Node's built-in test runner, run with the VSIX build on every push/PR.
 
