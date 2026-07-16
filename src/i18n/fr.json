@@ -13,7 +13,8 @@
     "scrambleNotInstalled": "Scramble n'est pas installé. Veuillez l'installer d'abord.",
     "sanctumMissing": "L'option Auth nécessite Laravel Sanctum (laravel/sanctum) qui n'est pas installé dans ce projet.",
     "generateWithoutAuth": "Générer sans Auth",
-    "sanctumInstallStarted": "Installation de Sanctum lancée. Relancez la génération une fois terminée."
+    "sanctumInstallStarted": "Installation de Sanctum lancée. Relancez la génération une fois terminée.",
+    "queryBuilderMissing": "L'option QueryBuilder nécessite spatie/laravel-query-builder qui n'est pas installé dans ce projet. Les endpoints de liste générés échoueront tant qu'il ne sera pas installé."
   },
   "env": {
     "missing": "Fichier .env introuvable dans ce projet. Les commandes de base de données échoueront sans lui.",

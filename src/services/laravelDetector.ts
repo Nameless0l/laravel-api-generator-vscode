@@ -21,6 +21,34 @@ export class LaravelDetector {
         return this.hasComposerPackage(workspaceRoot, 'laravel/sanctum');
     }
 
+    static isQueryBuilderInstalled(workspaceRoot: string): boolean {
+        return this.hasComposerPackage(workspaceRoot, 'spatie/laravel-query-builder');
+    }
+
+    /**
+     * The generated code needs spatie/laravel-query-builder at runtime when
+     * the QueryBuilder option is on. Non-blocking: offers a one-click
+     * composer require but never stops the generation itself.
+     */
+    static async promptQueryBuilderInstallIfMissing(workspaceRoot: string): Promise<void> {
+        if (this.isQueryBuilderInstalled(workspaceRoot)) {
+            return;
+        }
+        const installLabel = t('package.installViaComposer');
+        const action = await vscode.window.showWarningMessage(
+            t('package.queryBuilderMissing'),
+            installLabel
+        );
+        if (action === installLabel) {
+            const terminal = vscode.window.createTerminal({
+                name: 'Laravel API Generator',
+                cwd: workspaceRoot,
+            });
+            terminal.sendText('composer require spatie/laravel-query-builder');
+            terminal.show();
+        }
+    }
+
     private static hasComposerPackage(workspaceRoot: string, packageName: string): boolean {
         const composerPath = path.join(workspaceRoot, 'composer.json');
         if (!fs.existsSync(composerPath)) {

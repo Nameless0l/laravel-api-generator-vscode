@@ -30,6 +30,10 @@ export function registerGenerateFromSchemaCommand(onDidGenerate: () => void): vs
             return;
         }
 
+        if (options.queryBuilder) {
+            void LaravelDetector.promptQueryBuilderInstallIfMissing(root);
+        }
+
         const artisan = new ArtisanRunner(root);
         const result = await vscode.window.withProgress(
             {

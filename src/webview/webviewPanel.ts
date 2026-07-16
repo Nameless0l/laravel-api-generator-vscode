@@ -178,6 +178,10 @@ export class GeneratorPanel {
             }
         }
 
+        if (config.options.queryBuilder) {
+            void LaravelDetector.promptQueryBuilderInstallIfMissing(this.workspaceRoot);
+        }
+
         let result;
         if (config.relationships && config.relationships.length > 0) {
             result = await this.generateWithRelationships(config);

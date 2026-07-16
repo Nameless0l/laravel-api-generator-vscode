@@ -71,6 +71,10 @@ export function registerGenerateFromDatabaseCommand(onDidGenerate: () => void): 
             return;
         }
 
+        if (options.queryBuilder) {
+            void LaravelDetector.promptQueryBuilderInstallIfMissing(root);
+        }
+
         const result = await vscode.window.withProgress(
             {
                 location: vscode.ProgressLocation.Notification,
