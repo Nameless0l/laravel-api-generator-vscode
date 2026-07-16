@@ -2,6 +2,11 @@
 
 All notable changes to the Laravel API Generator VS Code extension will be documented in this file.
 
+## [Unreleased]
+
+### Changed
+- **Entity diagram overhaul** -- relationship links are now smooth Bezier curves anchored to the nearest card edge (instead of straight lines always drawn right-to-left across cards), with arrowheads, cardinality labels in readable pills, and hover highlighting of a card's connections. Inverse declarations (Post hasMany Comment + Comment belongsTo Post) are merged into a single link, self-referential relations render as a small loop, and rows/columns now space themselves to the real card sizes so tall cards never overlap.
+
 ## [0.7.0] - 2026-07-15
 
 Pairs with `nameless/laravel-api-generator` >= 3.5.

@@ -85,14 +85,30 @@ export class DiagramPanel {
             pointer-events: none;
             z-index: 0;
         }
-        svg.lines line {
+        svg.lines path.edge {
             stroke: var(--vscode-textLink-foreground);
             stroke-width: 2;
-            opacity: 0.5;
+            fill: none;
+            opacity: 0.45;
+            stroke-linecap: round;
+            transition: opacity 0.15s ease, stroke-width 0.15s ease;
         }
-        svg.lines text {
+        svg.lines path.edge.hl {
+            opacity: 1;
+            stroke-width: 2.5;
+        }
+        svg.lines .arrow-head {
+            fill: var(--vscode-textLink-foreground);
+        }
+        svg.lines .edge-label rect {
+            fill: var(--vscode-editorWidget-background);
+            stroke: var(--vscode-panel-border);
+            stroke-width: 1;
+        }
+        svg.lines .edge-label text {
             fill: var(--vscode-descriptionForeground);
-            font-size: 11px;
+            font-size: 10px;
+            font-weight: 600;
         }
         .entity-card {
             position: absolute;
@@ -241,7 +257,7 @@ export class DiagramPanel {
                     card.style.left = newX + 'px';
                     card.style.top = newY + 'px';
                     positions[entity.name] = { x: newX, y: newY };
-                    drawLines();
+                    scheduleDraw();
                 });
 
                 document.addEventListener('mouseup', () => {
@@ -250,48 +266,188 @@ export class DiagramPanel {
                         card.classList.remove('dragging');
                     }
                 });
+
+                // Highlight connected edges on hover
+                card.addEventListener('mouseenter', () => highlightEdges(entity.name));
+                card.addEventListener('mouseleave', () => highlightEdges(null));
             });
 
-            function drawLines() {
-                const svg = document.getElementById('linesLayer');
-                svg.innerHTML = '';
+            const SVG_NS = 'http://www.w3.org/2000/svg';
 
-                entities.forEach(entity => {
-                    entity.relationships.forEach(rel => {
-                        const from = positions[entity.name];
-                        const to = positions[rel.target];
-                        if (!from || !to) return;
-
-                        const fromCard = document.querySelector('[data-entity="' + entity.name + '"]');
-                        const toCard = document.querySelector('[data-entity="' + rel.target + '"]');
-                        if (!fromCard || !toCard) return;
-
-                        const x1 = from.x + fromCard.offsetWidth;
-                        const y1 = from.y + fromCard.offsetHeight / 2;
-                        const x2 = to.x;
-                        const y2 = to.y + toCard.offsetHeight / 2;
-
-                        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                        line.setAttribute('x1', x1);
-                        line.setAttribute('y1', y1);
-                        line.setAttribute('x2', x2);
-                        line.setAttribute('y2', y2);
-                        svg.appendChild(line);
-
-                        const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                        label.setAttribute('x', (x1 + x2) / 2);
-                        label.setAttribute('y', (y1 + y2) / 2 - 5);
-                        label.setAttribute('text-anchor', 'middle');
-                        const labelText = rel.type === 'belongsTo' ? 'N:1' :
-                                          rel.type === 'hasMany' ? '1:N' :
-                                          rel.type === 'hasOne' ? '1:1' : 'N:N';
-                        label.textContent = labelText;
-                        svg.appendChild(label);
-                    });
+            // The initial grid guesses card sizes; once rendered, measure the
+            // real ones and space rows/columns so tall cards never collide.
+            function relayout() {
+                const rowH = [], colW = [];
+                entities.forEach((e, i) => {
+                    const el = document.querySelector('[data-entity="' + e.name + '"]');
+                    if (!el) return;
+                    const row = Math.floor(i / cols), col = i % cols;
+                    rowH[row] = Math.max(rowH[row] || 0, el.offsetHeight);
+                    colW[col] = Math.max(colW[col] || 0, el.offsetWidth);
+                });
+                const rowY = [], colX = [];
+                let cursor = 20;
+                rowH.forEach((h, r) => { rowY[r] = cursor; cursor += h + gapY; });
+                cursor = 40;
+                colW.forEach((w, c) => { colX[c] = cursor; cursor += w + gapX; });
+                entities.forEach((e, i) => {
+                    const el = document.querySelector('[data-entity="' + e.name + '"]');
+                    if (!el) return;
+                    const row = Math.floor(i / cols), col = i % cols;
+                    el.style.left = colX[col] + 'px';
+                    el.style.top = rowY[row] + 'px';
+                    positions[e.name] = { x: colX[col], y: rowY[row] };
                 });
             }
 
-            setTimeout(drawLines, 100);
+            function relLabel(type) {
+                return type === 'belongsTo' ? 'N:1' :
+                       type === 'hasMany' ? '1:N' :
+                       type === 'hasOne' ? '1:1' : 'N:N';
+            }
+
+            // One edge per entity pair: when both sides declare the relation
+            // (Post hasMany Comment + Comment belongsTo Post), keep the
+            // owning side so the arrow points from "1" to "N".
+            function buildEdges() {
+                const seen = new Map();
+                const edges = [];
+                entities.forEach(entity => {
+                    entity.relationships.forEach(rel => {
+                        if (!positions[rel.target]) return;
+                        const key = entity.name < rel.target
+                            ? entity.name + '|' + rel.target
+                            : rel.target + '|' + entity.name;
+                        const existing = seen.get(key);
+                        if (existing) {
+                            if (existing.rel.type === 'belongsTo' && rel.type !== 'belongsTo') {
+                                existing.from = entity.name;
+                                existing.to = rel.target;
+                                existing.rel = rel;
+                            }
+                            return;
+                        }
+                        const edge = { from: entity.name, to: rel.target, rel };
+                        seen.set(key, edge);
+                        edges.push(edge);
+                    });
+                });
+                return edges;
+            }
+
+            function rectOf(name) {
+                const el = document.querySelector('[data-entity="' + name + '"]');
+                if (!el) return null;
+                const p = positions[name];
+                return { x: p.x, y: p.y, w: el.offsetWidth, h: el.offsetHeight };
+            }
+
+            // Pick facing edges based on where the cards are relative to each
+            // other, so links leave from the natural side instead of always
+            // right -> left.
+            function anchorsFor(a, b) {
+                const acx = a.x + a.w / 2, acy = a.y + a.h / 2;
+                const bcx = b.x + b.w / 2, bcy = b.y + b.h / 2;
+                const dx = bcx - acx, dy = bcy - acy;
+                if (Math.abs(dx) >= Math.abs(dy)) {
+                    const s = dx >= 0 ? 1 : -1;
+                    return {
+                        x1: s > 0 ? a.x + a.w : a.x, y1: acy,
+                        x2: s > 0 ? b.x : b.x + b.w, y2: bcy,
+                        horizontal: true, s
+                    };
+                }
+                const s = dy >= 0 ? 1 : -1;
+                return {
+                    x1: acx, y1: s > 0 ? a.y + a.h : a.y,
+                    x2: bcx, y2: s > 0 ? b.y : b.y + b.h,
+                    horizontal: false, s
+                };
+            }
+
+            function drawLines() {
+                const svg = document.getElementById('linesLayer');
+                svg.innerHTML = '<defs>' +
+                    '<marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" ' +
+                    'markerWidth="7" markerHeight="7" orient="auto-start-reverse">' +
+                    '<path class="arrow-head" d="M0,0 L10,5 L0,10 z"/></marker></defs>';
+
+                buildEdges().forEach(edge => {
+                    const a = rectOf(edge.from);
+                    const b = rectOf(edge.to);
+                    if (!a || !b) return;
+
+                    let d, midX, midY;
+                    if (edge.from === edge.to) {
+                        // Self-referential relation: small loop on the right edge
+                        const sx = a.x + a.w, sy1 = a.y + a.h * 0.3, sy2 = a.y + a.h * 0.7;
+                        d = 'M ' + sx + ' ' + sy1 +
+                            ' C ' + (sx + 70) + ' ' + sy1 + ', ' + (sx + 70) + ' ' + sy2 +
+                            ', ' + sx + ' ' + sy2;
+                        midX = sx + 52;
+                        midY = (sy1 + sy2) / 2;
+                    } else {
+                        const { x1, y1, x2, y2, horizontal, s } = anchorsFor(a, b);
+                        const dist = Math.hypot(x2 - x1, y2 - y1);
+                        const bend = Math.min(Math.max(dist * 0.4, 40), 150);
+                        const c1x = horizontal ? x1 + s * bend : x1;
+                        const c1y = horizontal ? y1 : y1 + s * bend;
+                        const c2x = horizontal ? x2 - s * bend : x2;
+                        const c2y = horizontal ? y2 : y2 - s * bend;
+                        d = 'M ' + x1 + ' ' + y1 +
+                            ' C ' + c1x + ' ' + c1y + ', ' + c2x + ' ' + c2y +
+                            ', ' + x2 + ' ' + y2;
+                        // Midpoint of the cubic Bezier at t = 0.5
+                        midX = (x1 + 3 * c1x + 3 * c2x + x2) / 8;
+                        midY = (y1 + 3 * c1y + 3 * c2y + y2) / 8;
+                    }
+
+                    const path = document.createElementNS(SVG_NS, 'path');
+                    path.setAttribute('d', d);
+                    path.setAttribute('class', 'edge');
+                    path.setAttribute('marker-end', 'url(#arrow)');
+                    path.setAttribute('data-from', edge.from);
+                    path.setAttribute('data-to', edge.to);
+                    svg.appendChild(path);
+
+                    const g = document.createElementNS(SVG_NS, 'g');
+                    g.setAttribute('class', 'edge-label');
+                    svg.appendChild(g);
+                    const text = document.createElementNS(SVG_NS, 'text');
+                    text.setAttribute('x', midX);
+                    text.setAttribute('y', midY);
+                    text.setAttribute('text-anchor', 'middle');
+                    text.setAttribute('dominant-baseline', 'middle');
+                    text.textContent = relLabel(edge.rel.type);
+                    g.appendChild(text);
+                    const bb = text.getBBox();
+                    const pill = document.createElementNS(SVG_NS, 'rect');
+                    pill.setAttribute('x', bb.x - 6);
+                    pill.setAttribute('y', bb.y - 3);
+                    pill.setAttribute('width', bb.width + 12);
+                    pill.setAttribute('height', bb.height + 6);
+                    pill.setAttribute('rx', 8);
+                    g.insertBefore(pill, text);
+                });
+            }
+
+            function highlightEdges(name) {
+                document.querySelectorAll('svg.lines path.edge').forEach(p => {
+                    p.classList.toggle('hl', !!name &&
+                        (p.getAttribute('data-from') === name || p.getAttribute('data-to') === name));
+                });
+            }
+
+            let rafId = null;
+            function scheduleDraw() {
+                if (rafId !== null) return;
+                rafId = requestAnimationFrame(() => {
+                    rafId = null;
+                    drawLines();
+                });
+            }
+
+            setTimeout(() => { relayout(); drawLines(); }, 100);
         }
     </script>
 </body>
