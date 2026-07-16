@@ -2,7 +2,10 @@
 
 All notable changes to the Laravel API Generator VS Code extension will be documented in this file.
 
-## [Unreleased]
+## [0.7.1] - 2026-07-16
+
+### Added
+- **Spatie QueryBuilder dependency check** -- when the QueryBuilder option is used and `spatie/laravel-query-builder` is not in the project's composer.json, a notification offers a one-click `composer require` (the generated services need it at runtime). Applies to the generator form and the three source commands, in English and French.
 
 ### Changed
 - **Entity diagram overhaul** -- relationship links are now smooth Bezier curves anchored to the nearest card edge (instead of straight lines always drawn right-to-left across cards), with arrowheads, cardinality labels in readable pills, and hover highlighting of a card's connections. Inverse declarations (Post hasMany Comment + Comment belongsTo Post) are merged into a single link, self-referential relations render as a small loop, and rows/columns now space themselves to the real card sizes so tall cards never overlap.
