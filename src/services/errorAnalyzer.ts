@@ -170,7 +170,7 @@ const PATTERNS: Pattern[] = [
         build: () => ({
             diagnosis: 'The laravel-api-generator package is not installed in this project.',
             actions: [
-                runInTerminal('composer require nameless/laravel-api-generator', 'composer require nameless/laravel-api-generator'),
+                runInTerminal('composer require --dev nameless/laravel-api-generator', 'composer require --dev nameless/laravel-api-generator'),
             ],
         }),
     },

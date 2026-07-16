@@ -7,7 +7,7 @@
     "loading": "Chargement..."
   },
   "package": {
-    "missing": "Le package Laravel API Generator n'est pas installé dans ce projet.",
+    "missing": "Le package Laravel API Generator n'est pas installé dans ce projet. Il s'installe en dépendance de dev : il ne s'exécute jamais en production et le code généré n'en dépend pas.",
     "installViaComposer": "Installer via Composer",
     "scrambleMissing": "Scramble (dedoc/scramble) n'est pas installé. Il est requis pour générer la documentation d'API.",
     "scrambleNotInstalled": "Scramble n'est pas installé. Veuillez l'installer d'abord.",

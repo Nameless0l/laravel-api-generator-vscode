@@ -148,7 +148,7 @@ export class LaravelDetector {
                 valid: false,
                 root,
                 packageMissing: true,
-                message: 'nameless/laravel-api-generator is not installed. Run: composer require nameless/laravel-api-generator',
+                message: 'nameless/laravel-api-generator is not installed. Run: composer require --dev nameless/laravel-api-generator',
             };
         }
         return { valid: true, root };
@@ -169,7 +169,7 @@ export class LaravelDetector {
                     name: 'Laravel API Generator',
                     cwd: check.root,
                 });
-                terminal.sendText('composer require nameless/laravel-api-generator');
+                terminal.sendText('composer require --dev nameless/laravel-api-generator');
                 terminal.show();
             }
             return { valid: false };

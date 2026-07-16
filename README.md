@@ -166,8 +166,10 @@ The whole UI -- panel labels, popups, QuickPick prompts, error messages -- is av
 ### 1. Install the package
 
 ```bash
-composer require nameless/laravel-api-generator
+composer require --dev nameless/laravel-api-generator
 ```
+
+It is a **dev dependency with zero lock-in**: nothing from the generator ships to production, and the generated code does not depend on it — you can even remove the package once your API is generated.
 
 ### 2. Install the extension
 
@@ -212,7 +214,7 @@ database/seeders/DatabaseSeeder.php             -- Seeder auto-registered
 - **VS Code** 1.80+
 - **PHP** 8.2+ on your PATH (or configure `laravelApiGenerator.phpPath`)
 - A **Laravel 10/11/12** project
-- The package: `composer require nameless/laravel-api-generator`
+- The package: `composer require --dev nameless/laravel-api-generator`
 
 ---
 
