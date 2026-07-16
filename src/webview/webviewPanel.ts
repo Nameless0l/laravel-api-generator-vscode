@@ -98,6 +98,58 @@ export class GeneratorPanel {
                     });
                 }
                 break;
+            case 'requestModels':
+                this.panel.webview.postMessage({
+                    type: 'modelsList',
+                    models: this.listModelNames(),
+                });
+                break;
+            case 'cancelOperation':
+                this.artisan.cancelAll();
+                this.panel.webview.postMessage({ type: 'clearAllLoading' });
+                break;
+        }
+    }
+
+    /**
+     * route:list crashes with a ReflectionException when a route file still
+     * references a deleted controller. Offer the package's clean-routes
+     * command, then retry.
+     */
+    private async offerRouteCleanup(failed: { success: boolean; output: string; errors: string[] }): Promise<{ success: boolean; output: string; errors: string[] }> {
+        const cleanLabel = t('routes.cleanOrphans');
+        const choice = await vscode.window.showWarningMessage(
+            t('routes.orphanDetected'),
+            cleanLabel,
+            t('common.cancel')
+        );
+        if (choice !== cleanLabel) {
+            return failed;
+        }
+
+        const cleanup = await this.artisan.cleanRoutes();
+        if (!cleanup.success) {
+            return cleanup;
+        }
+
+        vscode.window.showInformationMessage(t('routes.cleaned'));
+        if (this.onDidGenerate) {
+            this.onDidGenerate();
+        }
+
+        return this.artisan.routes();
+    }
+
+    private listModelNames(): string[] {
+        const modelsDir = path.join(this.workspaceRoot, 'app', 'Models');
+        try {
+            return fs
+                .readdirSync(modelsDir)
+                .filter((f) => f.endsWith('.php'))
+                .map((f) => f.replace(/\.php$/, ''))
+                .sort();
+        } catch {
+            return [];
         }
     }
 
@@ -248,6 +300,7 @@ export class GeneratorPanel {
                     name: f.name,
                     _type: f.type,
                     required: true,
+                    ...(f.primary ? { primary: true } : {}),
                 })),
                 ...buckets,
             },
@@ -256,7 +309,10 @@ export class GeneratorPanel {
         const destPath = path.join(this.workspaceRoot, 'class_data.json');
         fs.writeFileSync(destPath, JSON.stringify(classData, null, 2), 'utf-8');
 
-        return this.artisan.generateFromJson(config.onlyTypes, config.options.queryBuilder);
+        return this.artisan.generateFromJson(config.onlyTypes, {
+            queryBuilder: config.options.queryBuilder,
+            pest: config.options.pest,
+        });
     }
 
     /**
@@ -424,6 +480,9 @@ export class GeneratorPanel {
                 break;
             case 'routes':
                 result = await this.artisan.routes();
+                if (!result.success && /does not exist/i.test(result.output)) {
+                    result = await this.offerRouteCleanup(result);
+                }
                 break;
             case 'generateJson':
                 result = await this.artisan.generateFromJson();

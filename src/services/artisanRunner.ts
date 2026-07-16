@@ -7,6 +7,7 @@ export class ArtisanRunner {
     private workspaceRoot: string;
     private serveProcess: ChildProcess | undefined;
     private servePort: number | undefined;
+    private activeProcesses = new Set<ChildProcess>();
 
     constructor(workspaceRoot: string) {
         this.workspaceRoot = workspaceRoot;
@@ -22,7 +23,7 @@ export class ArtisanRunner {
 
         if (config.fields.length > 0) {
             const fieldsStr = config.fields
-                .map((f) => `${f.name}:${f.type}`)
+                .map((f) => `${f.name}:${f.type}${f.primary ? ':primary' : ''}`)
                 .join(',');
             args.push(`--fields=${fieldsStr}`);
         }
@@ -39,6 +40,9 @@ export class ArtisanRunner {
         if (config.options.queryBuilder) {
             args.push('--query-builder');
         }
+        if (config.options.pest) {
+            args.push('--pest');
+        }
 
         // Partial file selection: only pass --only= when user deselected at least one type
         if (config.onlyTypes && config.onlyTypes.length > 0) {
@@ -48,24 +52,28 @@ export class ArtisanRunner {
         return this.run(args);
     }
 
-    async generateFromJson(onlyTypes?: string[], queryBuilder?: boolean): Promise<ArtisanResult> {
+    async generateFromJson(
+        onlyTypes?: string[],
+        options?: { queryBuilder?: boolean; pest?: boolean }
+    ): Promise<ArtisanResult> {
         const args = ['artisan', 'make:fullapi'];
         if (onlyTypes && onlyTypes.length > 0) {
             args.push(`--only=${onlyTypes.join(',')}`);
         }
-        if (queryBuilder) {
+        if (options?.queryBuilder) {
             args.push('--query-builder');
+        }
+        if (options?.pest) {
+            args.push('--pest');
         }
         return this.run(args, 120000);
     }
 
-    /**
-     * Generate complete APIs from the existing database schema (package >= 3.5).
-     */
     async generateFromDatabase(options: {
         tables?: string[];
         withMigrations?: boolean;
         queryBuilder?: boolean;
+        pest?: boolean;
     }): Promise<ArtisanResult> {
         const args = ['artisan', 'make:fullapi', '--from-database'];
         if (options.tables && options.tables.length > 0) {
@@ -77,29 +85,42 @@ export class ArtisanRunner {
         if (options.queryBuilder) {
             args.push('--query-builder');
         }
+        if (options.pest) {
+            args.push('--pest');
+        }
         return this.run(args, 180000);
     }
 
-    /**
-     * Generate complete APIs from a declarative YAML/JSON schema file (package >= 3.5).
-     */
-    async generateFromSchema(schemaPath: string, queryBuilder?: boolean): Promise<ArtisanResult> {
+    async generateFromSchema(
+        schemaPath: string,
+        options?: { queryBuilder?: boolean; pest?: boolean }
+    ): Promise<ArtisanResult> {
         const args = ['artisan', 'make:fullapi', `--schema=${schemaPath}`];
-        if (queryBuilder) {
+        if (options?.queryBuilder) {
             args.push('--query-builder');
+        }
+        if (options?.pest) {
+            args.push('--pest');
         }
         return this.run(args, 180000);
     }
 
-    /**
-     * Generate complete APIs from a Mermaid erDiagram / classDiagram file (package >= 3.5).
-     */
-    async generateFromMermaid(diagramPath: string, queryBuilder?: boolean): Promise<ArtisanResult> {
+    async generateFromMermaid(
+        diagramPath: string,
+        options?: { queryBuilder?: boolean; pest?: boolean }
+    ): Promise<ArtisanResult> {
         const args = ['artisan', 'make:fullapi', `--mermaid=${diagramPath}`];
-        if (queryBuilder) {
+        if (options?.queryBuilder) {
             args.push('--query-builder');
         }
+        if (options?.pest) {
+            args.push('--pest');
+        }
         return this.run(args, 180000);
+    }
+
+    async addFields(entityName: string, fields: string): Promise<ArtisanResult> {
+        return this.run(['artisan', 'make:fullapi', entityName, `--add-fields=${fields}`], 60000);
     }
 
     async delete(entityName: string): Promise<ArtisanResult> {
@@ -121,6 +142,19 @@ export class ArtisanRunner {
 
     async routes(): Promise<ArtisanResult> {
         return this.run(['artisan', 'route:list', '--path=api']);
+    }
+
+    async cleanRoutes(): Promise<ArtisanResult> {
+        return this.run(['artisan', 'api-generator:clean-routes']);
+    }
+
+    cancelAll(): void {
+        for (const proc of this.activeProcesses) {
+            if (!proc.killed) {
+                proc.kill();
+            }
+        }
+        this.activeProcesses.clear();
     }
 
     async publishStubs(): Promise<ArtisanResult> {
@@ -287,7 +321,7 @@ export class ArtisanRunner {
         const phpPath = this.getPhpPath();
 
         return new Promise((resolve) => {
-            execFile(
+            const child = execFile(
                 phpPath,
                 args,
                 {
@@ -296,6 +330,7 @@ export class ArtisanRunner {
                     env: { ...process.env, FORCE_COLOR: '0' },
                 },
                 (error, stdout, stderr) => {
+                    this.activeProcesses.delete(child);
                     const stripAnsi = (s: string) => s.replace(/\x1B\[[0-9;]*m/g, '');
                     const output = stripAnsi(stdout.toString()).trim();
                     const errorOutput = stripAnsi(stderr.toString()).trim();
@@ -322,6 +357,7 @@ export class ArtisanRunner {
                     });
                 }
             );
+            this.activeProcesses.add(child);
         });
     }
 }

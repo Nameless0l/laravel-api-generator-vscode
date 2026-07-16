@@ -10,6 +10,7 @@ import { registerDiagramCommand } from './commands/showDiagram';
 import { registerRegenerateFileCommand } from './commands/regenerateFile';
 import { registerShowSnippetsCommand } from './commands/showSnippets';
 import { registerGenerateFromDatabaseCommand } from './commands/generateFromDatabase';
+import { registerAddFieldsCommand } from './commands/addFields';
 import { registerGenerateFromSchemaCommand } from './commands/generateFromSchema';
 import { registerGenerateFromMermaidCommand } from './commands/generateFromMermaid';
 
@@ -83,6 +84,7 @@ export function activate(context: vscode.ExtensionContext): void {
         registerDiagramCommand(),
         registerShowSnippetsCommand(context.extensionPath),
         registerGenerateFromDatabaseCommand(refresh),
+        registerAddFieldsCommand(refresh),
         registerGenerateFromSchemaCommand(refresh),
         registerGenerateFromMermaidCommand(refresh),
         vscode.commands.registerCommand('laravelApiGenerator.refresh', refresh)

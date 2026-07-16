@@ -102,6 +102,25 @@ const DB_TYPE_MAP: Record<string, string> = {
   uuid: "uuid",
 };
 
+function parseEnumValues(type: string): string[] | null {
+  const match = /^enum\((.+)\)$/.exec(type);
+  if (!match) {
+    return null;
+  }
+  const values = match[1]
+    .split(",")
+    .map((v) => v.trim())
+    .filter((v) => v !== "");
+  return values.length > 0 ? values : null;
+}
+
+function enumClass(fieldName: string): string {
+  return fieldName
+    .split(/[_-]/)
+    .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
+    .join("");
+}
+
 export class StubPreview {
   generatePreview(config: EntityConfig): Record<string, string> {
     const name = config.name;
@@ -125,18 +144,23 @@ export class StubPreview {
       .map((f) => `        '${f.name}',`)
       .join("\n");
     const casts = config.fields
-      .filter((f) =>
-        [
-          "boolean",
-          "bool",
-          "json",
-          "integer",
-          "int",
-          "float",
-          "decimal",
-        ].includes(f.type),
+      .filter(
+        (f) =>
+          parseEnumValues(f.type) !== null ||
+          [
+            "boolean",
+            "bool",
+            "json",
+            "integer",
+            "int",
+            "float",
+            "decimal",
+          ].includes(f.type),
       )
       .map((f) => {
+        if (parseEnumValues(f.type) !== null) {
+          return `        '${f.name}' => \\App\\Enums\\${enumClass(f.name)}::class,`;
+        }
         const cast = ["boolean", "bool"].includes(f.type)
           ? "boolean"
           : ["integer", "int"].includes(f.type)
@@ -155,6 +179,15 @@ export class StubPreview {
       traits = "\n    use SoftDeletes;";
     }
 
+    const primaryField = config.fields.find((f) => f.primary);
+    let primaryKeyBlock = "";
+    if (primaryField) {
+      const isInt = ["integer", "int", "bigint"].includes(primaryField.type);
+      primaryKeyBlock =
+        `\n\n    protected $primaryKey = '${primaryField.name}';\n\n    public $incrementing = false;` +
+        (isInt ? "" : "\n\n    protected $keyType = 'string';");
+    }
+
     return `<?php
 
 declare(strict_types=1);
@@ -170,7 +203,7 @@ class ${name} extends Model
 
     protected $fillable = [
 ${fillable}
-    ];
+    ];${primaryKeyBlock}
 ${casts ? `\n    protected $casts = [\n${casts}\n    ];\n` : ""}}`;
   }
 
@@ -314,6 +347,9 @@ ${fromReq}
   private genRequest(name: string, config: EntityConfig): string {
     const rules = config.fields
       .map((f) => {
+        if (parseEnumValues(f.type) !== null) {
+          return `            '${f.name}' => ['required', \\Illuminate\\Validation\\Rule::enum(\\App\\Enums\\${enumClass(f.name)}::class)],`;
+        }
         const v = TYPE_MAP[f.type]?.validation || "required|string";
         return `            '${f.name}' => '${v}',`;
       })
@@ -374,14 +410,23 @@ ${fields}
   private genMigration(tableName: string, config: EntityConfig): string {
     const fields = config.fields
       .map((f) => {
+        const primary = f.primary ? "->primary()" : "";
+        const enumValues = parseEnumValues(f.type);
+        if (enumValues !== null) {
+          const list = enumValues.map((v) => `'${v}'`).join(", ");
+          return `            $table->enum('${f.name}', [${list}])${primary};`;
+        }
         const dbType = DB_TYPE_MAP[f.type] || "string";
-        return `            $table->${dbType}('${f.name}');`;
+        return `            $table->${dbType}('${f.name}')${primary};`;
       })
       .join("\n");
 
     const sd = config.options.softDeletes
       ? "\n            $table->softDeletes();"
       : "";
+    const idLine = config.fields.some((f) => f.primary)
+      ? ""
+      : "\n            $table->id();";
 
     return `<?php
 
@@ -393,8 +438,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('${tableName}', function (Blueprint $table) {
-            $table->id();
+        Schema::create('${tableName}', function (Blueprint $table) {${idLine}
 ${fields}
             $table->timestamps();${sd}
         });
@@ -410,6 +454,9 @@ ${fields}
   private genFactory(name: string, config: EntityConfig): string {
     const fields = config.fields
       .map((f) => {
+        if (parseEnumValues(f.type) !== null) {
+          return `            '${f.name}' => fake()->randomElement(\\App\\Enums\\${enumClass(f.name)}::cases()),`;
+        }
         const fake = TYPE_MAP[f.type]?.fake || "fake()->word()";
         return `            '${f.name}' => ${fake},`;
       })

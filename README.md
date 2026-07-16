@@ -43,7 +43,11 @@ Create API entities through a form instead of CLI flags:
 - **Drag-and-drop fields** -- reorder fields with a hamburger handle, the live preview updates on drop
 - **Dynamic fields** -- add/remove fields with name and type selector (string, integer, text, float, boolean, json, date, datetime, uuid, etc.)
 - **Relationships section** -- add `belongsTo` / `hasMany` / `hasOne` / `belongsToMany` relations directly in the UI; generation routes through the package's JSON pipeline so you get full FK support, foreign-keyed factories and tests
-- **Options toggles** -- Auth (Sanctum), Postman collection export, Soft Deletes, Spatie QueryBuilder
+- **Options toggles** -- Auth (Sanctum), Postman collection export, Soft Deletes, Spatie QueryBuilder, Pest tests
+- **Enum fields** -- pick the `enum` type, type the values (`draft,published`) and get a backed PHP enum class, model cast, `Rule::enum()` validation and factory fake (package >= 3.6)
+- **Primary key designation** -- check `PK` on a field to replace the default `id`; the model, migration and every incoming relation follow (package >= 3.6)
+- **Model autocomplete** -- relationship targets suggest the models already in `app/Models`
+- **Cancellable operations** -- click a spinning button to kill the running artisan process
 - **File preview** -- see what files will be generated before running
 - **Real-time code preview** -- live preview of generated code across all file types (Model, Controller, Service, DTO, etc.) with syntax highlighting and tabbed navigation
 - **Conflict warning** -- before regenerating an existing entity, a modal lists every file that will be overwritten so you can opt out
@@ -101,6 +105,15 @@ Import a `class_data.json` file to generate multiple entities at once:
 - One-click generation for the entire schema
 - Supports relationships (oneToMany, manyToOne, manyToMany, compositions, aggregations)
 - [Download a sample class_data.json](https://github.com/Nameless0l/laravel-api-generator/blob/main/examples/class_data.json) to try it out (Blog with Author, Category, Article, Tag)
+
+### Add Fields to an Existing Entity
+
+Day-30 problem solved: evolve a generated API without wiping your manual changes (package >= 3.6).
+
+- Right-click an entity in the sidebar tree -> **Add Fields to Entity...** (or run it from the command palette)
+- Type the new fields: `excerpt:text,status:enum(draft,published)`
+- The package creates an incremental `Schema::table()` migration and patches `$fillable`, `$casts`, the model PHPDoc, the validation rules, the factory and the resource in place
+- One click to run the migration when it's done
 
 ### Regenerate Single File(s)
 

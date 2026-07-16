@@ -86,6 +86,7 @@ export function registerGenerateFromDatabaseCommand(onDidGenerate: () => void): 
                     tables: tablePicks.map((p) => p.label),
                     withMigrations: options.withMigrations,
                     queryBuilder: options.queryBuilder,
+                    pest: options.pest,
                 })
         );
 

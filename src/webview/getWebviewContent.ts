@@ -25,6 +25,13 @@ interface LocaleData {
         optPostman: string;
         optSoftDeletes: string;
         optQueryBuilder: string;
+        optPest: string;
+        enumValuesPlaceholder: string;
+        pkTooltip: string;
+        relTargetPlaceholder: string;
+        relRolePlaceholder: string;
+        relRoleTooltip: string;
+        clickToCancel: string;
         generate: string;
         preview: string;
         importJson: string;
@@ -128,6 +135,16 @@ export function getWebviewContent(
         .drag-handle:active { cursor: grabbing; }
         .field-row input { flex: 2; }
         .field-row select { flex: 1; }
+        .pk-toggle {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            font-size: 0.8em;
+            color: var(--vscode-descriptionForeground);
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .pk-toggle input { flex: none; width: auto; }
         .field-row button {
             flex: 0 0 30px;
             height: 30px;
@@ -430,6 +447,10 @@ export function getWebviewContent(
                 <input type="checkbox" id="optQueryBuilder" />
                 <label for="optQueryBuilder">${L.optQueryBuilder}</label>
             </div>
+            <div class="option-item">
+                <input type="checkbox" id="optPest" />
+                <label for="optPest">${L.optPest}</label>
+            </div>
         </div>
     </div>
 
@@ -504,6 +525,8 @@ export function getWebviewContent(
         <div id="outputContent" class="output"></div>
     </div>
 
+    <datalist id="modelsList"></datalist>
+
     <script nonce="${nonce}">
         (function() {
             const vscode = acquireVsCodeApi();
@@ -529,7 +552,43 @@ export function getWebviewContent(
                 const typeSelect = document.createElement('select');
                 typeSelect.className = 'field-type';
                 typeSelect.innerHTML = typeOptions;
-                if (type) { typeSelect.value = type; }
+
+                const enumInput = document.createElement('input');
+                enumInput.type = 'text';
+                enumInput.className = 'field-enum-values';
+                enumInput.placeholder = '${L.enumValuesPlaceholder}';
+                enumInput.style.display = 'none';
+
+                if (type) {
+                    var enumMatch = /^enum\\((.+)\\)$/.exec(type);
+                    if (enumMatch) {
+                        typeSelect.value = 'enum';
+                        enumInput.value = enumMatch[1];
+                        enumInput.style.display = '';
+                    } else {
+                        typeSelect.value = type;
+                    }
+                }
+
+                typeSelect.addEventListener('change', function() {
+                    enumInput.style.display = typeSelect.value === 'enum' ? '' : 'none';
+                });
+
+                const pkLabel = document.createElement('label');
+                pkLabel.className = 'pk-toggle';
+                pkLabel.title = '${L.pkTooltip}';
+                const pkCheckbox = document.createElement('input');
+                pkCheckbox.type = 'checkbox';
+                pkCheckbox.className = 'field-primary';
+                pkCheckbox.addEventListener('change', function() {
+                    if (pkCheckbox.checked) {
+                        document.querySelectorAll('.field-primary').forEach(function(cb) {
+                            if (cb !== pkCheckbox) { cb.checked = false; }
+                        });
+                    }
+                });
+                pkLabel.appendChild(pkCheckbox);
+                pkLabel.appendChild(document.createTextNode('PK'));
 
                 const removeBtn = document.createElement('button');
                 removeBtn.textContent = '\\u00D7';
@@ -550,6 +609,8 @@ export function getWebviewContent(
                 row.appendChild(dragHandle);
                 row.appendChild(nameInput);
                 row.appendChild(typeSelect);
+                row.appendChild(enumInput);
+                row.appendChild(pkLabel);
                 row.appendChild(removeBtn);
                 container.appendChild(row);
             }
@@ -571,13 +632,15 @@ export function getWebviewContent(
                 const targetInput = document.createElement('input');
                 targetInput.type = 'text';
                 targetInput.className = 'rel-target';
-                targetInput.placeholder = 'Target Model (e.g. Author)';
+                targetInput.placeholder = '${L.relTargetPlaceholder}';
+                targetInput.setAttribute('list', 'modelsList');
                 targetInput.value = target || '';
 
                 const roleInput = document.createElement('input');
                 roleInput.type = 'text';
                 roleInput.className = 'rel-role';
-                roleInput.placeholder = 'method name (optional)';
+                roleInput.placeholder = '${L.relRolePlaceholder}';
+                roleInput.title = '${L.relRoleTooltip}';
                 roleInput.value = role || '';
 
                 const removeBtn = document.createElement('button');
@@ -601,15 +664,22 @@ export function getWebviewContent(
                     const fnameEl = row.querySelector('.field-name');
                     const ftypeEl = row.querySelector('.field-type');
                     const fname = fnameEl ? fnameEl.value.trim() : '';
-                    const ftype = ftypeEl ? ftypeEl.value : 'string';
+                    var ftype = ftypeEl ? ftypeEl.value : 'string';
+                    if (ftype === 'enum') {
+                        const enumEl = row.querySelector('.field-enum-values');
+                        const values = enumEl ? enumEl.value.trim().replace(/\\s+/g, '') : '';
+                        ftype = values ? 'enum(' + values + ')' : 'string';
+                    }
                     if (fname) {
-                        fields.push({ name: fname, type: ftype });
+                        const pkEl = row.querySelector('.field-primary');
+                        fields.push({ name: fname, type: ftype, primary: pkEl ? pkEl.checked : false });
                     }
                 });
                 const authEl = document.getElementById('optAuth');
                 const postmanEl = document.getElementById('optPostman');
                 const softDeletesEl = document.getElementById('optSoftDeletes');
                 const queryBuilderEl = document.getElementById('optQueryBuilder');
+                const pestEl = document.getElementById('optPest');
 
                 const relationships = [];
                 document.querySelectorAll('#relationsContainer .field-row').forEach(function(r) {
@@ -642,34 +712,47 @@ export function getWebviewContent(
                         postman: postmanEl ? postmanEl.checked : false,
                         softDeletes: softDeletesEl ? softDeletesEl.checked : false,
                         queryBuilder: queryBuilderEl ? queryBuilderEl.checked : false,
+                        pest: pestEl ? pestEl.checked : false,
                     },
                     onlyTypes: onlyTypes,
                 };
             }
 
-            // Loading state management
+            // Loading state management. Buttons stay enabled while loading:
+            // a second click cancels the running artisan process.
             var buttonOriginalHTML = {};
 
             function setLoading(btnId, loadingText) {
                 var btn = document.getElementById(btnId);
                 if (!btn) return;
                 buttonOriginalHTML[btnId] = btn.innerHTML;
-                btn.disabled = true;
+                btn.dataset.loading = '1';
+                btn.title = '${L.clickToCancel}';
                 btn.innerHTML = '<span class="spinner"></span> ' + loadingText;
             }
 
             function clearLoading(btnId) {
                 var btn = document.getElementById(btnId);
                 if (!btn || !buttonOriginalHTML[btnId]) return;
-                btn.disabled = false;
+                delete btn.dataset.loading;
+                btn.title = '';
                 btn.innerHTML = buttonOriginalHTML[btnId];
             }
 
             function clearAllActionLoading() {
-                ['btnMigrate', 'btnSeed', 'btnTest', 'btnRoutes', 'btnDocs', 'btnPublishStubs', 'btnShowSnippets', 'btnImportFromDb'].forEach(function(id) {
+                ['btnMigrate', 'btnSeed', 'btnTest', 'btnRoutes', 'btnDocs', 'btnPublishStubs', 'btnShowSnippets', 'btnImportFromDb', 'btnGenerate', 'btnGenerateJson'].forEach(function(id) {
                     clearLoading(id);
                 });
             }
+
+            document.addEventListener('click', function(e) {
+                var btn = e.target && e.target.closest ? e.target.closest('button') : null;
+                if (btn && btn.dataset.loading) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    vscode.postMessage({ type: 'cancelOperation' });
+                }
+            }, true);
 
             function showOutput(text, isError) {
                 const section = document.getElementById('outputSection');
@@ -679,7 +762,33 @@ export function getWebviewContent(
                     content.className = 'output ' + (isError ? 'error' : 'success');
                     content.textContent = text;
                 }
+                updateResetVisibility();
             }
+
+            function formIsDirty() {
+                var nameEl = document.getElementById('entityName');
+                if (nameEl && nameEl.value.trim() !== '') { return true; }
+                var dirty = false;
+                document.querySelectorAll('#fieldsContainer .field-name').forEach(function(el) {
+                    if (el.value.trim() !== '') { dirty = true; }
+                });
+                document.querySelectorAll('#relationsContainer .rel-target').forEach(function(el) {
+                    if (el.value.trim() !== '') { dirty = true; }
+                });
+                var output = document.getElementById('outputSection');
+                var preview = document.getElementById('previewSection');
+                if (output && !output.classList.contains('hidden')) { dirty = true; }
+                if (preview && !preview.classList.contains('hidden')) { dirty = true; }
+                return dirty;
+            }
+
+            function updateResetVisibility() {
+                var btn = document.getElementById('btnReset');
+                if (btn) { btn.style.display = formIsDirty() ? '' : 'none'; }
+            }
+
+            document.addEventListener('input', updateResetVisibility);
+            document.addEventListener('change', updateResetVisibility);
 
             function showPreview(files) {
                 const section = document.getElementById('previewSection');
@@ -745,6 +854,7 @@ export function getWebviewContent(
                 document.getElementById('optPostman').checked = false;
                 document.getElementById('optSoftDeletes').checked = false;
                 document.getElementById('optQueryBuilder').checked = false;
+                document.getElementById('optPest').checked = false;
                 // Reset file type checkboxes to all-checked
                 ALL_FILE_IDS_RESET.forEach(function(id) {
                     var cb = document.getElementById('ft_' + id);
@@ -753,6 +863,7 @@ export function getWebviewContent(
                 document.getElementById('previewSection').classList.add('hidden');
                 document.getElementById('outputSection').classList.add('hidden');
                 addField();
+                updateResetVisibility();
             });
 
             // Preset autofill
@@ -1043,6 +1154,7 @@ export function getWebviewContent(
                         clearLoading('btnGenerate');
                         if (msg.success) {
                             showOutput(msg.output || 'API generated successfully!', false);
+                            vscode.postMessage({ type: 'requestModels' });
                         } else {
                             showOutput(msg.errors.join('\\n') || 'Generation failed.', true);
                         }
@@ -1125,11 +1237,26 @@ export function getWebviewContent(
                         }
                         break;
                     }
+                    case 'modelsList': {
+                        var dl = document.getElementById('modelsList');
+                        if (dl && Array.isArray(msg.models)) {
+                            dl.innerHTML = msg.models.map(function(m) {
+                                return '<option value="' + m + '"></option>';
+                            }).join('');
+                        }
+                        break;
+                    }
+                    case 'clearAllLoading': {
+                        clearAllActionLoading();
+                        break;
+                    }
                 }
             });
 
             // Start with one empty field
             addField();
+            updateResetVisibility();
+            vscode.postMessage({ type: 'requestModels' });
         })();
     </script>
 </body>

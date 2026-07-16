@@ -2,6 +2,28 @@
 
 All notable changes to the Laravel API Generator VS Code extension will be documented in this file.
 
+## [0.9.0] - 2026-07-16
+
+### Added
+- **Model autocomplete on relationships** -- the Target Model input now suggests the models present in `app/Models` (native datalist, refreshed after each generation).
+- **Primary key designation** -- a `PK` checkbox on each field row marks it as the table's primary key (replaces the default `id`; only one can be checked). The package (>= 3.6) wires the model (`$primaryKey`, `$incrementing`, `$keyType`), the migration (`->primary()`, no `$table->id()`) and every incoming relation (FK name, column type, `references()`, `exists` rule). The live code preview reflects all of it.
+- **Orphan route cleanup** -- when List Routes fails because a route file references a deleted controller (the `ReflectionException` that also breaks the official Laravel extension), the extension explains it and offers to run the package's new `api-generator:clean-routes`.
+- **Diagram zoom & pan** -- the entity diagram behaves like an Obsidian canvas: Ctrl+wheel zooms toward the cursor, dragging the background pans, and the toolbar gains −/+/100%/Fit controls. Card dragging stays accurate at any zoom level.
+- **Cancellable operations** -- buttons no longer spin forever: clicking a button while its operation runs kills the underlying artisan process and restores the UI.
+
+### Changed
+- The Reset button only appears once the form, preview or output has something to reset.
+- The relationship inputs are now localized and self-explanatory: "Target model (e.g. Post)" and "relation name, e.g. posts (optional)" with a tooltip explaining it becomes the Eloquent method name.
+
+## [0.8.0] - 2026-07-16
+
+Pairs with `nameless/laravel-api-generator` >= 3.6.
+
+### Added
+- **Add Fields to Entity** command -- right-click an entity in the sidebar (or use the command palette) and type `excerpt:text,status:enum(draft,published)`: the package creates an incremental migration and patches the model, request, factory and resource in place via `make:fullapi --add-fields`. Offers to run the migration right away.
+- **Pest tests toggle** -- new checkbox in the generator form and option in the three source commands (database / schema / Mermaid), passing `--pest` so generated tests use `it()` / `expect()` instead of PHPUnit classes.
+- **Enum field type** -- pick `enum` in the field type selector and type the values (`draft,published`): the generated API gets a backed PHP enum class, the model cast, `Rule::enum()` validation and a faked factory value. The live code preview renders all of it.
+
 ## [0.7.1] - 2026-07-16
 
 ### Added

@@ -40,7 +40,7 @@ export function registerGenerateFromMermaidCommand(onDidGenerate: () => void): v
                 title: t('sources.generating'),
                 cancellable: false,
             },
-            () => artisan.generateFromMermaid(diagramPath, options.queryBuilder)
+            () => artisan.generateFromMermaid(diagramPath, { queryBuilder: options.queryBuilder, pest: options.pest })
         );
 
         await presentGenerationResult(result, root, onDidGenerate);

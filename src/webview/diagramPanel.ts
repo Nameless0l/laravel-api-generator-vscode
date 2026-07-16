@@ -65,6 +65,31 @@ export class DiagramPanel {
             color: var(--vscode-descriptionForeground);
             font-size: 0.85em;
         }
+        .toolbar .zoom-controls {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .toolbar .zoom-controls button {
+            background: var(--vscode-button-secondaryBackground);
+            color: var(--vscode-button-secondaryForeground);
+            border: none;
+            border-radius: 3px;
+            padding: 3px 9px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+        .toolbar .zoom-controls button:hover {
+            background: var(--vscode-button-secondaryHoverBackground);
+        }
+        .toolbar .zoom-level {
+            min-width: 42px;
+            text-align: center;
+            font-size: 0.85em;
+            color: var(--vscode-descriptionForeground);
+        }
+        .canvas.panning { cursor: grabbing; }
         .canvas {
             position: relative;
             width: 100%;
@@ -171,6 +196,13 @@ export class DiagramPanel {
     <div class="toolbar">
         <h2>Entity Relationship Diagram</h2>
         <span class="count" id="entityCount"></span>
+        <div class="zoom-controls">
+            <button id="zoomOut" title="Zoom out (Ctrl+wheel)">&minus;</button>
+            <span class="zoom-level" id="zoomLevel">100%</span>
+            <button id="zoomIn" title="Zoom in (Ctrl+wheel)">+</button>
+            <button id="zoomReset" title="Reset zoom">100%</button>
+            <button id="zoomFit" title="Fit all entities">Fit</button>
+        </div>
     </div>
     <div class="canvas" id="canvas">
         <div class="canvas-inner" id="canvasInner">
@@ -198,6 +230,73 @@ export class DiagramPanel {
             const cardH = 200;
             const gapX = 80;
             const gapY = 60;
+
+            // Obsidian-canvas style zoom & pan
+            let scale = 1;
+            const canvasEl = document.getElementById('canvas');
+            const innerEl = document.getElementById('canvasInner');
+            innerEl.style.transformOrigin = '0 0';
+
+            function applyScale(newScale, anchorX, anchorY) {
+                newScale = Math.min(2.5, Math.max(0.2, newScale));
+                const rect = canvasEl.getBoundingClientRect();
+                const ax = anchorX !== undefined ? anchorX - rect.left : rect.width / 2;
+                const ay = anchorY !== undefined ? anchorY - rect.top : rect.height / 2;
+                const contentX = (canvasEl.scrollLeft + ax) / scale;
+                const contentY = (canvasEl.scrollTop + ay) / scale;
+                scale = newScale;
+                innerEl.style.transform = 'scale(' + scale + ')';
+                canvasEl.scrollLeft = contentX * scale - ax;
+                canvasEl.scrollTop = contentY * scale - ay;
+                document.getElementById('zoomLevel').textContent = Math.round(scale * 100) + '%';
+            }
+
+            canvasEl.addEventListener('wheel', (e) => {
+                if (!e.ctrlKey && !e.metaKey) return;
+                e.preventDefault();
+                applyScale(scale * (e.deltaY < 0 ? 1.12 : 0.89), e.clientX, e.clientY);
+            }, { passive: false });
+
+            document.getElementById('zoomIn').addEventListener('click', () => applyScale(scale * 1.2));
+            document.getElementById('zoomOut').addEventListener('click', () => applyScale(scale / 1.2));
+            document.getElementById('zoomReset').addEventListener('click', () => applyScale(1));
+            document.getElementById('zoomFit').addEventListener('click', () => {
+                let maxX = 0, maxY = 0;
+                Object.keys(positions).forEach((name) => {
+                    const el = document.querySelector('[data-entity="' + name + '"]');
+                    if (!el) return;
+                    maxX = Math.max(maxX, positions[name].x + el.offsetWidth);
+                    maxY = Math.max(maxY, positions[name].y + el.offsetHeight);
+                });
+                if (maxX === 0 || maxY === 0) return;
+                const rect = canvasEl.getBoundingClientRect();
+                applyScale(Math.min((rect.width - 40) / maxX, (rect.height - 40) / maxY, 1.5));
+                canvasEl.scrollLeft = 0;
+                canvasEl.scrollTop = 0;
+            });
+
+            // Drag the background to pan
+            let panning = false;
+            let panStartX = 0, panStartY = 0, panScrollX = 0, panScrollY = 0;
+            canvasEl.addEventListener('mousedown', (e) => {
+                if (e.target.closest('.entity-card')) return;
+                panning = true;
+                canvasEl.classList.add('panning');
+                panStartX = e.clientX;
+                panStartY = e.clientY;
+                panScrollX = canvasEl.scrollLeft;
+                panScrollY = canvasEl.scrollTop;
+                e.preventDefault();
+            });
+            document.addEventListener('mousemove', (e) => {
+                if (!panning) return;
+                canvasEl.scrollLeft = panScrollX - (e.clientX - panStartX);
+                canvasEl.scrollTop = panScrollY - (e.clientY - panStartY);
+            });
+            document.addEventListener('mouseup', () => {
+                panning = false;
+                canvasEl.classList.remove('panning');
+            });
 
             entities.forEach((entity, i) => {
                 const col = i % cols;
@@ -246,12 +345,13 @@ export class DiagramPanel {
                     origX = parseInt(card.style.left);
                     origY = parseInt(card.style.top);
                     e.preventDefault();
+                    e.stopPropagation();
                 });
 
                 document.addEventListener('mousemove', (e) => {
                     if (!isDragging) return;
-                    const dx = e.clientX - startX;
-                    const dy = e.clientY - startY;
+                    const dx = (e.clientX - startX) / scale;
+                    const dy = (e.clientY - startY) / scale;
                     const newX = origX + dx;
                     const newY = origY + dy;
                     card.style.left = newX + 'px';

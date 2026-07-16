@@ -2,7 +2,7 @@
   "name": "laravel-api-generator",
   "displayName": "Laravel API Generator",
   "description": "Generate complete REST APIs for Laravel with a visual interface",
-  "version": "0.7.1",
+  "version": "0.9.0",
   "publisher": "Nameless0l",
   "license": "MIT",
   "icon": "media/icon-marketplace.png",
@@ -100,6 +100,12 @@
         "title": "Generate APIs from Mermaid Diagram",
         "category": "Laravel API Generator",
         "icon": "$(type-hierarchy-sub)"
+      },
+      {
+        "command": "laravelApiGenerator.addFields",
+        "title": "Add Fields to Entity...",
+        "category": "Laravel API Generator",
+        "icon": "$(diff-added)"
       }
     ],
     "snippets": [
@@ -202,6 +208,11 @@
           "command": "laravelApiGenerator.delete",
           "when": "view == laravelApiGenerator.entities && viewItem == entity",
           "group": "inline@2"
+        },
+        {
+          "command": "laravelApiGenerator.addFields",
+          "when": "view == laravelApiGenerator.entities && viewItem == entity",
+          "group": "1_evolve@1"
         }
       ],
       "view/title": [

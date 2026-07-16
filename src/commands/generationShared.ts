@@ -51,9 +51,10 @@ export async function presentGenerationResult(
  */
 export async function pickGenerationOptions(
     withMigrationsChoice: boolean
-): Promise<{ queryBuilder: boolean; withMigrations: boolean } | undefined> {
+): Promise<{ queryBuilder: boolean; withMigrations: boolean; pest: boolean } | undefined> {
     const items: Array<vscode.QuickPickItem & { id: string }> = [
         { id: 'qb', label: t('sources.optQueryBuilder'), picked: false },
+        { id: 'pest', label: t('sources.optPest'), picked: false },
     ];
     if (withMigrationsChoice) {
         items.push({ id: 'mig', label: t('sources.optWithMigrations'), picked: false });
@@ -72,5 +73,6 @@ export async function pickGenerationOptions(
     return {
         queryBuilder: picks.some((p) => p.id === 'qb'),
         withMigrations: picks.some((p) => p.id === 'mig'),
+        pest: picks.some((p) => p.id === 'pest'),
     };
 }

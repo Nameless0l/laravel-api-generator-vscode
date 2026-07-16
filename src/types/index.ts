@@ -1,6 +1,8 @@
 export interface Field {
     name: string;
     type: string;
+    /** Marks the field as the table's primary key instead of the default id (package >= 3.6). */
+    primary?: boolean;
 }
 
 export interface Relationship {
@@ -15,6 +17,8 @@ export interface GenerateOptions {
     softDeletes: boolean;
     /** Generate index endpoints with spatie/laravel-query-builder (package >= 3.5). */
     queryBuilder?: boolean;
+    /** Generate Pest tests instead of PHPUnit (package >= 3.6). */
+    pest?: boolean;
 }
 
 export interface EntityConfig {
@@ -65,6 +69,7 @@ export const FIELD_TYPES = [
     'time',
     'uuid',
     'bigint',
+    'enum',
 ] as const;
 
 export type FieldType = (typeof FIELD_TYPES)[number];
