@@ -2,7 +2,7 @@
 
 The extension is a visual front-end for the
 [`nameless/laravel-api-generator`](https://packagist.org/packages/nameless/laravel-api-generator)
-package — that's what actually generates the code.
+package, which is what actually generates the code.
 
 In your Laravel project, run:
 

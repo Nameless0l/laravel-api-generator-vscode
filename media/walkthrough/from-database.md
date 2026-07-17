@@ -10,8 +10,8 @@ builds the complete API layer for every table you select:
 
 You can also generate from declarative sources instead:
 
-- **Schema file** — an `api-schema.yaml` / `.json` describing all entities
-- **Mermaid diagram** — an `.mmd` ER or class diagram, straight from
+- **Schema file**: an `api-schema.yaml` / `.json` describing all entities
+- **Mermaid diagram**: an `.mmd` ER or class diagram, straight from
   your documentation
 
 All three commands live in the command palette under

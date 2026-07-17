@@ -3,7 +3,7 @@
 The **Generated Entities** view lists every API in your project with
 its 12 generated files:
 
-- Click a file to open it — or use **Alt+click** on any generated file
+- Click a file to open it, or use **Alt+click** on any generated file
   and *Go to Related* to jump between Model ↔ Controller ↔ Service
 - Right-click an entity to **regenerate a single file** or **delete**
   the whole API cleanly (files + routes + registrations)
