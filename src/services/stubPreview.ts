@@ -380,6 +380,10 @@ ${rules}
   }
 
   private genResource(name: string, config: EntityConfig): string {
+    if (config.options.jsonApi) {
+      return this.genJsonApiResource(name, config);
+    }
+
     const fields = config.fields
       .map((f) => `            '${f.name}' => $this->${f.name},`)
       .join("\n");
@@ -405,6 +409,38 @@ ${fields}
         ];
     }
 }`;
+  }
+
+  private genJsonApiResource(name: string, config: EntityConfig): string {
+    const attributes = config.fields
+      .map((f) => `        '${f.name}',`)
+      .concat(["        'created_at',", "        'updated_at',"])
+      .join("\n");
+
+    const rels = (config.relationships ?? [])
+      .map((r) => (r.role && r.role.trim()) || r.target.toLowerCase())
+      .filter((role) => role.length > 0);
+
+    const relationships =
+      rels.length > 0
+        ? `\n    /** @var array<int, string> */\n    public $relationships = [\n${rels
+            .map((role) => `        '${role}',`)
+            .join("\n")}\n    ];\n`
+        : "";
+
+    return `<?php
+
+namespace App\\Http\\Resources;
+
+use Illuminate\\Http\\Resources\\JsonApi\\JsonApiResource;
+
+class ${name}Resource extends JsonApiResource
+{
+    /** @var array<int, string> */
+    public $attributes = [
+${attributes}
+    ];
+${relationships}}`;
   }
 
   private genMigration(tableName: string, config: EntityConfig): string {

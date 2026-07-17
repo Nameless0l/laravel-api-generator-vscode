@@ -87,6 +87,7 @@ export function registerGenerateFromDatabaseCommand(onDidGenerate: () => void): 
                     withMigrations: options.withMigrations,
                     queryBuilder: options.queryBuilder,
                     pest: options.pest,
+                    jsonApi: options.jsonApi,
                 })
         );
 

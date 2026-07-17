@@ -43,6 +43,9 @@ export class ArtisanRunner {
         if (config.options.pest) {
             args.push('--pest');
         }
+        if (config.options.jsonApi) {
+            args.push('--json-api');
+        }
 
         // Partial file selection: only pass --only= when user deselected at least one type
         if (config.onlyTypes && config.onlyTypes.length > 0) {
@@ -54,7 +57,7 @@ export class ArtisanRunner {
 
     async generateFromJson(
         onlyTypes?: string[],
-        options?: { queryBuilder?: boolean; pest?: boolean }
+        options?: { queryBuilder?: boolean; pest?: boolean; jsonApi?: boolean }
     ): Promise<ArtisanResult> {
         const args = ['artisan', 'make:fullapi'];
         if (onlyTypes && onlyTypes.length > 0) {
@@ -66,6 +69,9 @@ export class ArtisanRunner {
         if (options?.pest) {
             args.push('--pest');
         }
+        if (options?.jsonApi) {
+            args.push('--json-api');
+        }
         return this.run(args, 120000);
     }
 
@@ -74,6 +80,7 @@ export class ArtisanRunner {
         withMigrations?: boolean;
         queryBuilder?: boolean;
         pest?: boolean;
+        jsonApi?: boolean;
     }): Promise<ArtisanResult> {
         const args = ['artisan', 'make:fullapi', '--from-database'];
         if (options.tables && options.tables.length > 0) {
@@ -88,12 +95,15 @@ export class ArtisanRunner {
         if (options.pest) {
             args.push('--pest');
         }
+        if (options.jsonApi) {
+            args.push('--json-api');
+        }
         return this.run(args, 180000);
     }
 
     async generateFromSchema(
         schemaPath: string,
-        options?: { queryBuilder?: boolean; pest?: boolean }
+        options?: { queryBuilder?: boolean; pest?: boolean; jsonApi?: boolean }
     ): Promise<ArtisanResult> {
         const args = ['artisan', 'make:fullapi', `--schema=${schemaPath}`];
         if (options?.queryBuilder) {
@@ -102,12 +112,15 @@ export class ArtisanRunner {
         if (options?.pest) {
             args.push('--pest');
         }
+        if (options?.jsonApi) {
+            args.push('--json-api');
+        }
         return this.run(args, 180000);
     }
 
     async generateFromMermaid(
         diagramPath: string,
-        options?: { queryBuilder?: boolean; pest?: boolean }
+        options?: { queryBuilder?: boolean; pest?: boolean; jsonApi?: boolean }
     ): Promise<ArtisanResult> {
         const args = ['artisan', 'make:fullapi', `--mermaid=${diagramPath}`];
         if (options?.queryBuilder) {
@@ -115,6 +128,9 @@ export class ArtisanRunner {
         }
         if (options?.pest) {
             args.push('--pest');
+        }
+        if (options?.jsonApi) {
+            args.push('--json-api');
         }
         return this.run(args, 180000);
     }

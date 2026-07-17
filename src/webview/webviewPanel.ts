@@ -312,6 +312,7 @@ export class GeneratorPanel {
         return this.artisan.generateFromJson(config.onlyTypes, {
             queryBuilder: config.options.queryBuilder,
             pest: config.options.pest,
+            jsonApi: config.options.jsonApi,
         });
     }
 

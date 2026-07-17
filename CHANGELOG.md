@@ -2,6 +2,13 @@
 
 All notable changes to the Laravel API Generator VS Code extension will be documented in this file.
 
+## [0.10.0] - 2026-07-17
+
+Pairs with `nameless/laravel-api-generator` >= 3.7.
+
+### Added
+- **JSON:API resources** -- a new "JSON:API resources" option (builder form and the source generators' option picker) passes `--json-api` to the package. Generated resources extend `Illuminate\Http\Resources\JsonApi\JsonApiResource` (Laravel 12.45+) with `$attributes` and `$relationships` lists. The live code preview renders the JSON:API shape when the option is on. On older Laravel the package falls back to a standard resource.
+
 ## [0.9.0] - 2026-07-16
 
 ### Added

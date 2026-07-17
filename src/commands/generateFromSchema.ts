@@ -41,7 +41,7 @@ export function registerGenerateFromSchemaCommand(onDidGenerate: () => void): vs
                 title: t('sources.generating'),
                 cancellable: false,
             },
-            () => artisan.generateFromSchema(schemaPath, { queryBuilder: options.queryBuilder, pest: options.pest })
+            () => artisan.generateFromSchema(schemaPath, { queryBuilder: options.queryBuilder, pest: options.pest, jsonApi: options.jsonApi })
         );
 
         await presentGenerationResult(result, root, onDidGenerate);

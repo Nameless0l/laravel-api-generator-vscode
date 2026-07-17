@@ -19,6 +19,8 @@ export interface GenerateOptions {
     queryBuilder?: boolean;
     /** Generate Pest tests instead of PHPUnit (package >= 3.6). */
     pest?: boolean;
+    /** Generate JSON:API-compliant resources (package >= 3.7, Laravel 12.45+). */
+    jsonApi?: boolean;
 }
 
 export interface EntityConfig {

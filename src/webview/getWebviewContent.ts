@@ -26,6 +26,7 @@ interface LocaleData {
         optSoftDeletes: string;
         optQueryBuilder: string;
         optPest: string;
+        optJsonApi: string;
         enumValuesPlaceholder: string;
         pkTooltip: string;
         relTargetPlaceholder: string;
@@ -451,6 +452,10 @@ export function getWebviewContent(
                 <input type="checkbox" id="optPest" />
                 <label for="optPest">${L.optPest}</label>
             </div>
+            <div class="option-item">
+                <input type="checkbox" id="optJsonApi" />
+                <label for="optJsonApi">${L.optJsonApi}</label>
+            </div>
         </div>
     </div>
 
@@ -680,6 +685,7 @@ export function getWebviewContent(
                 const softDeletesEl = document.getElementById('optSoftDeletes');
                 const queryBuilderEl = document.getElementById('optQueryBuilder');
                 const pestEl = document.getElementById('optPest');
+                const jsonApiEl = document.getElementById('optJsonApi');
 
                 const relationships = [];
                 document.querySelectorAll('#relationsContainer .field-row').forEach(function(r) {
@@ -713,6 +719,7 @@ export function getWebviewContent(
                         softDeletes: softDeletesEl ? softDeletesEl.checked : false,
                         queryBuilder: queryBuilderEl ? queryBuilderEl.checked : false,
                         pest: pestEl ? pestEl.checked : false,
+                        jsonApi: jsonApiEl ? jsonApiEl.checked : false,
                     },
                     onlyTypes: onlyTypes,
                 };
@@ -855,6 +862,7 @@ export function getWebviewContent(
                 document.getElementById('optSoftDeletes').checked = false;
                 document.getElementById('optQueryBuilder').checked = false;
                 document.getElementById('optPest').checked = false;
+                document.getElementById('optJsonApi').checked = false;
                 // Reset file type checkboxes to all-checked
                 ALL_FILE_IDS_RESET.forEach(function(id) {
                     var cb = document.getElementById('ft_' + id);
