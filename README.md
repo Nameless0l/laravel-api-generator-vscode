@@ -257,6 +257,12 @@ database/seeders/DatabaseSeeder.php             -- Seeder auto-registered
 
 ---
 
+## Support the project
+
+This extension is free and MIT-licensed, and will stay that way. If it saves you time, you can support its development through [GitHub Sponsors](https://github.com/sponsors/Nameless0l) or [Buy Me a Coffee](https://buymeacoffee.com/loicmbassi).
+
+---
+
 ## License
 
 MIT
