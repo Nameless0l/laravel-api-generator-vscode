@@ -353,7 +353,7 @@ export class ArtisanRunner {
 
                     // Combine output sources so we never silently drop diagnostics.
                     // Node's `error.message` already starts with "Command failed: <cmd>"
-                    // when the process exits non-zero — don't add another prefix.
+                    // when the process exits non-zero: don't add another prefix.
                     const parts: string[] = [];
                     if (output) {
                         parts.push(output);

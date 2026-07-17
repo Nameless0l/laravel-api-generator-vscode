@@ -833,7 +833,7 @@ export function getWebviewContent(
                 vscode.postMessage({ type: 'generate', payload: config });
             });
 
-            // Files to Generate — select all / none
+            // Files to Generate: select all / none
             var ALL_FILE_IDS_RESET = ['Model','Controller','Service','DTO','Request','Resource','Policy','Migration','Factory','Seeder','FeatureTest','UnitTest'];
 
             document.getElementById('selectAllFiles').addEventListener('click', function(e) {

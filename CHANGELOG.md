@@ -2,6 +2,11 @@
 
 All notable changes to the Laravel API Generator VS Code extension will be documented in this file.
 
+## [0.10.2] - 2026-07-17
+
+### Changed
+- Cleaned up every user-facing string (webview labels, tooltips, walkthrough, README): consistent punctuation, no em-dashes.
+
 ## [0.10.1] - 2026-07-17
 
 ### Added

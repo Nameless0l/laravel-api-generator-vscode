@@ -120,7 +120,7 @@
   "snippets": {
     "notFound": "Snippets file was not found in the extension.",
     "parseFailed": "Failed to parse snippets file: {0}",
-    "pickTitle": "Laravel API Generator — Snippets",
+    "pickTitle": "Laravel API Generator: Snippets",
     "pickPlaceholder": "Pick a snippet to insert (or copy if no PHP file is open)",
     "inserted": "Inserted snippet: {0}",
     "copied": "Snippet \"{0}\" copied to clipboard."
@@ -134,7 +134,7 @@
   },
   "ui": {
     "quickStart": "Quick Start (preset)",
-    "quickStartHint": "— Choose a preset to autofill —",
+    "quickStartHint": "Choose a preset to autofill",
     "presets": {
       "blogPost": "Blog Post",
       "userProfile": "User Profile",
@@ -158,7 +158,7 @@
     "optPest": "Pest tests",
     "optJsonApi": "JSON:API resources",
     "enumValuesPlaceholder": "values: draft,published",
-    "pkTooltip": "Primary key — replaces the default auto-increment id",
+    "pkTooltip": "Primary key: replaces the default auto-increment id",
     "relTargetPlaceholder": "Target model (e.g. Post)",
     "relRolePlaceholder": "relation name, e.g. posts (optional)",
     "relRoleTooltip": "Name of the Eloquent method generated on the model (defaults to the target model name)",

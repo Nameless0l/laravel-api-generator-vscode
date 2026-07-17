@@ -118,7 +118,7 @@ const PATTERNS: Pattern[] = [
         match: /Migration table not found|Base table or view not found.*migrations/i,
         contexts: ['migrate', 'seed', 'test'],
         build: () => ({
-            diagnosis: 'The migrations table is missing — your database has never been initialized.',
+            diagnosis: 'The migrations table is missing: your database has never been initialized.',
             actions: [
                 runInTerminal('php artisan migrate:install', 'php artisan migrate:install'),
                 showOutput(),

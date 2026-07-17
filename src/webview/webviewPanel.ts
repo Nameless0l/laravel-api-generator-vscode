@@ -346,7 +346,7 @@ export class GeneratorPanel {
 
         const broken = payload.results.filter((r) => r.status === 'invalid');
         const lines = broken
-            .map((r) => `  • ${r.stub}.stub — missing {{${r.missing.join('}}, {{')}}}`)
+            .map((r) => `  • ${r.stub}.stub: missing {{${r.missing.join('}}, {{')}}}`)
             .join('\n');
 
         const openLabel = t('generate.openStubsFolder');
@@ -698,7 +698,7 @@ export class GeneratorPanel {
             return;
         }
 
-        // Stop the button spinner now — we're handing control to the QuickPick UI
+        // Stop the button spinner now: we're handing control to the QuickPick UI
         this.panel.webview.postMessage({ type: 'clearLoading', id: 'btnImportFromDb' });
 
         const tablePick = await vscode.window.showQuickPick(

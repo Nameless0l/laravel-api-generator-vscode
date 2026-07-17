@@ -60,7 +60,7 @@ The killer feature for legacy projects (requires package >= 3.5): generate compl
 - Run **Laravel API Generator: Generate APIs from Database** (command palette or sidebar `...` menu)
 - Multi-select the tables (all preselected; `users` is unchecked so `app/Models/User.php` is never overwritten)
 - Pick options: Spatie QueryBuilder filtering, and whether to also generate migration files
-- Foreign keys become `belongsTo`/`hasMany`, pivot tables become `belongsToMany`, `deleted_at` enables Soft Deletes — all automatically
+- Foreign keys become `belongsTo`/`hasMany`, pivot tables become `belongsToMany`, `deleted_at` enables Soft Deletes: all automatically
 
 ### Generate from a Schema File (api-schema.yaml)
 
@@ -72,7 +72,7 @@ Describe the whole API in a declarative, versionable YAML/JSON file and regenera
 
 ### Generate from a Mermaid Diagram
 
-Paste a Mermaid `erDiagram` or `classDiagram` — hand-written or produced by an AI assistant — and turn it into a working API (requires package >= 3.5):
+Paste a Mermaid `erDiagram` or `classDiagram` (hand-written or produced by an AI assistant) and turn it into a working API (requires package >= 3.5):
 
 - Run **Laravel API Generator: Generate APIs from Mermaid Diagram**
 - Uses the active `.mmd` file, or lets you browse for one
@@ -182,7 +182,7 @@ The whole UI -- panel labels, popups, QuickPick prompts, error messages -- is av
 composer require --dev nameless/laravel-api-generator
 ```
 
-It is a **dev dependency with zero lock-in**: nothing from the generator ships to production, and the generated code does not depend on it — you can even remove the package once your API is generated.
+It is a **dev dependency with zero lock-in**: nothing from the generator ships to production, and the generated code does not depend on it; you can even remove the package once your API is generated.
 
 ### 2. Install the extension
 

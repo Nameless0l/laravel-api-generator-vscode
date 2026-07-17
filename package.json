@@ -2,7 +2,7 @@
   "name": "laravel-api-generator",
   "displayName": "Laravel API Generator",
   "description": "Generate complete REST APIs for Laravel with a visual interface",
-  "version": "0.10.1",
+  "version": "0.10.2",
   "publisher": "Nameless0l",
   "license": "MIT",
   "icon": "media/icon-marketplace.png",
@@ -152,7 +152,7 @@
       {
         "id": "laravelApiGenerator.gettingStarted",
         "title": "Get Started with Laravel API Generator",
-        "description": "Generate complete REST APIs for Laravel — from a form, your database, a schema file or a Mermaid diagram.",
+        "description": "Generate complete REST APIs for Laravel from a form, your database, a schema file or a Mermaid diagram.",
         "steps": [
           {
             "id": "installPackage",
@@ -176,7 +176,7 @@
           {
             "id": "fromDatabase",
             "title": "Import an existing database",
-            "description": "Point the generator at your schema and get APIs for every table — relationships included.\n[Generate from Database](command:laravelApiGenerator.generateFromDatabase)",
+            "description": "Point the generator at your schema and get APIs for every table, relationships included.\n[Generate from Database](command:laravelApiGenerator.generateFromDatabase)",
             "media": {
               "markdown": "media/walkthrough/from-database.md"
             },

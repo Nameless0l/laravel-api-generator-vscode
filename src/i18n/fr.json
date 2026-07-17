@@ -120,7 +120,7 @@
   "snippets": {
     "notFound": "Fichier de snippets introuvable dans l'extension.",
     "parseFailed": "Échec de l'analyse du fichier de snippets : {0}",
-    "pickTitle": "Laravel API Generator — Snippets",
+    "pickTitle": "Laravel API Generator : Snippets",
     "pickPlaceholder": "Choisissez un snippet à insérer (ou à copier si aucun fichier PHP n'est ouvert)",
     "inserted": "Snippet inséré : {0}",
     "copied": "Snippet « {0} » copié dans le presse-papiers."
@@ -134,7 +134,7 @@
   },
   "ui": {
     "quickStart": "Démarrage rapide (preset)",
-    "quickStartHint": "— Choisissez un preset pour pré-remplir —",
+    "quickStartHint": "Choisissez un preset pour pré-remplir",
     "presets": {
       "blogPost": "Article de blog",
       "userProfile": "Profil utilisateur",
@@ -158,7 +158,7 @@
     "optPest": "Tests Pest",
     "optJsonApi": "Resources JSON:API",
     "enumValuesPlaceholder": "valeurs : draft,published",
-    "pkTooltip": "Clé primaire — remplace l'id auto-incrémenté par défaut",
+    "pkTooltip": "Clé primaire : remplace l'id auto-incrémenté par défaut",
     "relTargetPlaceholder": "Modèle cible (ex. Post)",
     "relRolePlaceholder": "nom de la relation, ex. posts (optionnel)",
     "relRoleTooltip": "Nom de la méthode Eloquent générée sur le modèle (par défaut : dérivé du modèle cible)",
