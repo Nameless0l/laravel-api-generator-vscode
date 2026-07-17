@@ -2,6 +2,11 @@
 
 All notable changes to the Laravel API Generator VS Code extension will be documented in this file.
 
+## [0.10.1] - 2026-07-17
+
+### Added
+- Sponsor button on the Marketplace listing (`sponsor` field in the manifest), pointing at [GitHub Sponsors](https://github.com/sponsors/Nameless0l).
+
 ## [0.10.0] - 2026-07-17
 
 Pairs with `nameless/laravel-api-generator` >= 3.7.
