@@ -137,8 +137,15 @@
     "views": {
       "laravelApiGenerator": [
         {
+          "id": "laravelApiGenerator.home",
+          "type": "webview",
+          "name": "Generate",
+          "initialSize": 1
+        },
+        {
           "id": "laravelApiGenerator.entities",
-          "name": "Generated Entities"
+          "name": "Generated Entities",
+          "initialSize": 1
         }
       ]
     },

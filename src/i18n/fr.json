@@ -117,6 +117,21 @@
     "entities": "Laravel API : {0}",
     "tooltip": "Cliquer pour ouvrir la barre latérale Laravel API Generator"
   },
+  "sidebar": {
+    "tagline": "De l'entité à l'API REST testée et documentée en un clic.",
+    "newApi": "Nouvelle API",
+    "generateFrom": "Générer depuis",
+    "database": "Base de données existante",
+    "databaseDesc": "Une API par table, relations comprises.",
+    "schema": "Fichier de schéma",
+    "schemaDesc": "api-schema.yaml ou JSON, versionné avec le repo.",
+    "mermaid": "Diagramme Mermaid",
+    "mermaidDesc": "Un diagramme de classes devient des API.",
+    "explore": "Explorer",
+    "diagram": "Diagramme d'entités",
+    "snippets": "Snippets",
+    "docs": "Documentation"
+  },
   "snippets": {
     "notFound": "Fichier de snippets introuvable dans l'extension.",
     "parseFailed": "Échec de l'analyse du fichier de snippets : {0}",

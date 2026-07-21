@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { initLocale } from './i18n';
 import { LaravelDetector } from './services/laravelDetector';
 import { EntityTreeProvider } from './providers/entityTreeProvider';
+import { SidebarHomeViewProvider } from './webview/sidebarHomeView';
 import { StatusBarManager } from './services/statusBar';
 import { registerGenerateCommand } from './commands/generateApi';
 import { registerDeleteCommand } from './commands/deleteApi';
@@ -16,6 +17,13 @@ import { registerGenerateFromMermaidCommand } from './commands/generateFromMerma
 
 export function activate(context: vscode.ExtensionContext): void {
     initLocale();
+
+    context.subscriptions.push(
+        vscode.window.registerWebviewViewProvider(
+            SidebarHomeViewProvider.viewId,
+            new SidebarHomeViewProvider(context)
+        )
+    );
 
     const root = LaravelDetector.getWorkspaceRoot();
     const isLaravel = !!root && LaravelDetector.isLaravelProject(root);
