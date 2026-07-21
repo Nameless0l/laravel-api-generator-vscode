@@ -2,6 +2,15 @@
 
 All notable changes to the Laravel API Generator VS Code extension will be documented in this file.
 
+## [0.11.0] - 2026-07-21
+
+### Added
+- **Sidebar home** -- the activity bar view opens on a branded panel: a New API button, the three import sources (existing database, schema file, Mermaid diagram) and shortcuts to the entity diagram, the snippets picker and the documentation, localized like the rest of the UI. The entity tree keeps its place right below.
+- **Infinite canvas** -- the entity diagram pans forever in every direction over an Obsidian-style dotted grid that tracks pan and zoom. Scroll pans, Shift+scroll pans horizontally, Ctrl+wheel (or a trackpad pinch) zooms toward the cursor, and dragging empty space pans with a hand cursor. Entity cards got a sharper look with cardinality badges and a relations section, and the view frames all entities on open.
+
+### Fixed
+- The diagram no longer collapses to minimum zoom when its webview starts without real dimensions; initial framing waits for the view to be measured.
+
 ## [0.10.2] - 2026-07-17
 
 ### Changed

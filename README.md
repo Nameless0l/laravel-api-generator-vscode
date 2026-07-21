@@ -126,13 +126,21 @@ Modified your migration and want fresh tests without retyping the schema?
 
 ### Sidebar Entity Explorer
 
-Browse all generated entities in a dedicated sidebar panel:
+The activity bar view opens on a **home panel**: a New API button, the three import sources and shortcuts to the diagram, the snippets and the documentation, localized like the rest of the UI. Right below, the entity tree tracks everything the generator created:
 
 - Each entity expands into three groups: **Files**, **Fields**, **Relations**
 - **Files** show a green check / red slash for each artifact (Model, Controller, Service, ...) and click to open
 - **Fields** are read from the model's `$fillable`
 - **Relations** are extracted from the model's `belongsTo` / `hasMany` / `hasOne` / `belongsToMany` methods, with a `belongsTo -> Author` style description
 - Inline actions on each entity: **Regenerate File(s)** and **Delete**
+
+### Entity Diagram (infinite canvas)
+
+Visualize every generated entity and its relationships on an Obsidian-style canvas:
+
+- Infinite dotted grid that follows pan and zoom, with a hand cursor to drag the view
+- Scroll pans, Shift+scroll pans horizontally, Ctrl+wheel (or a trackpad pinch) zooms toward the cursor
+- Inverse declarations are merged into one link with cardinality pills; cards stay draggable at any zoom
 
 ### Quick Actions
 
