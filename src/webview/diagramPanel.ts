@@ -89,32 +89,55 @@ export class DiagramPanel {
             font-size: 0.85em;
             color: var(--vscode-descriptionForeground);
         }
-        .canvas.panning { cursor: grabbing; }
         .canvas {
             position: relative;
             width: 100%;
             height: calc(100vh - 45px);
-            overflow: auto;
+            overflow: hidden;
+            cursor: grab;
+            background: var(--vscode-editor-background);
+        }
+        .canvas.panning { cursor: grabbing; }
+        .canvas::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            background-image:
+                radial-gradient(circle at center, var(--vscode-descriptionForeground) 1.3px, transparent 1.6px),
+                radial-gradient(circle at center, var(--vscode-descriptionForeground) 2px, transparent 2.4px);
+            background-size:
+                var(--grid-size, 26px) var(--grid-size, 26px),
+                var(--grid-major, 130px) var(--grid-major, 130px);
+            background-position: var(--grid-x, 0px) var(--grid-y, 0px);
+            opacity: 0.5;
         }
         .canvas-inner {
-            position: relative;
-            min-width: 100%;
-            min-height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 0;
+            height: 0;
+            transform-origin: 0 0;
+            will-change: transform;
+            z-index: 1;
         }
         svg.lines {
             position: absolute;
             top: 0;
             left: 0;
-            width: 100%;
-            height: 100%;
+            width: 20000px;
+            height: 20000px;
             pointer-events: none;
+            overflow: visible;
             z-index: 0;
         }
         svg.lines path.edge {
             stroke: var(--vscode-textLink-foreground);
             stroke-width: 2;
             fill: none;
-            opacity: 0.45;
+            opacity: 0.6;
             stroke-linecap: round;
             transition: opacity 0.15s ease, stroke-width 0.15s ease;
         }
@@ -139,47 +162,91 @@ export class DiagramPanel {
             position: absolute;
             background: var(--vscode-editorWidget-background);
             border: 1px solid var(--vscode-panel-border);
-            border-radius: 6px;
-            min-width: 180px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            border-radius: 10px;
+            min-width: 210px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.35), 0 2px 6px rgba(0,0,0,0.25);
             cursor: grab;
             z-index: 1;
             user-select: none;
+            overflow: hidden;
+            transition: box-shadow 0.15s ease, border-color 0.15s ease;
         }
         .entity-card:hover {
             border-color: var(--vscode-focusBorder);
+            box-shadow: 0 16px 44px rgba(0,0,0,0.5), 0 0 0 1px var(--vscode-focusBorder);
         }
-        .entity-card.dragging { cursor: grabbing; opacity: 0.9; }
+        .entity-card.dragging { cursor: grabbing; box-shadow: 0 20px 52px rgba(0,0,0,0.55); }
         .entity-header {
             background: var(--vscode-button-background);
             color: var(--vscode-button-foreground);
-            padding: 8px 12px;
-            font-weight: bold;
-            font-size: 0.95em;
-            border-radius: 5px 5px 0 0;
+            padding: 10px 14px;
+            font-weight: 600;
+            font-size: 0.92em;
+            letter-spacing: 0.02em;
+            display: flex;
+            align-items: center;
+            gap: 9px;
+        }
+        .entity-header::before {
+            content: "";
+            width: 7px;
+            height: 7px;
+            border-radius: 2px;
+            background: currentColor;
+            opacity: 0.85;
         }
         .entity-fields {
-            padding: 6px 0;
+            padding: 8px 0;
         }
         .entity-field {
-            padding: 3px 12px;
+            padding: 4px 14px;
             font-size: 0.82em;
             font-family: var(--vscode-editor-font-family);
             color: var(--vscode-foreground);
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
         }
         .entity-field .type {
             color: var(--vscode-descriptionForeground);
-            margin-left: 6px;
+            margin-left: auto;
+            opacity: 0.85;
         }
         .entity-relations {
             border-top: 1px solid var(--vscode-panel-border);
-            padding: 6px 0;
+            background: rgba(127,127,127,0.04);
+            padding: 8px 0 6px;
+        }
+        .entity-relations::before {
+            content: "RELATIONS";
+            display: block;
+            padding: 0 14px 5px;
+            font-size: 0.6em;
+            font-weight: 700;
+            letter-spacing: 0.14em;
+            color: var(--vscode-descriptionForeground);
+            opacity: 0.7;
         }
         .entity-relation {
-            padding: 2px 12px;
+            padding: 3px 14px;
             font-size: 0.78em;
-            color: var(--vscode-textLink-foreground);
+            color: var(--vscode-foreground);
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
+        .entity-relation .rel-badge {
+            font-family: var(--vscode-editor-font-family);
+            font-size: 0.9em;
+            font-weight: 700;
+            background: var(--vscode-badge-background);
+            color: var(--vscode-badge-foreground);
+            border-radius: 5px;
+            padding: 1px 6px;
+            min-width: 30px;
+            text-align: center;
+        }
+        .entity-relation .rel-text { color: var(--vscode-textLink-foreground); }
         .empty-state {
             display: flex;
             flex-direction: column;
@@ -231,72 +298,106 @@ export class DiagramPanel {
             const gapX = 80;
             const gapY = 60;
 
-            // Obsidian-canvas style zoom & pan
-            let scale = 1;
+            // Obsidian-canvas style infinite pan & zoom: the world is a single
+            // transformed layer, the dotted grid is a background that tracks it.
+            let scale = 1, tx = 0, ty = 0;
             const canvasEl = document.getElementById('canvas');
             const innerEl = document.getElementById('canvasInner');
             innerEl.style.transformOrigin = '0 0';
+            const GRID = 26;
 
-            function applyScale(newScale, anchorX, anchorY) {
+            function applyTransform() {
+                innerEl.style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(' + scale + ')';
+                canvasEl.style.setProperty('--grid-size', (GRID * scale) + 'px');
+                canvasEl.style.setProperty('--grid-major', (GRID * 5 * scale) + 'px');
+                canvasEl.style.setProperty('--grid-x', tx + 'px');
+                canvasEl.style.setProperty('--grid-y', ty + 'px');
+                document.getElementById('zoomLevel').textContent = Math.round(scale * 100) + '%';
+            }
+
+            // Zoom around a screen anchor (cursor, or viewport centre by default)
+            // so the point under the anchor stays put.
+            function zoomAt(newScale, anchorX, anchorY) {
                 newScale = Math.min(2.5, Math.max(0.2, newScale));
                 const rect = canvasEl.getBoundingClientRect();
                 const ax = anchorX !== undefined ? anchorX - rect.left : rect.width / 2;
                 const ay = anchorY !== undefined ? anchorY - rect.top : rect.height / 2;
-                const contentX = (canvasEl.scrollLeft + ax) / scale;
-                const contentY = (canvasEl.scrollTop + ay) / scale;
+                const wx = (ax - tx) / scale;
+                const wy = (ay - ty) / scale;
                 scale = newScale;
-                innerEl.style.transform = 'scale(' + scale + ')';
-                canvasEl.scrollLeft = contentX * scale - ax;
-                canvasEl.scrollTop = contentY * scale - ay;
-                document.getElementById('zoomLevel').textContent = Math.round(scale * 100) + '%';
+                tx = ax - wx * scale;
+                ty = ay - wy * scale;
+                applyTransform();
             }
 
+            // Wheel pans, Obsidian style; Ctrl/Cmd+wheel zooms toward the
+            // cursor (trackpad pinches arrive as Ctrl+wheel, so they zoom too).
             canvasEl.addEventListener('wheel', (e) => {
-                if (!e.ctrlKey && !e.metaKey) return;
                 e.preventDefault();
-                applyScale(scale * (e.deltaY < 0 ? 1.12 : 0.89), e.clientX, e.clientY);
+                if (e.ctrlKey || e.metaKey) {
+                    zoomAt(scale * (e.deltaY < 0 ? 1.1 : 0.9), e.clientX, e.clientY);
+                    return;
+                }
+                if (e.shiftKey) {
+                    tx -= (e.deltaY || e.deltaX);
+                } else {
+                    tx -= e.deltaX;
+                    ty -= e.deltaY;
+                }
+                applyTransform();
             }, { passive: false });
 
-            document.getElementById('zoomIn').addEventListener('click', () => applyScale(scale * 1.2));
-            document.getElementById('zoomOut').addEventListener('click', () => applyScale(scale / 1.2));
-            document.getElementById('zoomReset').addEventListener('click', () => applyScale(1));
-            document.getElementById('zoomFit').addEventListener('click', () => {
-                let maxX = 0, maxY = 0;
+            function fitAll() {
+                let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
                 Object.keys(positions).forEach((name) => {
                     const el = document.querySelector('[data-entity="' + name + '"]');
                     if (!el) return;
-                    maxX = Math.max(maxX, positions[name].x + el.offsetWidth);
-                    maxY = Math.max(maxY, positions[name].y + el.offsetHeight);
+                    const p = positions[name];
+                    minX = Math.min(minX, p.x);
+                    minY = Math.min(minY, p.y);
+                    maxX = Math.max(maxX, p.x + el.offsetWidth);
+                    maxY = Math.max(maxY, p.y + el.offsetHeight);
                 });
-                if (maxX === 0 || maxY === 0) return;
+                if (!isFinite(minX)) return;
                 const rect = canvasEl.getBoundingClientRect();
-                applyScale(Math.min((rect.width - 40) / maxX, (rect.height - 40) / maxY, 1.5));
-                canvasEl.scrollLeft = 0;
-                canvasEl.scrollTop = 0;
-            });
+                const pad = 60;
+                const w = maxX - minX, h = maxY - minY;
+                scale = Math.max(0.2, Math.min((rect.width - pad * 2) / w, (rect.height - pad * 2) / h, 1.5));
+                tx = (rect.width - w * scale) / 2 - minX * scale;
+                ty = (rect.height - h * scale) / 2 - minY * scale;
+                applyTransform();
+            }
+
+            document.getElementById('zoomIn').addEventListener('click', () => zoomAt(scale * 1.2));
+            document.getElementById('zoomOut').addEventListener('click', () => zoomAt(scale / 1.2));
+            document.getElementById('zoomReset').addEventListener('click', () => { zoomAt(1); });
+            document.getElementById('zoomFit').addEventListener('click', fitAll);
 
             // Drag the background to pan
             let panning = false;
-            let panStartX = 0, panStartY = 0, panScrollX = 0, panScrollY = 0;
+            let panStartX = 0, panStartY = 0, panTx = 0, panTy = 0;
             canvasEl.addEventListener('mousedown', (e) => {
                 if (e.target.closest('.entity-card')) return;
                 panning = true;
                 canvasEl.classList.add('panning');
                 panStartX = e.clientX;
                 panStartY = e.clientY;
-                panScrollX = canvasEl.scrollLeft;
-                panScrollY = canvasEl.scrollTop;
+                panTx = tx;
+                panTy = ty;
                 e.preventDefault();
             });
             document.addEventListener('mousemove', (e) => {
                 if (!panning) return;
-                canvasEl.scrollLeft = panScrollX - (e.clientX - panStartX);
-                canvasEl.scrollTop = panScrollY - (e.clientY - panStartY);
+                tx = panTx + (e.clientX - panStartX);
+                ty = panTy + (e.clientY - panStartY);
+                applyTransform();
             });
             document.addEventListener('mouseup', () => {
                 panning = false;
                 canvasEl.classList.remove('panning');
             });
+
+            applyTransform();
 
             entities.forEach((entity, i) => {
                 const col = i % cols;
@@ -315,7 +416,11 @@ export class DiagramPanel {
                 html += '<div class="entity-fields">';
                 html += '<div class="entity-field"><b>id</b><span class="type">bigint PK</span></div>';
                 entity.fields.forEach(f => {
-                    html += '<div class="entity-field">' + f + '</div>';
+                    const idx = f.indexOf(':');
+                    const fname = idx >= 0 ? f.slice(0, idx) : f;
+                    const ftype = idx >= 0 ? f.slice(idx + 1) : '';
+                    html += '<div class="entity-field"><span class="fname">' + fname + '</span>' +
+                            (ftype ? '<span class="type">' + ftype + '</span>' : '') + '</div>';
                 });
                 html += '</div>';
 
@@ -325,7 +430,8 @@ export class DiagramPanel {
                         const label = r.type === 'belongsTo' ? 'N:1' :
                                       r.type === 'hasMany' ? '1:N' :
                                       r.type === 'hasOne' ? '1:1' : 'N:N';
-                        html += '<div class="entity-relation">' + label + ' ' + r.method + ' -> ' + r.target + '</div>';
+                        html += '<div class="entity-relation"><span class="rel-badge">' + label + '</span>' +
+                                '<span class="rel-text">' + r.method + ' &rarr; ' + r.target + '</span></div>';
                     });
                     html += '</div>';
                 }
@@ -547,7 +653,21 @@ export class DiagramPanel {
                 });
             }
 
-            setTimeout(() => { relayout(); drawLines(); }, 100);
+            // A hidden or restoring webview reports zero size; wait for real
+            // dimensions so layout and fit use real card measurements.
+            function initView() { relayout(); drawLines(); fitAll(); }
+            setTimeout(() => {
+                if (canvasEl.clientWidth === 0) {
+                    const ro = new ResizeObserver(() => {
+                        if (canvasEl.clientWidth === 0) return;
+                        ro.disconnect();
+                        initView();
+                    });
+                    ro.observe(canvasEl);
+                } else {
+                    initView();
+                }
+            }, 100);
         }
     </script>
 </body>
