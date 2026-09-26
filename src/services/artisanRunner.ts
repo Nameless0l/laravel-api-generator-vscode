@@ -1,9 +1,11 @@
 import * as vscode from 'vscode';
 import { execFile, spawn, ChildProcess } from 'child_process';
 import * as http from 'http';
-import { ArtisanResult, EntityConfig } from '../types';
-import { generateArgs, sourceArgs, SourceOptions } from './artisanArgs';
+import { ArtisanResult, EntityConfig, GenerationDocument } from '../types';
+import { generateArgs, schemaGenerationArgs, sourceArgs, SourceOptions } from './artisanArgs';
+import { lastProtocolDocument } from './generationOutput';
 import { PhpCommand, projectRelative, resolvePhpCommand } from './phpCommand';
+import { schemaFromConfig } from './schemaBuilder';
 
 export class ArtisanRunner {
     private workspaceRoot: string;
@@ -22,6 +24,11 @@ export class ArtisanRunner {
 
     async generate(config: EntityConfig): Promise<ArtisanResult> {
         return this.run(generateArgs(config));
+    }
+
+    async generateFromConfig(config: EntityConfig): Promise<{ result: ArtisanResult; document: GenerationDocument | null }> {
+        const result = await this.run(schemaGenerationArgs(config), 120000, JSON.stringify(schemaFromConfig(config)));
+        return { result, document: lastProtocolDocument(result.output) };
     }
 
     async generateFromJson(onlyTypes?: string[], options?: SourceOptions): Promise<ArtisanResult> {
@@ -249,7 +256,7 @@ export class ArtisanRunner {
         }
     }
 
-    private run(args: string[], timeout: number = 30000): Promise<ArtisanResult> {
+    private run(args: string[], timeout: number = 30000, input?: string): Promise<ArtisanResult> {
         const php = this.phpCommand();
 
         return new Promise((resolve) => {
@@ -290,6 +297,9 @@ export class ArtisanRunner {
                 }
             );
             this.activeProcesses.add(child);
+            if (input !== undefined) {
+                child.stdin?.end(input);
+            }
         });
     }
 }

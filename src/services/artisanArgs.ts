@@ -1,4 +1,5 @@
 import { EntityConfig } from '../types';
+import { flagsFromConfig } from './schemaBuilder';
 
 export interface SourceOptions {
     queryBuilder?: boolean;
@@ -38,6 +39,23 @@ export function generateArgs(config: EntityConfig): string[] {
 
     if (config.onlyTypes && config.onlyTypes.length > 0) {
         args.push(`--only=${config.onlyTypes.join(',')}`);
+    }
+
+    return args;
+}
+
+export function schemaGenerationArgs(config: EntityConfig): string[] {
+    const args = ['artisan', 'make:fullapi', '--schema=-', '--json'];
+    const flags = flagsFromConfig(config);
+
+    if (flags.auth) {
+        args.push('--auth');
+    }
+    if (flags.postman) {
+        args.push('--postman');
+    }
+    if (flags.only) {
+        args.push(`--only=${flags.only.join(',')}`);
     }
 
     return args;
