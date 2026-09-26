@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { execFile, spawn, ChildProcess } from 'child_process';
 import * as http from 'http';
 import { ArtisanResult, EntityConfig } from '../types';
+import { generateArgs, sourceArgs, SourceOptions } from './artisanArgs';
 
 export class ArtisanRunner {
     private workspaceRoot: string;
@@ -19,120 +20,34 @@ export class ArtisanRunner {
     }
 
     async generate(config: EntityConfig): Promise<ArtisanResult> {
-        const args = ['artisan', 'make:fullapi', config.name];
-
-        if (config.fields.length > 0) {
-            const fieldsStr = config.fields
-                .map((f) => `${f.name}:${f.type}${f.primary ? ':primary' : ''}`)
-                .join(',');
-            args.push(`--fields=${fieldsStr}`);
-        }
-
-        if (config.options.softDeletes) {
-            args.push('--soft-deletes');
-        }
-        if (config.options.auth) {
-            args.push('--auth');
-        }
-        if (config.options.postman) {
-            args.push('--postman');
-        }
-        if (config.options.queryBuilder) {
-            args.push('--query-builder');
-        }
-        if (config.options.pest) {
-            args.push('--pest');
-        }
-        if (config.options.jsonApi) {
-            args.push('--json-api');
-        }
-
-        // Partial file selection: only pass --only= when user deselected at least one type
-        if (config.onlyTypes && config.onlyTypes.length > 0) {
-            args.push(`--only=${config.onlyTypes.join(',')}`);
-        }
-
-        return this.run(args);
+        return this.run(generateArgs(config));
     }
 
-    async generateFromJson(
-        onlyTypes?: string[],
-        options?: { queryBuilder?: boolean; pest?: boolean; jsonApi?: boolean }
-    ): Promise<ArtisanResult> {
-        const args = ['artisan', 'make:fullapi'];
-        if (onlyTypes && onlyTypes.length > 0) {
-            args.push(`--only=${onlyTypes.join(',')}`);
-        }
-        if (options?.queryBuilder) {
-            args.push('--query-builder');
-        }
-        if (options?.pest) {
-            args.push('--pest');
-        }
-        if (options?.jsonApi) {
-            args.push('--json-api');
-        }
-        return this.run(args, 120000);
+    async generateFromJson(onlyTypes?: string[], options?: SourceOptions): Promise<ArtisanResult> {
+        const flags = onlyTypes && onlyTypes.length > 0 ? [`--only=${onlyTypes.join(',')}`] : [];
+        return this.run(sourceArgs(flags, options), 120000);
     }
 
-    async generateFromDatabase(options: {
+    async generateFromDatabase(options: SourceOptions & {
         tables?: string[];
         withMigrations?: boolean;
-        queryBuilder?: boolean;
-        pest?: boolean;
-        jsonApi?: boolean;
     }): Promise<ArtisanResult> {
-        const args = ['artisan', 'make:fullapi', '--from-database'];
+        const flags = ['--from-database'];
         if (options.tables && options.tables.length > 0) {
-            args.push(`--tables=${options.tables.join(',')}`);
+            flags.push(`--tables=${options.tables.join(',')}`);
         }
         if (options.withMigrations) {
-            args.push('--with-migrations');
+            flags.push('--with-migrations');
         }
-        if (options.queryBuilder) {
-            args.push('--query-builder');
-        }
-        if (options.pest) {
-            args.push('--pest');
-        }
-        if (options.jsonApi) {
-            args.push('--json-api');
-        }
-        return this.run(args, 180000);
+        return this.run(sourceArgs(flags, options), 180000);
     }
 
-    async generateFromSchema(
-        schemaPath: string,
-        options?: { queryBuilder?: boolean; pest?: boolean; jsonApi?: boolean }
-    ): Promise<ArtisanResult> {
-        const args = ['artisan', 'make:fullapi', `--schema=${schemaPath}`];
-        if (options?.queryBuilder) {
-            args.push('--query-builder');
-        }
-        if (options?.pest) {
-            args.push('--pest');
-        }
-        if (options?.jsonApi) {
-            args.push('--json-api');
-        }
-        return this.run(args, 180000);
+    async generateFromSchema(schemaPath: string, options?: SourceOptions): Promise<ArtisanResult> {
+        return this.run(sourceArgs([`--schema=${schemaPath}`], options), 180000);
     }
 
-    async generateFromMermaid(
-        diagramPath: string,
-        options?: { queryBuilder?: boolean; pest?: boolean; jsonApi?: boolean }
-    ): Promise<ArtisanResult> {
-        const args = ['artisan', 'make:fullapi', `--mermaid=${diagramPath}`];
-        if (options?.queryBuilder) {
-            args.push('--query-builder');
-        }
-        if (options?.pest) {
-            args.push('--pest');
-        }
-        if (options?.jsonApi) {
-            args.push('--json-api');
-        }
-        return this.run(args, 180000);
+    async generateFromMermaid(diagramPath: string, options?: SourceOptions): Promise<ArtisanResult> {
+        return this.run(sourceArgs([`--mermaid=${diagramPath}`], options), 180000);
     }
 
     async addFields(entityName: string, fields: string): Promise<ArtisanResult> {
