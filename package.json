@@ -269,7 +269,13 @@
         "laravelApiGenerator.phpPath": {
           "type": "string",
           "default": "php",
-          "description": "Path to the PHP executable"
+          "description": "Path to the PHP executable. Ignored when phpCommand is set."
+        },
+        "laravelApiGenerator.phpCommand": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [],
+          "markdownDescription": "Full command that runs PHP, one argument per item, for projects where PHP lives in a container. Examples: `[\"./vendor/bin/sail\", \"php\"]` or `[\"docker\", \"compose\", \"exec\", \"-T\", \"app\", \"php\"]`. When empty, `phpPath` is used."
         },
         "laravelApiGenerator.locale": {
           "type": "string",
