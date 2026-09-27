@@ -53,6 +53,8 @@ export interface GeneratedEntity {
 
 export interface EntityFile {
     type: string;
+    /** The package's kind, as `--only` names it: `Request` covers the Store and Update requests. */
+    kind?: string;
     path: string;
     exists: boolean;
 }

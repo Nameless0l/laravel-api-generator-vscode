@@ -2,52 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { LaravelDetector } from '../services/laravelDetector';
 import { EntityScanner } from '../services/entityScanner';
-
-const EXCLUDED_REQUEST_NAMES = ['Login', 'Register'];
-
-interface EntityPattern {
-    regex: RegExp;
-    nameIndex: number;
-}
-
-const ENTITY_PATTERNS: EntityPattern[] = [
-    { regex: /^(.+)ControllerTest\.php$/, nameIndex: 1 },
-    { regex: /^(.+)ServiceTest\.php$/, nameIndex: 1 },
-    { regex: /^(.+)Controller\.php$/, nameIndex: 1 },
-    { regex: /^(.+)Service\.php$/, nameIndex: 1 },
-    { regex: /^(.+)DTO\.php$/, nameIndex: 1 },
-    { regex: /^(.+)Request\.php$/, nameIndex: 1 },
-    { regex: /^(.+)Resource\.php$/, nameIndex: 1 },
-    { regex: /^(.+)Policy\.php$/, nameIndex: 1 },
-    { regex: /^(.+)Factory\.php$/, nameIndex: 1 },
-    { regex: /^(.+)Seeder\.php$/, nameIndex: 1 },
-];
-
-function extractEntityName(filePath: string): string | undefined {
-    const fileName = path.basename(filePath);
-
-    // Check if file is a Model in app/Models/
-    const normalizedPath = filePath.replace(/\\/g, '/');
-    if (normalizedPath.includes('app/Models/') && fileName.endsWith('.php')) {
-        return fileName.replace('.php', '');
-    }
-
-    for (const pattern of ENTITY_PATTERNS) {
-        const match = fileName.match(pattern.regex);
-        if (match) {
-            const name = match[pattern.nameIndex];
-
-            // Exclude certain Request names
-            if (fileName.endsWith('Request.php') && EXCLUDED_REQUEST_NAMES.includes(name)) {
-                return undefined;
-            }
-
-            return name;
-        }
-    }
-
-    return undefined;
-}
+import { entityOfFile } from '../services/entityOfFile';
 
 export function registerGoToRelatedCommand(): vscode.Disposable {
     return vscode.commands.registerCommand('laravelApiGenerator.goToRelated', async () => {
@@ -64,7 +19,7 @@ export function registerGoToRelatedCommand(): vscode.Disposable {
         }
 
         const currentFilePath = editor.document.uri.fsPath;
-        const entityName = extractEntityName(currentFilePath);
+        const entityName = entityOfFile(check.root, currentFilePath);
 
         if (!entityName) {
             vscode.window.showWarningMessage('Could not determine entity name from the current file.');
