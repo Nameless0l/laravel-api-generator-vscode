@@ -92,14 +92,14 @@ Prefer to review one table before generating?
 - The form is auto-filled with the entity name (singularized + PascalCased), the field list, and the Soft Deletes flag (when `deleted_at` is present)
 - Review and click **Generate API**
 
-### OpenAPI / Swagger Import
+### Generate from an OpenAPI Spec
 
-Import an OpenAPI 3.0 or Swagger 2.0 JSON spec to bulk-generate entities:
+Hand an OpenAPI 3.0, 3.1 or Swagger 2.0 spec, JSON or YAML, to the package from the command palette, the sidebar or the builder's **Import OpenAPI** button:
 
-- Walks `components.schemas` (or `definitions`) and converts each schema into an entity
-- Maps OpenAPI types and formats: `integer`/`int64`, `number`/`float`, `string`/`uuid`/`date`/`date-time`, `boolean`, `array`, `object`
-- `$ref` properties become `belongsTo` relationships, `array` of `$ref` becomes `hasMany`
-- Boilerplate schemas like `ErrorResponse`, `PaginatedResponse`, `Meta`, `Links` are skipped automatically
+- A dry run first names the entities, counts the files to create and update, and lists the schemas left aside (`NewPet`, `ErrorResponse`...) with the reason
+- References become `belongsTo`, lists of references `hasMany` or `belongsToMany`, `postId` next to a `Post` schema a relation, string enums PHP enums, `deletedAt` soft deletes
+- A spec outside the project goes through stdin, so Sail and Docker work too
+- With a package older than 3.13, the button keeps the previous JSON-only importer
 
 ### JSON Bulk Import
 
