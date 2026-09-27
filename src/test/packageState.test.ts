@@ -3,7 +3,7 @@ import * as assert from 'node:assert/strict';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { detectPackageState, previewSupport } from '../services/packageState';
+import { detectPackageState, previewSupport, readLaravelMajor, requirePackageCommand } from '../services/packageState';
 
 function project(installed?: unknown): string {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'lag-state-'));
@@ -37,4 +37,15 @@ test('old versions cannot preview and dev versions are left to the handshake', (
     assert.equal(previewSupport('v4.0.1'), 'supported');
     assert.equal(previewSupport('dev-main'), 'unknown');
     assert.equal(previewSupport('dev-local'), 'unknown');
+});
+
+test('Laravel 10 and 11 install the 3.x line, Laravel 12 and an unknown version the latest', () => {
+    const laravel = (version: string) => project({ packages: [{ name: 'laravel/framework', version }] });
+
+    assert.equal(readLaravelMajor(laravel('v11.44.2')), 11);
+    assert.equal(requirePackageCommand(laravel('v11.44.2')), 'composer require --dev "nameless/laravel-api-generator:^3.15"');
+    assert.equal(requirePackageCommand(laravel('v10.48.0')), 'composer require --dev "nameless/laravel-api-generator:^3.15"');
+    assert.equal(requirePackageCommand(laravel('v12.69.2')), 'composer require --dev nameless/laravel-api-generator');
+    assert.equal(requirePackageCommand(laravel('dev-master')), 'composer require --dev nameless/laravel-api-generator');
+    assert.equal(requirePackageCommand(project()), 'composer require --dev nameless/laravel-api-generator');
 });

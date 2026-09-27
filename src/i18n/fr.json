@@ -6,8 +6,13 @@
     "no": "Non",
     "loading": "Chargement..."
   },
+  "errors": {
+    "writeFailed": "Le package n'a pas pu écrire un fichier. Vérifiez les droits sur les dossiers du projet.",
+    "invalidManifest": "Le manifest de génération .api-generator/manifest.json n'est pas un JSON valide. Restaurez-le depuis le gestionnaire de versions, ou supprimez-le pour qu'il soit reconstruit à la prochaine génération."
+  },
   "package": {
     "missing": "Le package Laravel API Generator n'est pas installé dans ce projet. Il s'installe en dépendance de dev : il ne s'exécute jamais en production et le code généré n'en dépend pas.",
+    "missingLegacyLaravel": "Le package Laravel API Generator n'est pas installé dans ce projet. Laravel {0} utilise sa ligne 3.x, car la 4.x demande Laravel 12. Il s'installe en dépendance de dev : il ne s'exécute jamais en production et le code généré n'en dépend pas.",
     "installViaComposer": "Installer via Composer",
     "scrambleMissing": "Scramble (dedoc/scramble) n'est pas installé. Il est requis pour générer la documentation d'API.",
     "scrambleNotInstalled": "Scramble n'est pas installé. Veuillez l'installer d'abord.",
@@ -34,7 +39,9 @@
     "keepMine": "Garder mes modifications",
     "editedByHand": "\"{0}\" : ces fichiers ont été modifiés à la main depuis leur génération :\n\n{1}\n\nLes écraser, ou garder vos modifications et générer le reste ?",
     "cancelledOverwrite": "Génération annulée pour éviter d'écraser des fichiers existants.",
-    "stubsInvalidTitle": "Certains stubs personnalisés n'ont pas les placeholders requis. La génération produira du code cassé.\n\n{0}",
+    "stubsInvalidTitle": "Certains stubs personnalisés n'ont pas les placeholders requis ou datent de la 3.x : le code généré risque de ne pas fonctionner.\n\n{0}",
+    "stubMissing": "il manque {0}",
+    "stubsObsolete": "Certains stubs publiés ne sont plus lus par le package :\n\n{0}",
     "openStubsFolder": "Ouvrir le dossier de stubs",
     "generateAnyway": "Générer quand même",
     "fixStubsCancelled": "Génération annulée. Corrigez les stubs et réessayez.",

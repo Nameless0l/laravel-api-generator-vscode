@@ -1,7 +1,7 @@
 import './vscodeStub';
 import { test } from 'node:test';
 import * as assert from 'node:assert/strict';
-import { analyzeError } from '../services/errorAnalyzer';
+import { analyzeError, analyzeProtocolErrors } from '../services/errorAnalyzer';
 
 test('an unknown generator option points to an outdated package', () => {
     const suggestion = analyzeError('generate', 'The "--json-api" option does not exist.');
@@ -26,4 +26,16 @@ test('a refused database connection is diagnosed in any context', () => {
 
 test('successful output yields no suggestion', () => {
     assert.equal(analyzeError('generate', 'API generation completed successfully!'), null);
+});
+
+test('the error codes of the JSON document pick the suggestion', () => {
+    assert.match(analyzeProtocolErrors([{ code: 'write_failed', message: 'Failed to create file: app/Models/Post.php' }])?.diagnosis ?? '', /could not write/);
+    assert.deepEqual(analyzeProtocolErrors([{ code: 'invalid_manifest', message: 'The generation manifest is not valid JSON.' }])?.actions.map((action) => action.label), [
+        'Open manifest.json',
+    ]);
+});
+
+test('a validation error needs no suggestion, an unexpected one is read like plain output', () => {
+    assert.equal(analyzeProtocolErrors([{ code: 'invalid_schema', message: 'Post.title: unknown type.', hint: 'Use string.' }]), null);
+    assert.ok(analyzeProtocolErrors([{ code: 'unexpected_error', message: 'SQLSTATE[HY000] [2002] Connection refused' }]));
 });

@@ -6,8 +6,13 @@
     "no": "No",
     "loading": "Loading..."
   },
+  "errors": {
+    "writeFailed": "The package could not write a file. Check the permissions of the project folders.",
+    "invalidManifest": "The generation manifest .api-generator/manifest.json is not valid JSON. Restore it from version control, or delete it to rebuild it on the next run."
+  },
   "package": {
     "missing": "Laravel API Generator package is not installed in this project. It installs as a dev dependency: it never runs in production and the generated code does not depend on it.",
+    "missingLegacyLaravel": "Laravel API Generator package is not installed in this project. Laravel {0} uses its 3.x line, since 4.x needs Laravel 12. It installs as a dev dependency: it never runs in production and the generated code does not depend on it.",
     "installViaComposer": "Install via Composer",
     "scrambleMissing": "Scramble (dedoc/scramble) is not installed. It is required to generate API documentation.",
     "scrambleNotInstalled": "Scramble is not installed. Please install it first.",
@@ -34,7 +39,9 @@
     "keepMine": "Keep my changes",
     "editedByHand": "\"{0}\": these files were edited by hand since they were generated:\n\n{1}\n\nOverwrite them, or keep your changes and generate the rest?",
     "cancelledOverwrite": "Generation cancelled to avoid overwriting existing files.",
-    "stubsInvalidTitle": "Some customized stubs are missing required placeholders. Generation will produce broken code.\n\n{0}",
+    "stubsInvalidTitle": "Some customized stubs miss required placeholders or were written for 3.x, so the generated code may break.\n\n{0}",
+    "stubMissing": "missing {0}",
+    "stubsObsolete": "Some published stubs are no longer read by the package:\n\n{0}",
     "openStubsFolder": "Open Stubs Folder",
     "generateAnyway": "Generate Anyway",
     "fixStubsCancelled": "Generation cancelled. Fix the stubs and try again.",

@@ -8,12 +8,23 @@ import { EntityScanner } from '../services/entityScanner';
 import { describeGeneration } from '../services/generationOutput';
 import { GeneratorBridge, PreviewOutcome } from '../services/generatorBridge';
 import { OverwriteCheck, overwriteCheck } from '../services/overwriteCheck';
-import { detectPackageState, OPENAPI_MIN_VERSION, PackageState, PREVIEW_MIN_VERSION, readInstalledVersion, versionSupport } from '../services/packageState';
+import {
+    detectPackageState,
+    OPENAPI_MIN_VERSION,
+    PackageState,
+    PREVIEW_MIN_VERSION,
+    readInstalledVersion,
+    readLaravelMajor,
+    requirePackageCommand,
+    usesLegacyLine,
+    versionSupport,
+} from '../services/packageState';
 import { flagsFromConfig, schemaFromConfig } from '../services/schemaBuilder';
+import { StubRow, stubLine } from '../services/stubReport';
 import { LaravelDetector } from '../services/laravelDetector';
 import { parseOpenApi } from '../services/openApiImporter';
-import { analyzeError, presentSuggestion } from '../services/errorAnalyzer';
-import { EntityConfig, PlannedFile } from '../types';
+import { analyzeError, analyzeProtocolErrors, presentSuggestion } from '../services/errorAnalyzer';
+import { ArtisanResult, EntityConfig, PlannedFile, ProtocolMessage } from '../types';
 import { t, getLocaleData } from '../i18n';
 
 const PLAN_SCHEME = 'laravel-api-plan';
@@ -281,7 +292,7 @@ export class GeneratorPanel {
             void LaravelDetector.promptQueryBuilderInstallIfMissing(this.workspaceRoot);
         }
 
-        let result;
+        let result: ArtisanResult & { protocolErrors?: ProtocolMessage[] };
         if (this.usesSchemaGeneration()) {
             result = await this.generateThroughSchema(config, force);
         } else if (config.relationships && config.relationships.length > 0) {
@@ -303,8 +314,9 @@ export class GeneratorPanel {
                 this.onDidGenerate();
             }
         } else {
-            const combined = result.output || result.errors.join('\n');
-            const suggestion = analyzeError('generate', combined);
+            const suggestion = result.protocolErrors
+                ? analyzeProtocolErrors(result.protocolErrors)
+                : analyzeError('generate', result.output || result.errors.join('\n'));
             if (suggestion) {
                 void presentSuggestion(this.workspaceRoot, suggestion);
             }
@@ -349,14 +361,14 @@ export class GeneratorPanel {
         });
     }
 
-    private async generateThroughSchema(config: EntityConfig, force: boolean): Promise<{ success: boolean; output: string; errors: string[] }> {
+    private async generateThroughSchema(config: EntityConfig, force: boolean): Promise<ArtisanResult & { protocolErrors?: ProtocolMessage[] }> {
         const { result, document } = await this.artisan.generateFromConfig(config, force);
         if (!document) {
             return result;
         }
         if (document.errors.length > 0) {
             const lines = document.errors.flatMap((error) => (error.hint ? [error.message, error.hint] : [error.message]));
-            return { success: false, output: lines.join('\n'), errors: lines };
+            return { success: false, output: lines.join('\n'), errors: lines, protocolErrors: document.errors };
         }
         return {
             success: true,
@@ -430,11 +442,7 @@ export class GeneratorPanel {
             return false;
         }
 
-        let payload: {
-            status: string;
-            message: string;
-            results: Array<{ stub: string; status: string; missing: string[] }>;
-        };
+        let payload: { status: string; message: string; results: StubRow[] };
         try {
             const raw = result.output.trim();
             const start = raw.indexOf('{');
@@ -443,14 +451,15 @@ export class GeneratorPanel {
             return false;
         }
 
+        const obsolete = payload.results.filter((r) => r.status === 'obsolete').map((r) => stubLine(r));
         if (payload.status !== 'invalid') {
+            if (obsolete.length > 0) {
+                void vscode.window.showWarningMessage(t('generate.stubsObsolete', obsolete.join('\n')));
+            }
             return false;
         }
 
-        const broken = payload.results.filter((r) => r.status === 'invalid');
-        const lines = broken
-            .map((r) => `  • ${r.stub}.stub: missing {{${r.missing.join('}}, {{')}}}`)
-            .join('\n');
+        const lines = [...payload.results.filter((r) => r.status === 'invalid').map((r) => stubLine(r)), ...obsolete].join('\n');
 
         const openLabel = t('generate.openStubsFolder');
         const anywayLabel = t('generate.generateAnyway');
@@ -1091,7 +1100,10 @@ export class GeneratorPanel {
 
     private previewBlocker(): { message: string; command?: string } | undefined {
         if (this.packageState.kind === 'notDeclared') {
-            return { message: t('package.missing'), command: 'composer require --dev nameless/laravel-api-generator' };
+            const message = usesLegacyLine(this.workspaceRoot)
+                ? t('package.missingLegacyLaravel', readLaravelMajor(this.workspaceRoot) ?? '')
+                : t('package.missing');
+            return { message, command: requirePackageCommand(this.workspaceRoot) };
         }
         if (this.packageState.kind === 'notInstalled') {
             return { message: t('preview.notInstalled'), command: 'composer install' };

@@ -45,6 +45,22 @@ export function readInstalledVersion(root: string): string | null {
     return readInstalledPackages(root).get(PACKAGE_NAME) ?? null;
 }
 
+/** Major version of laravel/framework in vendor, null when vendor does not say. */
+export function readLaravelMajor(root: string): number | null {
+    const match = /^v?(\d+)\./.exec(readInstalledPackages(root).get('laravel/framework') ?? '');
+    return match ? Number(match[1]) : null;
+}
+
+/** Laravel 10 and 11 stay on the 3.x line, since 4.0 needs Laravel 12. */
+export function usesLegacyLine(root: string): boolean {
+    const major = readLaravelMajor(root);
+    return major !== null && major < 12;
+}
+
+export function requirePackageCommand(root: string): string {
+    return usesLegacyLine(root) ? `composer require --dev "${PACKAGE_NAME}:^3.15"` : `composer require --dev ${PACKAGE_NAME}`;
+}
+
 export function versionSupport(version: string, minimum: string): PreviewSupport {
     const match = /^v?(\d+)\.(\d+)\.(\d+)/.exec(version);
     if (!match) {

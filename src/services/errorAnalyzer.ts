@@ -2,6 +2,9 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import { t } from '../i18n';
+import { ProtocolMessage } from '../types';
+import { MANIFEST_PATH } from './manifest';
+import { requirePackageCommand } from './packageState';
 
 export interface ErrorAction {
     label: string;
@@ -37,11 +40,11 @@ const openFile = (relPath: string): ErrorAction => ({
     },
 });
 
-const runInTerminal = (label: string, command: string): ErrorAction => ({
+const runInTerminal = (label: string, command: string | ((root: string) => string)): ErrorAction => ({
     label,
     run: (root) => {
         const term = vscode.window.createTerminal({ name: 'Laravel API Generator', cwd: root });
-        term.sendText(command);
+        term.sendText(typeof command === 'string' ? command : command(root));
         term.show();
     },
 });
@@ -178,9 +181,7 @@ const PATTERNS: Pattern[] = [
         contexts: ['generate'],
         build: () => ({
             diagnosis: 'The laravel-api-generator package is not installed in this project.',
-            actions: [
-                runInTerminal('composer require --dev nameless/laravel-api-generator', 'composer require --dev nameless/laravel-api-generator'),
-            ],
+            actions: [runInTerminal(t('package.installViaComposer'), requirePackageCommand)],
         }),
     },
     {
@@ -226,6 +227,26 @@ export function analyzeError(action: string, output: string): ErrorSuggestion | 
         }
         if (pattern.match.test(output)) {
             return pattern.build();
+        }
+    }
+    return null;
+}
+
+const CODE_SUGGESTIONS: Record<string, () => ErrorSuggestion> = {
+    write_failed: () => ({ diagnosis: t('errors.writeFailed'), actions: [showOutput()] }),
+    invalid_manifest: () => ({ diagnosis: t('errors.invalidManifest'), actions: [openFile(MANIFEST_PATH)] }),
+};
+
+/**
+ * The same, from the error codes of the package's JSON document. The package
+ * cannot classify an unexpected error, so its message still goes through the
+ * patterns above (a database that refuses the connection, for instance).
+ */
+export function analyzeProtocolErrors(errors: ProtocolMessage[]): ErrorSuggestion | null {
+    for (const error of errors) {
+        const suggestion = CODE_SUGGESTIONS[error.code]?.() ?? (error.code === 'unexpected_error' ? analyzeError('generate', error.message) : null);
+        if (suggestion) {
+            return suggestion;
         }
     }
     return null;
