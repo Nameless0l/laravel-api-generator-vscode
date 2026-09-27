@@ -92,6 +92,14 @@ Prefer to review one table before generating?
 - The form is auto-filled with the entity name (singularized + PascalCased), the field list, and the Soft Deletes flag (when `deleted_at` is present)
 - Review and click **Generate API**
 
+### Describe an API with Copilot
+
+Start from a sentence: *a library that lends books to members, a loan has a due date*.
+
+- The chat model VS Code offers (GitHub Copilot first, VS Code 1.90+) drafts an `api-schema.yaml`, and relates it to the entities your project already has
+- The draft opens in an editor so you can adjust it
+- **Preview and Generate** runs the package's dry run and shows the entities and files before anything is written; **Save as api-schema.yaml** keeps the draft as the source of your API
+
 ### Generate from an OpenAPI Spec
 
 Hand an OpenAPI 3.0, 3.1 or Swagger 2.0 spec, JSON or YAML, to the package from the command palette, the sidebar or the builder's **Import OpenAPI** button:

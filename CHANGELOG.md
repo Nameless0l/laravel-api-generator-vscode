@@ -2,6 +2,16 @@
 
 All notable changes to the Laravel API Generator VS Code extension will be documented in this file.
 
+## [0.17.0] - Unreleased
+
+Works with `nameless/laravel-api-generator` 3.9 or later.
+
+### Added
+- **Describe an API with Copilot.** Write the API in plain words: the chat model VS Code offers (GitHub Copilot first, VS Code 1.90+) drafts an `api-schema.yaml` that relates to the entities your project already has. Review and edit the draft, then **Preview and Generate** shows the package's dry run before anything is written, or **Save as api-schema.yaml** keeps it as the source of your API. Also in the sidebar home and the entities view menu.
+
+### Changed
+- The OpenAPI import and this command share the same dry run dialog.
+
 ## [0.16.0] - Unreleased
 
 Pairs with `nameless/laravel-api-generator` >= 3.13.
