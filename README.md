@@ -49,7 +49,8 @@ Create API entities through a form instead of CLI flags:
 - **Model autocomplete** -- relationship targets suggest the models already in `app/Models`
 - **Cancellable operations** -- click a spinning button to kill the running artisan process
 - **File preview** -- see what files will be generated before running
-- **Real-time code preview** -- live preview of generated code across all file types (Model, Controller, Service, DTO, etc.) with syntax highlighting and tabbed navigation
+- **Sail and Docker** -- point `laravelApiGenerator.phpCommand` at `["./vendor/bin/sail", "php"]` or `["docker", "compose", "exec", "-T", "app", "php"]` and every action runs inside the container
+- **Real-time code preview** -- rendered by the package installed in your project, so it is exactly the code that will be written: every generated file, routes and seeder included, your published stubs, badges for new, modified and unchanged files, and a diff for modified ones
 - **Conflict warning** -- before regenerating an existing entity, a modal lists every file that will be overwritten so you can opt out
 - **Auto-open generated files** -- after a successful generation, the new Model and Controller open in the editor
 
@@ -233,8 +234,8 @@ database/seeders/DatabaseSeeder.php             -- Seeder auto-registered
 ## Requirements
 
 - **VS Code** 1.80+
-- **PHP** 8.2+ on your PATH (or configure `laravelApiGenerator.phpPath`)
-- A **Laravel 10/11/12** project
+- **PHP** 8.2+ on your PATH (or configure `laravelApiGenerator.phpPath`, or `laravelApiGenerator.phpCommand` for Sail and Docker)
+- A **Laravel 10 to 13** project
 - The package: `composer require --dev nameless/laravel-api-generator`
 
 ---
@@ -244,6 +245,7 @@ database/seeders/DatabaseSeeder.php             -- Seeder auto-registered
 | Setting | Default | Description |
 |---------|---------|-------------|
 | `laravelApiGenerator.phpPath` | `php` | Path to the PHP executable |
+| `laravelApiGenerator.phpCommand` | `[]` | Full command that runs PHP, one argument per item (Sail, Docker). Wins over `phpPath` when set. |
 | `laravelApiGenerator.locale` | `auto` | UI language: `auto` (follow VS Code), `en`, or `fr` |
 
 ---
