@@ -2,7 +2,8 @@ import * as vscode from 'vscode';
 import { LaravelDetector } from '../services/laravelDetector';
 import { ArtisanRunner } from '../services/artisanRunner';
 import { EntityTreeItem } from '../providers/entityTreeProvider';
-import { isUnsupportedOption } from './generationShared';
+import { lastProtocolDocument } from '../services/generationOutput';
+import { isUnsupportedOption, presentDocumentErrors } from './generationShared';
 import { t } from '../i18n';
 
 const FIELDS_PATTERN = /^\s*\w+\s*:\s*\w+(\([\w\s,.-]+\))?\s*(,\s*\w+\s*:\s*\w+(\([\w\s,.-]+\))?\s*)*$/;
@@ -49,6 +50,12 @@ export function registerAddFieldsCommand(onDidChange: () => void): vscode.Dispos
                 },
                 () => artisan.addFields(entityName, fields.trim())
             );
+
+            const document = lastProtocolDocument(result.output);
+            if (document && document.errors.length > 0) {
+                presentDocumentErrors(document.errors, root);
+                return;
+            }
 
             if (result.success) {
                 const migrateLabel = t('addFields.runMigrate');

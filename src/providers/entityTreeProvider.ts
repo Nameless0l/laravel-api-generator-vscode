@@ -167,6 +167,7 @@ export class EntityTreeProvider implements vscode.TreeDataProvider<EntityTreeIte
                                 entityName: name,
                                 entityFile: file,
                                 workspaceRoot: this.workspaceRoot,
+                                description: path.basename(file.path),
                             }
                         )
                 );

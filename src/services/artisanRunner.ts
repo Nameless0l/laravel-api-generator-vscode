@@ -5,6 +5,7 @@ import * as http from 'http';
 import { ArtisanResult, EntityConfig, GenerationDocument } from '../types';
 import { generateArgs, schemaGenerationArgs, sourceArgs, SourceOptions } from './artisanArgs';
 import { lastProtocolDocument } from './generationOutput';
+import { PREVIEW_MIN_VERSION, readInstalledVersion, versionSupport } from './packageState';
 import { PhpCommand, projectRelative, resolvePhpCommand } from './phpCommand';
 import { schemaFromConfig } from './schemaBuilder';
 
@@ -48,32 +49,32 @@ export class ArtisanRunner {
         if (options.withMigrations) {
             flags.push('--with-migrations');
         }
-        return this.run(sourceArgs(flags, options), 180000);
+        return this.run(sourceArgs([...flags, ...this.jsonFlag()], options), 180000);
     }
 
     async generateFromSchema(schemaPath: string, options?: SourceOptions): Promise<ArtisanResult> {
-        return this.run(sourceArgs([`--schema=${projectRelative(this.workspaceRoot, schemaPath)}`], options), 180000);
+        return this.run(sourceArgs([`--schema=${projectRelative(this.workspaceRoot, schemaPath)}`, ...this.jsonFlag()], options), 180000);
     }
 
     async generateFromMermaid(diagramPath: string, options?: SourceOptions): Promise<ArtisanResult> {
-        return this.run(sourceArgs([`--mermaid=${projectRelative(this.workspaceRoot, diagramPath)}`], options), 180000);
+        return this.run(sourceArgs([`--mermaid=${projectRelative(this.workspaceRoot, diagramPath)}`, ...this.jsonFlag()], options), 180000);
     }
 
     async generateFromSchemaText(schema: string, dryRun = false): Promise<ArtisanResult> {
-        return this.run(sourceArgs(['--schema=-', ...(dryRun ? ['--dry-run', '--json'] : [])]), 180000, schema);
+        return this.run(sourceArgs(['--schema=-', ...(dryRun ? ['--dry-run', '--json'] : this.jsonFlag())]), 180000, schema);
     }
 
     /** A spec outside the project goes through stdin, so PHP running in a container can read it too. */
     async generateFromOpenApi(specPath: string, options?: SourceOptions, dryRun = false): Promise<ArtisanResult> {
         const relative = projectRelative(this.workspaceRoot, specPath);
         const inside = relative !== specPath;
-        const flags = [inside ? `--openapi=${relative}` : '--openapi=-', ...(dryRun ? ['--dry-run', '--json'] : [])];
+        const flags = [inside ? `--openapi=${relative}` : '--openapi=-', ...(dryRun ? ['--dry-run', '--json'] : this.jsonFlag())];
 
         return this.run(sourceArgs(flags, options), 180000, inside ? undefined : fs.readFileSync(specPath, 'utf-8'));
     }
 
     async addFields(entityName: string, fields: string): Promise<ArtisanResult> {
-        return this.run(['artisan', 'make:fullapi', entityName, `--add-fields=${fields}`], 60000);
+        return this.run(['artisan', 'make:fullapi', entityName, `--add-fields=${fields}`, ...this.jsonFlag()], 60000);
     }
 
     async delete(entityName: string): Promise<ArtisanResult> {
@@ -99,6 +100,12 @@ export class ArtisanRunner {
 
     async cleanRoutes(): Promise<ArtisanResult> {
         return this.run(['artisan', 'api-generator:clean-routes']);
+    }
+
+    /** Since 3.9 the package can answer one JSON document, whose errors carry a code. */
+    private jsonFlag(): string[] {
+        const version = readInstalledVersion(this.workspaceRoot);
+        return version !== null && versionSupport(version, PREVIEW_MIN_VERSION) !== 'tooOld' ? ['--json'] : [];
     }
 
     cancelAll(): void {

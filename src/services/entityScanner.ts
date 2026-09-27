@@ -1,6 +1,14 @@
 import * as path from 'path';
 import * as fs from 'fs';
 import { GeneratedEntity, EntityFile, EntityRelation } from '../types';
+import { ManifestEntry, readManifest } from './manifest';
+import { enumClasses, fillableColumns } from './modelSource';
+
+const ENTITY_KINDS = new Set(['Model', 'Controller', 'Service', 'DTO', 'Request', 'Resource', 'Policy', 'Enum', 'Factory', 'Seeder', 'FeatureTest', 'UnitTest', 'Migration']);
+
+const KIND_ORDER = [...ENTITY_KINDS, 'PivotMigration'];
+
+const KIND_LABELS: Record<string, string> = { FeatureTest: 'Feature Test', UnitTest: 'Unit Test', PivotMigration: 'Pivot Migration' };
 
 export class EntityScanner {
     private workspaceRoot: string;
@@ -9,59 +17,109 @@ export class EntityScanner {
         this.workspaceRoot = workspaceRoot;
     }
 
+    /**
+     * Entities recorded in the generation manifest, plus the ones generated
+     * before it existed (a model with its Controller and Service).
+     */
     scan(): GeneratedEntity[] {
+        const manifest = readManifest(this.workspaceRoot);
+        const names = new Set([
+            ...(manifest ?? []).flatMap((entry) => (entry.entity !== null && ENTITY_KINDS.has(entry.kind) ? [entry.entity] : [])),
+            ...this.conventionalEntityNames(),
+        ]);
+
+        return [...names].sort().flatMap((name) => {
+            const files = this.getEntityFiles(name, manifest);
+            if (!files.some((file) => file.exists)) {
+                return [];
+            }
+            return [{ name, files, ...this.parseModel(files) }];
+        });
+    }
+
+    /** The manifest's paths when it tracks the entity, the conventional ones otherwise. */
+    getEntityFiles(name: string, manifest: ManifestEntry[] | null = readManifest(this.workspaceRoot)): EntityFile[] {
+        const recorded = (manifest ?? []).filter((entry) => entry.entity === name && KIND_ORDER.includes(entry.kind));
+        if (recorded.length === 0) {
+            return this.conventionalFiles(name);
+        }
+
+        return recorded
+            .map((entry) => this.file(entry.kind, entry.path, name))
+            .sort((a, b) => KIND_ORDER.indexOf(a.kind ?? '') - KIND_ORDER.indexOf(b.kind ?? '') || a.path.localeCompare(b.path));
+    }
+
+    private conventionalEntityNames(): string[] {
         const modelsDir = path.join(this.workspaceRoot, 'app', 'Models');
         if (!fs.existsSync(modelsDir)) {
             return [];
         }
 
-        // User.php is included too: the Controller + Service requirement
-        // below already filters out Laravel's default (non-generated) User model.
-        const modelFiles = fs
+        // Laravel's default User model has no Controller nor Service, so it stays out.
+        return fs
             .readdirSync(modelsDir)
-            .filter((f) => f.endsWith('.php'));
+            .filter((file) => file.endsWith('.php'))
+            .map((file) => file.replace('.php', ''))
+            .filter((name) => this.exists(`app/Http/Controllers/${name}Controller.php`) && this.exists(`app/Services/${name}Service.php`));
+    }
 
-        const entities: GeneratedEntity[] = [];
+    private conventionalFiles(name: string): EntityFile[] {
+        const model = `app/Models/${name}.php`;
+        const legacyRequest = `app/Http/Requests/${name}Request.php`;
+        const requests = this.exists(legacyRequest) && !this.exists(`app/Http/Requests/Store${name}Request.php`)
+            ? [legacyRequest]
+            : [`app/Http/Requests/Store${name}Request.php`, `app/Http/Requests/Update${name}Request.php`];
+        const enums = this.exists(model) ? enumClasses(this.read(model)).map((enumClass) => `app/Enums/${enumClass}.php`) : [];
 
-        for (const file of modelFiles) {
-            const name = file.replace('.php', '');
-            const files = this.getEntityFiles(name);
+        const files: EntityFile[] = [
+            this.file('Model', model, name),
+            this.file('Controller', `app/Http/Controllers/${name}Controller.php`, name),
+            this.file('Service', `app/Services/${name}Service.php`, name),
+            this.file('DTO', `app/DTO/${name}DTO.php`, name),
+            ...requests.map((request) => this.file('Request', request, name)),
+            this.file('Resource', `app/Http/Resources/${name}Resource.php`, name),
+            this.file('Policy', `app/Policies/${name}Policy.php`, name),
+            ...enums.map((enumFile) => this.file('Enum', enumFile, name)),
+            this.file('Factory', `database/factories/${name}Factory.php`, name),
+            this.file('Seeder', `database/seeders/${name}Seeder.php`, name),
+            this.file('FeatureTest', `tests/Feature/${name}ControllerTest.php`, name),
+            this.file('UnitTest', `tests/Unit/${name}ServiceTest.php`, name),
+        ];
 
-            // Consider it a generated entity if at least Controller + Service exist
-            const hasController = files.some((f) => f.type === 'Controller' && f.exists);
-            const hasService = files.some((f) => f.type === 'Service' && f.exists);
+        const table = this.pluralSnake(name);
+        const migration = this.findMigration(table);
+        files.push({
+            type: 'Migration',
+            kind: 'Migration',
+            path: migration || `database/migrations/*_create_${table}_table.php`,
+            exists: migration !== null,
+        });
 
-            if (hasController && hasService) {
-                const modelInfo = this.parseModel(name);
-                entities.push({ name, files, fields: modelInfo.fields, relations: modelInfo.relations });
-            }
+        return files;
+    }
+
+    private file(kind: string, relativePath: string, entity: string): EntityFile {
+        const base = path.basename(relativePath);
+        let type = KIND_LABELS[kind] ?? kind;
+        if (kind === 'Request' && base === `Store${entity}Request.php`) {
+            type = 'Store Request';
+        } else if (kind === 'Request' && base === `Update${entity}Request.php`) {
+            type = 'Update Request';
         }
 
-        return entities;
+        return { type, kind, path: relativePath, exists: this.exists(relativePath) };
     }
 
     /**
      * Extract fillable + relationship methods from a generated model file.
      */
-    private parseModel(name: string): { fields: string[]; relations: EntityRelation[] } {
-        const modelPath = path.join(this.workspaceRoot, 'app', 'Models', `${name}.php`);
-        if (!fs.existsSync(modelPath)) {
+    private parseModel(files: EntityFile[]): { fields: string[]; relations: EntityRelation[] } {
+        const model = files.find((file) => file.kind === 'Model');
+        if (!model || !model.exists) {
             return { fields: [], relations: [] };
         }
 
-        const content = fs.readFileSync(modelPath, 'utf-8');
-
-        // Extract fillable: $fillable = [ 'a', 'b', ... ];
-        const fields: string[] = [];
-        const fillableMatch = content.match(/protected\s+\$fillable\s*=\s*\[([\s\S]*?)\];/);
-        if (fillableMatch) {
-            const inner = fillableMatch[1];
-            const re = /['"]([^'"]+)['"]/g;
-            let m: RegExpExecArray | null;
-            while ((m = re.exec(inner)) !== null) {
-                fields.push(m[1]);
-            }
-        }
+        const content = this.read(model.path);
 
         // Extract relationship methods: public function name(): RelType { return $this->relType(Target::class) }
         const relations: EntityRelation[] = [];
@@ -73,42 +131,19 @@ export class EntityScanner {
             relations.push({ name: methodName, type: relType, target: cleanTarget });
         }
 
-        return { fields, relations };
+        return { fields: fillableColumns(content), relations };
     }
 
-    getEntityFiles(name: string): EntityFile[] {
-        const pluralSnake = this.pluralSnake(name);
+    private exists(relativePath: string): boolean {
+        return fs.existsSync(path.join(this.workspaceRoot, relativePath));
+    }
 
-        const fileMap: Array<{ type: string; relativePath: string }> = [
-            { type: 'Model', relativePath: `app/Models/${name}.php` },
-            { type: 'Controller', relativePath: `app/Http/Controllers/${name}Controller.php` },
-            { type: 'Service', relativePath: `app/Services/${name}Service.php` },
-            { type: 'DTO', relativePath: `app/DTO/${name}DTO.php` },
-            { type: 'Request', relativePath: `app/Http/Requests/${name}Request.php` },
-            { type: 'Resource', relativePath: `app/Http/Resources/${name}Resource.php` },
-            { type: 'Policy', relativePath: `app/Policies/${name}Policy.php` },
-            { type: 'Factory', relativePath: `database/factories/${name}Factory.php` },
-            { type: 'Seeder', relativePath: `database/seeders/${name}Seeder.php` },
-            { type: 'Feature Test', relativePath: `tests/Feature/${name}ControllerTest.php` },
-            { type: 'Unit Test', relativePath: `tests/Unit/${name}ServiceTest.php` },
-        ];
-
-        // Find migration by glob pattern
-        const migrationFile = this.findMigration(pluralSnake);
-
-        const files: EntityFile[] = fileMap.map(({ type, relativePath }) => ({
-            type,
-            path: relativePath,
-            exists: fs.existsSync(path.join(this.workspaceRoot, relativePath)),
-        }));
-
-        files.push({
-            type: 'Migration',
-            path: migrationFile || `database/migrations/*_create_${pluralSnake}_table.php`,
-            exists: migrationFile !== null,
-        });
-
-        return files;
+    private read(relativePath: string): string {
+        try {
+            return fs.readFileSync(path.join(this.workspaceRoot, relativePath), 'utf-8');
+        } catch {
+            return '';
+        }
     }
 
     private findMigration(tableName: string): string | null {

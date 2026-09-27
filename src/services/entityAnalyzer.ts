@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import { fillableColumns } from './modelSource';
 
 export interface EntityRelationship {
     type: string;
@@ -37,28 +38,13 @@ export class EntityAnalyzer {
                 continue;
             }
 
-            const fields = this.extractFillable(content);
+            const fields = fillableColumns(content);
             const relationships = this.extractRelationships(content);
 
             entities.push({ name, fields, relationships });
         }
 
         return entities;
-    }
-
-    private extractFillable(content: string): string[] {
-        const match = content.match(/\$fillable\s*=\s*\[([\s\S]*?)\]/);
-        if (!match) {
-            return [];
-        }
-
-        const fields: string[] = [];
-        const regex = /'([^']+)'/g;
-        let m;
-        while ((m = regex.exec(match[1])) !== null) {
-            fields.push(m[1]);
-        }
-        return fields;
     }
 
     private extractRelationships(content: string): EntityRelationship[] {

@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { LaravelDetector } from '../services/laravelDetector';
 import { ArtisanRunner } from '../services/artisanRunner';
 import { MigrationIntrospector } from '../services/migrationIntrospector';
+import { EntityScanner } from '../services/entityScanner';
 import { EntityTreeItem } from '../providers/entityTreeProvider';
 import { t } from '../i18n';
 
@@ -16,7 +17,7 @@ const REGENERABLE_TYPES: RegenerableType[] = [
     { label: 'Controller', description: 'app/Http/Controllers/{Name}Controller.php', artisanType: 'Controller' },
     { label: 'Service', description: 'app/Services/{Name}Service.php', artisanType: 'Service' },
     { label: 'DTO', description: 'app/DTO/{Name}DTO.php', artisanType: 'DTO' },
-    { label: 'Request', description: 'app/Http/Requests/{Name}Request.php', artisanType: 'Request' },
+    { label: 'Requests', description: 'app/Http/Requests/Store{Name}Request.php, app/Http/Requests/Update{Name}Request.php', artisanType: 'Request' },
     { label: 'Resource', description: 'app/Http/Resources/{Name}Resource.php', artisanType: 'Resource' },
     { label: 'Factory', description: 'database/factories/{Name}Factory.php', artisanType: 'Factory' },
     { label: 'Seeder', description: 'database/seeders/{Name}Seeder.php', artisanType: 'Seeder' },
@@ -58,10 +59,13 @@ export function registerRegenerateFileCommand(onDidRegenerate: () => void): vsco
                 return;
             }
 
+            const files = new EntityScanner(check.root).getEntityFiles(entityName);
             const picks = await vscode.window.showQuickPick(
                 REGENERABLE_TYPES.map((rt) => ({
                     label: rt.label,
-                    description: rt.description.replace('{Name}', entityName!),
+                    description:
+                        files.filter((file) => file.kind === rt.artisanType).map((file) => file.path).join(', ') ||
+                        rt.description.split('{Name}').join(entityName!),
                     artisanType: rt.artisanType,
                 })),
                 {

@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import { t } from '../i18n';
+import { readLaravelMajor, requirePackageCommand, usesLegacyLine } from './packageState';
 
 export class LaravelDetector {
     static isLaravelProject(workspaceRoot: string): boolean {
@@ -148,7 +149,7 @@ export class LaravelDetector {
                 valid: false,
                 root,
                 packageMissing: true,
-                message: 'nameless/laravel-api-generator is not installed. Run: composer require --dev nameless/laravel-api-generator',
+                message: `nameless/laravel-api-generator is not installed. Run: ${requirePackageCommand(root)}`,
             };
         }
         return { valid: true, root };
@@ -160,7 +161,7 @@ export class LaravelDetector {
         if (check.packageMissing && check.root) {
             const installLabel = t('package.installViaComposer');
             const action = await vscode.window.showWarningMessage(
-                t('package.missing'),
+                usesLegacyLine(check.root) ? t('package.missingLegacyLaravel', readLaravelMajor(check.root) ?? '') : t('package.missing'),
                 installLabel,
                 t('common.cancel')
             );
@@ -169,7 +170,7 @@ export class LaravelDetector {
                     name: 'Laravel API Generator',
                     cwd: check.root,
                 });
-                terminal.sendText('composer require --dev nameless/laravel-api-generator');
+                terminal.sendText(requirePackageCommand(check.root));
                 terminal.show();
             }
             return { valid: false };

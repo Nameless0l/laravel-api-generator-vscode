@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
-import { ArtisanResult } from '../types';
+import { ArtisanResult, ProtocolMessage } from '../types';
+import { analyzeProtocolErrors, presentSuggestion } from '../services/errorAnalyzer';
 import { lastProtocolDocument } from '../services/generationOutput';
 import { summarizePlan } from '../services/planSummary';
 import { t } from '../i18n';
@@ -20,6 +21,12 @@ export async function presentGenerationResult(
     workspaceRoot: string,
     onDidGenerate?: () => void
 ): Promise<void> {
+    const document = lastProtocolDocument(result.output);
+    if (document && document.errors.length > 0) {
+        presentDocumentErrors(document.errors, workspaceRoot);
+        return;
+    }
+
     if (result.success) {
         vscode.window.showInformationMessage(t('sources.success'));
         if (onDidGenerate) {
@@ -36,6 +43,15 @@ export async function presentGenerationResult(
     const output = result.output || result.errors.join('\n');
     const truncated = output.length > 800 ? `${output.slice(0, 800)}\n...` : output;
     vscode.window.showErrorMessage(t('sources.failed', truncated));
+}
+
+/** Errors of the package's JSON document, with the fix their code points to. */
+export function presentDocumentErrors(errors: ProtocolMessage[], workspaceRoot: string): void {
+    vscode.window.showErrorMessage(t('sources.failed', errors.map((e) => (e.hint ? `${e.message} ${e.hint}` : e.message)).join('\n')));
+    const suggestion = analyzeProtocolErrors(errors);
+    if (suggestion) {
+        void presentSuggestion(workspaceRoot, suggestion);
+    }
 }
 
 export async function offerPackageUpdate(workspaceRoot: string): Promise<void> {
@@ -62,9 +78,7 @@ export async function confirmPlannedGeneration(dryRun: ArtisanResult, source: st
         return false;
     }
     if (document.errors.length > 0) {
-        vscode.window.showErrorMessage(
-            t('sources.failed', document.errors.map((e) => (e.hint ? `${e.message} ${e.hint}` : e.message)).join('\n'))
-        );
+        presentDocumentErrors(document.errors, workspaceRoot);
         return false;
     }
 
