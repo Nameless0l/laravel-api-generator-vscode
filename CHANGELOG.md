@@ -2,7 +2,7 @@
 
 All notable changes to the Laravel API Generator VS Code extension will be documented in this file.
 
-## [1.0.0] - Unreleased
+## [1.0.0] - 2026-09-27
 
 Pairs with `nameless/laravel-api-generator` 4.0 and still works with 3.9 or later.
 
