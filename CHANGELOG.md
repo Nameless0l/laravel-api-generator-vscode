@@ -2,6 +2,12 @@
 
 All notable changes to the Laravel API Generator VS Code extension will be documented in this file.
 
+## [0.13.0] - Unreleased
+
+### Added
+- **GitHub Copilot skill.** In Laravel projects, the extension contributes the package's `laravel-api-generator` agent skill (VS Code 1.109+), so Copilot generates APIs with `make:fullapi` instead of writing the files by hand.
+- **Schema file validation.** `api-schema.yaml`, `api-schema.yml` and `api-schema.json` get completion and typo checks from the package's JSON Schema. YAML files need the Red Hat YAML extension.
+
 ## [0.12.0] - Unreleased
 
 Pairs with `nameless/laravel-api-generator` >= 3.9 for the live preview. Older packages keep generating as before.

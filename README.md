@@ -42,7 +42,7 @@ Create API entities through a form instead of CLI flags:
 - **Quick Start presets** -- one-click form fill for Blog Post, User Profile, E-commerce Product, Comment, Task, Article (with soft deletes)
 - **Drag-and-drop fields** -- reorder fields with a hamburger handle, the live preview updates on drop
 - **Dynamic fields** -- add/remove fields with name and type selector (string, integer, text, float, boolean, json, date, datetime, uuid, etc.)
-- **Relationships section** -- add `belongsTo` / `hasMany` / `hasOne` / `belongsToMany` relations directly in the UI; generation routes through the package's JSON pipeline so you get full FK support, foreign-keyed factories and tests
+- **Relationships section** -- add `belongsTo` / `hasMany` / `hasOne` / `belongsToMany` relations directly in the UI; generation hands the form to the package in the schema file format, so you get full FK support, foreign-keyed factories and tests
 - **Options toggles** -- Auth (Sanctum), Postman collection export, Soft Deletes, Spatie QueryBuilder, Pest tests
 - **Enum fields** -- pick the `enum` type, type the values (`draft,published`) and get a backed PHP enum class, model cast, `Rule::enum()` validation and factory fake (package >= 3.6)
 - **Primary key designation** -- check `PK` on a field to replace the default `id`; the model, migration and every incoming relation follow (package >= 3.6)
@@ -51,6 +51,8 @@ Create API entities through a form instead of CLI flags:
 - **File preview** -- see what files will be generated before running
 - **Sail and Docker** -- point `laravelApiGenerator.phpCommand` at `["./vendor/bin/sail", "php"]` or `["docker", "compose", "exec", "-T", "app", "php"]` and every action runs inside the container
 - **Real-time code preview** -- rendered by the package installed in your project, so it is exactly the code that will be written: every generated file, routes and seeder included, your published stubs, badges for new, modified and unchanged files, and a diff for modified ones
+- **Copilot skill** -- in Laravel projects, GitHub Copilot (VS Code 1.109+) gets the package's `laravel-api-generator` skill, so it generates APIs with `make:fullapi` instead of writing the files by hand
+- **Schema file autocompletion** -- `api-schema.yaml`, `.yml` and `.json` are checked against the package's JSON Schema: completion for keys and types, typos flagged before you generate (YAML needs the Red Hat YAML extension)
 - **Conflict warning** -- before regenerating an existing entity, a modal lists every file that will be overwritten so you can opt out
 - **Auto-open generated files** -- after a successful generation, the new Model and Controller open in the editor
 

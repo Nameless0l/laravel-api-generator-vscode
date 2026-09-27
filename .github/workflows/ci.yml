@@ -60,6 +60,11 @@ jobs:
           composer config repositories.package "{\"type\": \"path\", \"url\": \"$RUNNER_TEMP/package\", \"options\": {\"symlink\": true, \"versions\": {\"nameless/laravel-api-generator\": \"dev-contract\"}}}"
           composer require --dev "nameless/laravel-api-generator:dev-contract" --no-interaction
 
+      - name: Bundled copies match the package
+        run: |
+          diff skills/laravel-api-generator/SKILL.md "$RUNNER_TEMP/package/resources/boost/skills/laravel-api-generator/SKILL.md"
+          diff schemas/api-schema.json "$RUNNER_TEMP/package/resources/schema/api-schema.json"
+
       - name: Contract with the host PHP
         env:
           CONTRACT_APP: ${{ runner.temp }}/app
