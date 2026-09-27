@@ -4,6 +4,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import Ajv from 'ajv';
 import { sourceArgs } from '../../services/artisanArgs';
+import { extractSchema } from '../../services/describePrompt';
 import { GeneratorBridge } from '../../services/generatorBridge';
 import { lastProtocolDocument } from '../../services/generationOutput';
 import { mcpLaunch } from '../../services/mcpServer';
@@ -105,6 +106,17 @@ async function main(): Promise<void> {
     assert.ok(openApiDocument.files.some((file) => file.path === 'app/Models/Ticket.php'));
     assert.ok(openApiDocument.warnings.some((warning) => warning.code === 'openapi_schema_skipped'));
     fs.unlinkSync(path.join(app, 'contract-openapi.json'));
+
+    const answer = ['Here is the schema:', '', '```yaml', 'entities:', '  Member:', '    fields:', '      name: string', '```'].join('\n');
+    const described = spawnSync(php[0], [...php.slice(1), ...sourceArgs(['--schema=-', '--dry-run', '--json'])], {
+        cwd: app,
+        input: extractSchema(answer),
+        encoding: 'utf8',
+    });
+    const describedDocument = lastProtocolDocument(described.stdout);
+    assert.ok(describedDocument, described.stdout + described.stderr);
+    validate('planDocument', describedDocument);
+    assert.ok(describedDocument.files.some((file) => file.path === 'app/Models/Member.php'));
 
     console.log(`contract ok with ${php.join(' ')}`);
 }
