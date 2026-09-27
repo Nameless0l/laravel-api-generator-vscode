@@ -5,6 +5,7 @@ import * as path from 'path';
 import Ajv from 'ajv';
 import { sourceArgs } from '../../services/artisanArgs';
 import { extractSchema } from '../../services/describePrompt';
+import { EntityScanner } from '../../services/entityScanner';
 import { GeneratorBridge } from '../../services/generatorBridge';
 import { lastProtocolDocument } from '../../services/generationOutput';
 import { mcpLaunch } from '../../services/mcpServer';
@@ -53,7 +54,7 @@ async function main(): Promise<void> {
         validate('planResult', outcome.plan);
         const paths = outcome.plan.files.map((file) => file.path);
         assert.ok(paths.includes('app/Models/Invoice.php'), paths.join(', '));
-        assert.ok(paths.includes('app/Enums/Status.php'), paths.join(', '));
+        assert.ok(paths.includes('app/Enums/InvoiceStatus.php'), paths.join(', '));
     }
     bridge.dispose();
 
@@ -117,6 +118,21 @@ async function main(): Promise<void> {
     assert.ok(describedDocument, described.stdout + described.stderr);
     validate('planDocument', describedDocument);
     assert.ok(describedDocument.files.some((file) => file.path === 'app/Models/Member.php'));
+
+    const receipt = { entities: { Receipt: { fields: { code: 'string primary', state: 'enum(open,paid)' } } } };
+    const written = spawnSync(php[0], [...php.slice(1), 'artisan', 'make:fullapi', '--schema=-', '--json'], { cwd: app, input: JSON.stringify(receipt), encoding: 'utf8' });
+    const writtenDocument = lastProtocolDocument(written.stdout);
+    assert.ok(writtenDocument, written.stdout + written.stderr);
+    assert.deepEqual(writtenDocument.errors, []);
+    const scanned = new EntityScanner(app).scan().find((entity) => entity.name === 'Receipt');
+    assert.ok(scanned, 'the scanner does not read Receipt from the manifest');
+    assert.deepEqual(scanned.fields, ['code', 'state']);
+    const types = scanned.files.filter((file) => file.exists).map((file) => file.type);
+    for (const type of ['Model', 'Store Request', 'Update Request', 'Enum', 'Migration']) {
+        assert.ok(types.includes(type), `${type} missing from ${types.join(', ')}`);
+    }
+    spawnSync(php[0], [...php.slice(1), 'artisan', 'delete:fullapi', 'Receipt', '--force'], { cwd: app, encoding: 'utf8' });
+    assert.equal(new EntityScanner(app).scan().some((entity) => entity.name === 'Receipt'), false);
 
     console.log(`contract ok with ${php.join(' ')}`);
 }
