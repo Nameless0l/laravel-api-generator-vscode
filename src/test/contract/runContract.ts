@@ -3,6 +3,7 @@ import { spawnSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import Ajv from 'ajv';
+import { sourceArgs } from '../../services/artisanArgs';
 import { GeneratorBridge } from '../../services/generatorBridge';
 import { lastProtocolDocument } from '../../services/generationOutput';
 import { mcpLaunch } from '../../services/mcpServer';
@@ -86,6 +87,24 @@ async function main(): Promise<void> {
         ?.result?.tools?.map((tool) => tool.name)
         .sort();
     assert.deepEqual(tools, ['add-fields', 'generate-api', 'list-entities', 'plan-api'], mcp.stdout + mcp.stderr);
+
+    const spec = {
+        openapi: '3.0.0',
+        components: {
+            schemas: {
+                Ticket: { type: 'object', properties: { title: { type: 'string' } } },
+                Error: { type: 'object', properties: { message: { type: 'string' } } },
+            },
+        },
+    };
+    fs.writeFileSync(path.join(app, 'contract-openapi.json'), JSON.stringify(spec));
+    const openApi = spawnSync(php[0], [...php.slice(1), ...sourceArgs(['--openapi=contract-openapi.json', '--dry-run', '--json'])], { cwd: app, encoding: 'utf8' });
+    const openApiDocument = lastProtocolDocument(openApi.stdout);
+    assert.ok(openApiDocument, openApi.stdout + openApi.stderr);
+    validate('planDocument', openApiDocument);
+    assert.ok(openApiDocument.files.some((file) => file.path === 'app/Models/Ticket.php'));
+    assert.ok(openApiDocument.warnings.some((warning) => warning.code === 'openapi_schema_skipped'));
+    fs.unlinkSync(path.join(app, 'contract-openapi.json'));
 
     console.log(`contract ok with ${php.join(' ')}`);
 }
