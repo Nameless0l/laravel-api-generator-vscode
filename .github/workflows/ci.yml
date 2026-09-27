@@ -58,7 +58,7 @@ jobs:
           git clone --depth 1 --branch "$(cat .package-ref)" https://github.com/Nameless0l/laravel-api-generator.git "$RUNNER_TEMP/package"
           cd "$RUNNER_TEMP/app"
           composer config repositories.package "{\"type\": \"path\", \"url\": \"$RUNNER_TEMP/package\", \"options\": {\"symlink\": true, \"versions\": {\"nameless/laravel-api-generator\": \"dev-contract\"}}}"
-          composer require --dev "nameless/laravel-api-generator:dev-contract" --no-interaction
+          composer require --dev "nameless/laravel-api-generator:dev-contract" laravel/mcp --no-interaction
 
       - name: Bundled copies match the package
         run: |
