@@ -3,6 +3,7 @@ import * as assert from 'node:assert/strict';
 import * as fs from 'fs';
 import * as path from 'path';
 import Ajv from 'ajv';
+import { MCP_PROVIDER_ID } from '../services/mcpServer';
 
 const root = path.join(__dirname, '..', '..');
 const manifest = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')) as {
@@ -10,6 +11,8 @@ const manifest = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'ut
         chatSkills?: Array<{ path: string; when?: string }>;
         jsonValidation?: Array<{ fileMatch: string | string[]; url: string }>;
         yamlValidation?: Array<{ fileMatch: string | string[]; url: string }>;
+        mcpServerDefinitionProviders?: Array<{ id: string; label: string }>;
+        configuration: { properties: Record<string, { default?: unknown }> };
     };
 };
 
@@ -47,4 +50,12 @@ test('the bundled schema accepts documented forms and flags typos', () => {
     assert.ok(validate({ options: null, entities: { Post: { fields: { title: 'string' }, relations: { tags: 'belongsToMany Tag' } } } }));
     assert.equal(validate(document({ title: 'strng' })), false);
     assert.equal(validate(document({ title: 'string nulable' })), false);
+});
+
+test('the MCP server provider is declared under the id the code registers', () => {
+    assert.deepEqual(
+        (manifest.contributes.mcpServerDefinitionProviders ?? []).map((provider) => provider.id),
+        [MCP_PROVIDER_ID]
+    );
+    assert.equal(manifest.contributes.configuration.properties['laravelApiGenerator.mcp.enabled']?.default, true);
 });
