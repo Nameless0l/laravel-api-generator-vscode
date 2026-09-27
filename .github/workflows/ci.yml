@@ -30,3 +30,45 @@ jobs:
         with:
           name: vsix
           path: '*.vsix'
+
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, pdo_sqlite, sqlite
+          coverage: none
+
+      - name: Install and compile
+        run: |
+          npm ci
+          npm run compile
+
+      - name: Create a Laravel app with the package
+        run: |
+          composer create-project laravel/laravel "$RUNNER_TEMP/app" --prefer-dist --no-interaction
+          git clone --depth 1 --branch "$(cat .package-ref)" https://github.com/Nameless0l/laravel-api-generator.git "$RUNNER_TEMP/package"
+          cd "$RUNNER_TEMP/app"
+          composer config repositories.package "{\"type\": \"path\", \"url\": \"$RUNNER_TEMP/package\", \"options\": {\"symlink\": true, \"versions\": {\"nameless/laravel-api-generator\": \"dev-contract\"}}}"
+          composer require --dev "nameless/laravel-api-generator:dev-contract" --no-interaction
+
+      - name: Contract with the host PHP
+        env:
+          CONTRACT_APP: ${{ runner.temp }}/app
+        run: node out/test/contract/runContract.js
+
+      - name: Contract through docker exec
+        env:
+          CONTRACT_APP: ${{ runner.temp }}/app
+          CONTRACT_PHP_COMMAND: '["docker", "exec", "-i", "lag-php", "php"]'
+        run: |
+          docker run -d --name lag-php -v "$RUNNER_TEMP:$RUNNER_TEMP" -w "$RUNNER_TEMP/app" php:8.4-cli sleep infinity
+          node out/test/contract/runContract.js
