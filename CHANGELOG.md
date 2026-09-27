@@ -2,9 +2,9 @@
 
 All notable changes to the Laravel API Generator VS Code extension will be documented in this file.
 
-## [0.13.0] - Unreleased
+## [0.12.0] - Unreleased
 
-Pairs with `nameless/laravel-api-generator` >= 3.10 for the live preview. Older packages keep generating as before.
+Pairs with `nameless/laravel-api-generator` >= 3.9 for the live preview. Older packages keep generating as before.
 
 ### Changed
 - **The live preview is rendered by the installed package.** A PHP process (`php artisan api-generator:serve --stdio`) starts with the builder form and answers each preview in a few milliseconds, so the preview shows exactly the code the package writes: every file including routes, the database seeder, the policy, tests and enums, your published stubs, and badges for new, modified and unchanged files. Modified files open in a diff.

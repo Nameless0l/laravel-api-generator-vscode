@@ -35,7 +35,7 @@ readline.createInterface({ input: process.stdin }).on('line', (line) => {
             id,
             result: {
                 protocol,
-                package: { version: '3.10.0' },
+                package: { version: '3.9.0' },
                 laravel: '12.0.0',
                 php: '8.3.0',
                 capabilities: {

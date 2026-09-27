@@ -33,6 +33,7 @@ test('Composer 2 and Composer 1 formats are both read', () => {
 
 test('old versions cannot preview and dev versions are left to the handshake', () => {
     assert.equal(previewSupport('3.8.0'), 'tooOld');
+    assert.equal(previewSupport('v3.9.0'), 'supported');
     assert.equal(previewSupport('v4.0.1'), 'supported');
     assert.equal(previewSupport('dev-main'), 'unknown');
     assert.equal(previewSupport('dev-local'), 'unknown');

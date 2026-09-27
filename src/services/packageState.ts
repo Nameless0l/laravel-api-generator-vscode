@@ -3,7 +3,7 @@ import * as path from 'path';
 
 export const PACKAGE_NAME = 'nameless/laravel-api-generator';
 
-export const PREVIEW_MIN_VERSION = '3.10.0';
+export const PREVIEW_MIN_VERSION = '3.9.0';
 
 export type PreviewSupport = 'supported' | 'tooOld' | 'unknown';
 
