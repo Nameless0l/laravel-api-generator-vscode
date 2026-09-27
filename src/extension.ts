@@ -27,6 +27,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
     const root = LaravelDetector.getWorkspaceRoot();
     const isLaravel = !!root && LaravelDetector.isLaravelProject(root);
+    void vscode.commands.executeCommand('setContext', 'laravelApiGenerator.laravelProject', isLaravel);
 
     let treeProvider: EntityTreeProvider | undefined;
     let statusBar: StatusBarManager | undefined;

@@ -2,7 +2,7 @@
   "name": "laravel-api-generator",
   "displayName": "Laravel API Generator",
   "description": "Generate complete REST APIs for Laravel with a visual interface",
-  "version": "0.12.0",
+  "version": "0.13.0",
   "publisher": "Nameless0l",
   "license": "MIT",
   "icon": "media/icon-marketplace.png",
@@ -35,7 +35,10 @@
     "artisan",
     "eloquent",
     "scaffold",
-    "backend"
+    "backend",
+    "ai",
+    "copilot",
+    "agent skills"
   ],
   "activationEvents": [
     "workspaceContains:artisan",
@@ -115,6 +118,24 @@
       {
         "language": "php",
         "path": "./snippets/laravel-api-generator.json"
+      }
+    ],
+    "chatSkills": [
+      {
+        "path": "./skills/laravel-api-generator/SKILL.md",
+        "when": "laravelApiGenerator.laravelProject"
+      }
+    ],
+    "jsonValidation": [
+      {
+        "fileMatch": "api-schema.json",
+        "url": "./schemas/api-schema.json"
+      }
+    ],
+    "yamlValidation": [
+      {
+        "fileMatch": ["api-schema.yaml", "api-schema.yml"],
+        "url": "./schemas/api-schema.json"
       }
     ],
     "keybindings": [
