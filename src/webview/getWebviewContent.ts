@@ -31,6 +31,7 @@ interface LocaleData {
         badgeCreate: string;
         badgeUpdate: string;
         badgeUnchanged: string;
+        badgeKept: string;
         showDiff: string;
         runInTerminal: string;
         useSail: string;
@@ -343,6 +344,7 @@ export function getWebviewContent(
         .badge-create { color: var(--vscode-gitDecoration-addedResourceForeground); }
         .badge-update { color: var(--vscode-gitDecoration-modifiedResourceForeground); }
         .badge-unchanged { color: var(--vscode-descriptionForeground); }
+        .badge-kept { color: var(--vscode-editorWarning-foreground); }
         .file-header {
             display: flex;
             justify-content: space-between;
@@ -1228,8 +1230,8 @@ export function getWebviewContent(
                     btn.dataset.path = file.path;
                     btn.textContent = tabLabel(file);
                     var badge = document.createElement('span');
-                    badge.className = 'badge badge-' + file.action;
-                    badge.textContent = badgeText(file.action);
+                    badge.className = 'badge badge-' + (file.kept ? 'kept' : file.action);
+                    badge.textContent = file.kept ? '${L.badgeKept}' : badgeText(file.action);
                     btn.appendChild(badge);
                     btn.addEventListener('click', function() {
                         tabBar.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });

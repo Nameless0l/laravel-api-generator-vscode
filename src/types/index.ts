@@ -85,6 +85,8 @@ export interface PlannedFile {
     kind: string;
     entity?: string;
     action: PlannedAction;
+    /** Edited by hand since it was generated: the package leaves it as is unless forced (package >= 3.11). */
+    kept?: boolean;
     content?: string;
 }
 
@@ -107,6 +109,7 @@ export interface HandshakeResult {
     capabilities: {
         fieldTypes: string[];
         relationTypes: string[];
+        keepsEditedFiles?: boolean;
         options: { json_api: { supported: boolean; reason?: string } };
     };
 }

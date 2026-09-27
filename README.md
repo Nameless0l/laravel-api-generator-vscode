@@ -53,7 +53,7 @@ Create API entities through a form instead of CLI flags:
 - **Real-time code preview** -- rendered by the package installed in your project, so it is exactly the code that will be written: every generated file, routes and seeder included, your published stubs, badges for new, modified and unchanged files, and a diff for modified ones
 - **Copilot skill** -- in Laravel projects, GitHub Copilot (VS Code 1.109+) gets the package's `laravel-api-generator` skill, so it generates APIs with `make:fullapi` instead of writing the files by hand
 - **Schema file autocompletion** -- `api-schema.yaml`, `.yml` and `.json` are checked against the package's JSON Schema: completion for keys and types, typos flagged before you generate (YAML needs the Red Hat YAML extension)
-- **Conflict warning** -- before regenerating an existing entity, a modal lists every file that will be overwritten so you can opt out
+- **Your edits are safe** -- with package 3.11 or later, regenerating keeps the files you edited by hand; a modal names them and lets you overwrite them or keep your changes (older packages: a modal lists every file that will be overwritten)
 - **Auto-open generated files** -- after a successful generation, the new Model and Controller open in the editor
 
 ### Generate APIs from Database (one shot)

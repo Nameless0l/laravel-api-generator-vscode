@@ -44,7 +44,7 @@ export function generateArgs(config: EntityConfig): string[] {
     return args;
 }
 
-export function schemaGenerationArgs(config: EntityConfig): string[] {
+export function schemaGenerationArgs(config: EntityConfig, force = false): string[] {
     const args = ['artisan', 'make:fullapi', '--schema=-', '--json'];
     const flags = flagsFromConfig(config);
 
@@ -56,6 +56,9 @@ export function schemaGenerationArgs(config: EntityConfig): string[] {
     }
     if (flags.only) {
         args.push(`--only=${flags.only.join(',')}`);
+    }
+    if (force) {
+        args.push('--force');
     }
 
     return args;

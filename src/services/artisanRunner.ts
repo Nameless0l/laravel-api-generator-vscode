@@ -26,8 +26,8 @@ export class ArtisanRunner {
         return this.run(generateArgs(config));
     }
 
-    async generateFromConfig(config: EntityConfig): Promise<{ result: ArtisanResult; document: GenerationDocument | null }> {
-        const result = await this.run(schemaGenerationArgs(config), 120000, JSON.stringify(schemaFromConfig(config)));
+    async generateFromConfig(config: EntityConfig, force = false): Promise<{ result: ArtisanResult; document: GenerationDocument | null }> {
+        const result = await this.run(schemaGenerationArgs(config, force), 120000, JSON.stringify(schemaFromConfig(config)));
         return { result, document: lastProtocolDocument(result.output) };
     }
 
