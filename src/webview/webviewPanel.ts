@@ -8,7 +8,7 @@ import { EntityScanner } from '../services/entityScanner';
 import { describeGeneration } from '../services/generationOutput';
 import { GeneratorBridge, PreviewOutcome } from '../services/generatorBridge';
 import { OverwriteCheck, overwriteCheck } from '../services/overwriteCheck';
-import { detectPackageState, PackageState, PREVIEW_MIN_VERSION } from '../services/packageState';
+import { detectPackageState, OPENAPI_MIN_VERSION, PackageState, PREVIEW_MIN_VERSION, readInstalledVersion, versionSupport } from '../services/packageState';
 import { flagsFromConfig, schemaFromConfig } from '../services/schemaBuilder';
 import { LaravelDetector } from '../services/laravelDetector';
 import { parseOpenApi } from '../services/openApiImporter';
@@ -910,14 +910,22 @@ export class GeneratorPanel {
     }
 
     private async handleImportOpenApi(): Promise<void> {
+        const version = readInstalledVersion(this.workspaceRoot);
+        const packageReadsSpecs = version !== null && versionSupport(version, OPENAPI_MIN_VERSION) !== 'tooOld';
+
         const fileUri = await vscode.window.showOpenDialog({
             canSelectFiles: true,
             canSelectMany: false,
-            filters: { 'OpenAPI / Swagger JSON': ['json'] },
-            title: 'Select an OpenAPI / Swagger JSON spec',
+            filters: packageReadsSpecs ? { 'OpenAPI / Swagger': ['yaml', 'yml', 'json'] } : { 'OpenAPI / Swagger JSON': ['json'] },
+            title: packageReadsSpecs ? t('sources.openApiTitle') : 'Select an OpenAPI / Swagger JSON spec',
         });
 
         if (!fileUri || fileUri.length === 0) {
+            return;
+        }
+
+        if (packageReadsSpecs) {
+            await vscode.commands.executeCommand('laravelApiGenerator.generateFromOpenApi', fileUri[0]);
             return;
         }
 

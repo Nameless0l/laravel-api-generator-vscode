@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { execFile, spawn, ChildProcess } from 'child_process';
+import * as fs from 'fs';
 import * as http from 'http';
 import { ArtisanResult, EntityConfig, GenerationDocument } from '../types';
 import { generateArgs, schemaGenerationArgs, sourceArgs, SourceOptions } from './artisanArgs';
@@ -56,6 +57,15 @@ export class ArtisanRunner {
 
     async generateFromMermaid(diagramPath: string, options?: SourceOptions): Promise<ArtisanResult> {
         return this.run(sourceArgs([`--mermaid=${projectRelative(this.workspaceRoot, diagramPath)}`], options), 180000);
+    }
+
+    /** A spec outside the project goes through stdin, so PHP running in a container can read it too. */
+    async generateFromOpenApi(specPath: string, options?: SourceOptions, dryRun = false): Promise<ArtisanResult> {
+        const relative = projectRelative(this.workspaceRoot, specPath);
+        const inside = relative !== specPath;
+        const flags = [inside ? `--openapi=${relative}` : '--openapi=-', ...(dryRun ? ['--dry-run', '--json'] : [])];
+
+        return this.run(sourceArgs(flags, options), 180000, inside ? undefined : fs.readFileSync(specPath, 'utf-8'));
     }
 
     async addFields(entityName: string, fields: string): Promise<ArtisanResult> {

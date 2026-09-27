@@ -100,7 +100,14 @@
     "browseSchema": "Parcourir pour choisir un fichier de schéma...",
     "mermaidTitle": "Générer depuis un diagramme Mermaid",
     "useCurrentFile": "Utiliser le fichier actif ({0})",
-    "browseMermaid": "Parcourir pour choisir un fichier Mermaid..."
+    "browseMermaid": "Parcourir pour choisir un fichier Mermaid...",
+    "openApiTitle": "Générer depuis une spec OpenAPI",
+    "browseOpenApi": "Parcourir pour choisir un fichier OpenAPI ou Swagger...",
+    "readingSpec": "Lecture de la spec OpenAPI...",
+    "openApiSummary": "{0} décrit {1}.",
+    "openApiFiles": "Fichiers : {0} à créer, {1} à modifier, {2} gardés car vous les avez modifiés.",
+    "openApiSkipped": "Schémas écartés :",
+    "openApiGenerate": "Générer"
   },
   "routes": {
     "orphanDetected": "route:list a échoué car un fichier de routes référence un contrôleur supprimé. Supprimer les routes orphelines ?",
@@ -131,6 +138,8 @@
     "schemaDesc": "api-schema.yaml ou JSON, versionné avec le repo.",
     "mermaid": "Diagramme Mermaid",
     "mermaidDesc": "Un diagramme de classes devient des API.",
+    "openapi": "Spec OpenAPI",
+    "openapiDesc": "OpenAPI 3 ou Swagger 2, en JSON ou en YAML.",
     "explore": "Explorer",
     "diagram": "Diagramme d'entités",
     "snippets": "Snippets",
