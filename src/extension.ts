@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { initLocale } from './i18n';
 import { LaravelDetector } from './services/laravelDetector';
 import { EntityTreeProvider } from './providers/entityTreeProvider';
+import { registerMcpServerProvider } from './providers/mcpServerProvider';
 import { SidebarHomeViewProvider } from './webview/sidebarHomeView';
 import { StatusBarManager } from './services/statusBar';
 import { registerGenerateCommand } from './commands/generateApi';
@@ -38,7 +39,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
         statusBar = new StatusBarManager(root);
         statusBar.refresh();
-        context.subscriptions.push({ dispose: () => statusBar?.dispose() });
+        context.subscriptions.push({ dispose: () => statusBar?.dispose() }, ...registerMcpServerProvider(root));
     }
 
     const refresh = (): void => {

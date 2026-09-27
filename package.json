@@ -2,7 +2,7 @@
   "name": "laravel-api-generator",
   "displayName": "Laravel API Generator",
   "description": "Generate complete REST APIs for Laravel with a visual interface",
-  "version": "0.14.0",
+  "version": "0.15.0",
   "publisher": "Nameless0l",
   "license": "MIT",
   "icon": "media/icon-marketplace.png",
@@ -284,6 +284,12 @@
         }
       ]
     },
+    "mcpServerDefinitionProviders": [
+      {
+        "id": "laravelApiGenerator.mcp",
+        "label": "Laravel API Generator"
+      }
+    ],
     "configuration": {
       "title": "Laravel API Generator",
       "properties": {
@@ -297,6 +303,11 @@
           "items": { "type": "string" },
           "default": [],
           "markdownDescription": "Full command that runs PHP, one argument per item, for projects where PHP lives in a container. Examples: `[\"./vendor/bin/sail\", \"php\"]` or `[\"docker\", \"compose\", \"exec\", \"-T\", \"app\", \"php\"]`. When empty, `phpPath` is used."
+        },
+        "laravelApiGenerator.mcp.enabled": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Offer the package's MCP server to Copilot's agent mode when the project has `laravel/mcp`. It runs `php artisan api-generator:mcp` with the PHP command above."
         },
         "laravelApiGenerator.locale": {
           "type": "string",

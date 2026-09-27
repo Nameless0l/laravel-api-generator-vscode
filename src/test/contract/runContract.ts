@@ -5,6 +5,7 @@ import * as path from 'path';
 import Ajv from 'ajv';
 import { GeneratorBridge } from '../../services/generatorBridge';
 import { lastProtocolDocument } from '../../services/generationOutput';
+import { mcpLaunch } from '../../services/mcpServer';
 import { flagsFromConfig, schemaFromConfig } from '../../services/schemaBuilder';
 import { EntityConfig } from '../../types';
 
@@ -64,6 +65,27 @@ async function main(): Promise<void> {
     validate('planDocument', document);
     assert.deepEqual(document.errors, []);
     assert.equal(fs.existsSync(path.join(app, 'app', 'Models', 'Invoice.php')), false);
+
+    const launch = mcpLaunch(app, { command: php[0], args: php.slice(1) });
+    assert.ok(launch, 'no MCP server: laravel/mcp or the package is missing from vendor');
+    const messages = [
+        { jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'contract', version: '1' } } },
+        { jsonrpc: '2.0', method: 'notifications/initialized' },
+        { jsonrpc: '2.0', id: 2, method: 'tools/list' },
+    ];
+    const mcp = spawnSync(launch.command, launch.args, {
+        cwd: app,
+        input: messages.map((message) => `${JSON.stringify(message)}\n`).join(''),
+        encoding: 'utf8',
+    });
+    const tools = mcp.stdout
+        .split('\n')
+        .filter((line) => line.trim() !== '')
+        .map((line) => JSON.parse(line) as { id?: number; result?: { tools?: Array<{ name: string }> } })
+        .find((message) => message.id === 2)
+        ?.result?.tools?.map((tool) => tool.name)
+        .sort();
+    assert.deepEqual(tools, ['add-fields', 'generate-api', 'list-entities', 'plan-api'], mcp.stdout + mcp.stderr);
 
     console.log(`contract ok with ${php.join(' ')}`);
 }

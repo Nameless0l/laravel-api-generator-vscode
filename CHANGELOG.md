@@ -2,6 +2,14 @@
 
 All notable changes to the Laravel API Generator VS Code extension will be documented in this file.
 
+## [0.15.0] - Unreleased
+
+Pairs with `nameless/laravel-api-generator` >= 3.12 and `laravel/mcp`.
+
+### Added
+- **MCP server for Copilot.** In a Laravel project with `laravel/mcp` installed, the extension registers the package's MCP server (VS Code 1.101+), so Copilot's agent mode can list your generated entities, preview a generation, generate APIs and add fields by itself, without ever overwriting a file you edited. The server runs `php artisan api-generator:mcp` with your PHP command, Sail and Docker included, and the list refreshes when `vendor/composer/installed.json` or the PHP settings change. Set `laravelApiGenerator.mcp.enabled` to `false` to hide it.
+- The bundled Copilot skill describes the MCP tools and the files kept after hand edits.
+
 ## [0.14.0] - Unreleased
 
 Pairs with `nameless/laravel-api-generator` >= 3.11.
