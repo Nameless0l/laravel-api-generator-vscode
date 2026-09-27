@@ -6,7 +6,7 @@
 
 Generate complete REST APIs for Laravel without touching the terminal. Visual interface for the [nameless/laravel-api-generator](https://packagist.org/packages/nameless/laravel-api-generator) package.
 
-> **12 production-ready files per entity** -- Model, Controller, Service, DTO, Request, Resource, Policy, Migration, Factory, Seeder, Feature Test, Unit Test -- plus route & seeder registration. All in one click.
+> **13 production-ready files per entity** -- Model, Controller, Service, DTO, Store and Update requests, Resource, Policy, Migration, Factory, Seeder, Feature Test, Unit Test -- plus route & seeder registration. All in one click.
 
 ---
 
@@ -124,7 +124,7 @@ Day-30 problem solved: evolve a generated API without wiping your manual changes
 
 - Right-click an entity in the sidebar tree -> **Add Fields to Entity...** (or run it from the command palette)
 - Type the new fields: `excerpt:text,status:enum(draft,published)`
-- The package creates an incremental `Schema::table()` migration and patches `$fillable`, `$casts`, the model PHPDoc, the validation rules, the factory and the resource in place
+- The package creates an incremental `Schema::table()` migration and patches the fillable columns, the casts, the model PHPDoc, the validation rules, the factory and the resource in place
 - One click to run the migration when it's done
 
 ### Regenerate Single File(s)
@@ -133,7 +133,7 @@ Modified your migration and want fresh tests without retyping the schema?
 
 - Right-click an entity in the sidebar tree -> **Regenerate File(s)...**
 - The extension parses the existing migration to recover the field list and Soft Deletes flag
-- Multi-select the artifacts to rebuild (Model, Controller, Service, DTO, Request, Resource, Factory, Seeder, Policy, Feature Test, Unit Test)
+- Multi-select the artifacts to rebuild (Model, Controller, Service, DTO, Requests, Resource, Factory, Seeder, Policy, Feature Test, Unit Test)
 - Underlying call is `make:fullapi --only=Type,Type` so the migration, the API route and seeder registration are left untouched
 
 ### Sidebar Entity Explorer
@@ -141,8 +141,8 @@ Modified your migration and want fresh tests without retyping the schema?
 The activity bar view opens on a **home panel**: a New API button, the three import sources and shortcuts to the diagram, the snippets and the documentation, localized like the rest of the UI. Right below, the entity tree tracks everything the generator created:
 
 - Each entity expands into three groups: **Files**, **Fields**, **Relations**
-- **Files** show a green check / red slash for each artifact (Model, Controller, Service, ...) and click to open
-- **Fields** are read from the model's `$fillable`
+- **Files** list what the package recorded in `.api-generator/manifest.json` (Store and Update requests, enums and `--add-fields` migrations included), with a green check / red slash each and a click to open
+- **Fields** are read from the model's `$fillable`, or its `#[Fillable]` attribute on Laravel 13
 - **Relations** are extracted from the model's `belongsTo` / `hasMany` / `hasOne` / `belongsToMany` methods, with a `belongsTo -> Author` style description
 - Inline actions on each entity: **Regenerate File(s)** and **Delete**
 
@@ -224,11 +224,12 @@ Want a different controller layout, different test asserts, more fields in the r
 ## What Gets Generated
 
 ```
-app/Models/Product.php                          -- Eloquent model with fillable, casts, relationships
-app/Http/Controllers/ProductController.php      -- CRUD controller with service injection
-app/Services/ProductService.php                 -- Business logic with filtering
-app/DTO/ProductDTO.php                          -- Readonly data transfer object
-app/Http/Requests/ProductRequest.php            -- Form validation rules
+app/Models/Product.php                          -- Eloquent model with fillable, casts(), relationships
+app/Http/Controllers/ProductController.php      -- CRUD controller with route model binding and policy checks
+app/Services/ProductService.php                 -- Paginated, filtered and sorted index
+app/DTO/ProductDTO.php                          -- Data transfer object that keeps PATCH partial
+app/Http/Requests/StoreProductRequest.php       -- Validation for creation
+app/Http/Requests/UpdateProductRequest.php      -- Validation for partial updates
 app/Http/Resources/ProductResource.php          -- API resource transformer
 app/Policies/ProductPolicy.php                  -- Authorization policy
 database/migrations/xxxx_create_products_table.php
@@ -247,7 +248,7 @@ database/seeders/DatabaseSeeder.php             -- Seeder auto-registered
 - **VS Code** 1.80+
 - **PHP** 8.2+ on your PATH (or configure `laravelApiGenerator.phpPath`, or `laravelApiGenerator.phpCommand` for Sail and Docker)
 - A **Laravel 10 to 13** project
-- The package: `composer require --dev nameless/laravel-api-generator`
+- The package: `composer require --dev nameless/laravel-api-generator`. Its 4.x line needs Laravel 12, so Laravel 10 and 11 projects use the 3.x line, which the extension installs for them.
 
 ---
 

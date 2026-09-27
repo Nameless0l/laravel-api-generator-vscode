@@ -2,6 +2,23 @@
 
 All notable changes to the Laravel API Generator VS Code extension will be documented in this file.
 
+## [1.0.0] - Unreleased
+
+Pairs with `nameless/laravel-api-generator` 4.0 and still works with 3.9 or later.
+
+### Added
+- **The entity tree reads the generation manifest** (package 3.11+). Each entity lists the files the package recorded: the Store and Update requests, the enums, the migrations added with `--add-fields`. Entities generated before the manifest keep their conventional files, found next to it.
+- **Laravel 10 and 11 install the 3.x line.** The package 4.x needs Laravel 12, so on older projects the install prompt says so and runs `composer require --dev "nameless/laravel-api-generator:^3.15"`.
+- **Generation errors come with their code** (package 3.9+). Every generation asks for the package's JSON document: a file that cannot be written points to the folder permissions, a broken manifest opens it, and invalid schemas show the package's hint. The text patterns remain for older packages and for errors the package cannot classify, such as a database that refuses the connection.
+
+### Changed
+- **Go to Related File** knows the Store and Update requests, the enums named after their entity (`PostStatus`) and every file the manifest records, migrations included.
+- **Regenerate File(s)** lists the paths the manifest recorded, and rewrites both requests with one item.
+- Before a generation, the stub check says why a stub written for 3.x no longer fits, and warns about the stubs the package stopped reading.
+- The fields of a Laravel 13 model are read from `#[Fillable([...])]`.
+- The file nodes of the entity tree show the file name.
+- The bundled Copilot skill follows the package 4.0.
+
 ## [0.17.0] - 2026-09-27
 
 Works with `nameless/laravel-api-generator` 3.9 or later.
