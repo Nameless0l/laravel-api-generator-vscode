@@ -2,6 +2,26 @@
 
 All notable changes to the Laravel API Generator VS Code extension will be documented in this file.
 
+## [0.12.0] - Unreleased
+
+Pairs with `nameless/laravel-api-generator` >= 3.9 for the live preview. Older packages keep generating as before.
+
+### Changed
+- **The live preview is rendered by the installed package.** A PHP process (`php artisan api-generator:serve --stdio`) starts with the builder form and answers each preview in a few milliseconds, so the preview shows exactly the code the package writes: every file including routes, the database seeder, the policy, tests and enums, your published stubs, and badges for new, modified and unchanged files. Modified files open in a diff.
+- Generation sends the form to `make:fullapi --schema=- --json`, the same input as the preview. No `class_data.json` is written at the project root anymore.
+- The overwrite confirmation lists the files the package would actually modify.
+- Options your installed package or Laravel version cannot honor are disabled with the reason, such as JSON:API before Laravel 12.45.
+
+### Added
+- `laravelApiGenerator.phpCommand` runs PHP through a full command, for projects whose PHP lives in Sail or Docker. When PHP is missing and the project ships Sail, the preview offers to switch in one click.
+- The preview explains why it is unavailable (package not installed, too old, PHP not found, app failing to boot) and offers the fixing command.
+
+### Fixed
+- With relationships in the form, Soft Deletes, Auth and Postman were silently ignored. They now reach the generator.
+
+### Removed
+- The TypeScript copy of the stubs that used to render the preview.
+
 ## [0.11.1] - 2026-09-26
 
 ### Fixed

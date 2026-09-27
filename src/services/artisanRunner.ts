@@ -1,8 +1,11 @@
 import * as vscode from 'vscode';
 import { execFile, spawn, ChildProcess } from 'child_process';
 import * as http from 'http';
-import { ArtisanResult, EntityConfig } from '../types';
-import { generateArgs, sourceArgs, SourceOptions } from './artisanArgs';
+import { ArtisanResult, EntityConfig, GenerationDocument } from '../types';
+import { generateArgs, schemaGenerationArgs, sourceArgs, SourceOptions } from './artisanArgs';
+import { lastProtocolDocument } from './generationOutput';
+import { PhpCommand, projectRelative, resolvePhpCommand } from './phpCommand';
+import { schemaFromConfig } from './schemaBuilder';
 
 export class ArtisanRunner {
     private workspaceRoot: string;
@@ -14,13 +17,18 @@ export class ArtisanRunner {
         this.workspaceRoot = workspaceRoot;
     }
 
-    private getPhpPath(): string {
+    phpCommand(): PhpCommand {
         const config = vscode.workspace.getConfiguration('laravelApiGenerator');
-        return config.get<string>('phpPath', 'php');
+        return resolvePhpCommand(config.get<unknown>('phpCommand'), config.get<string>('phpPath', 'php'));
     }
 
     async generate(config: EntityConfig): Promise<ArtisanResult> {
         return this.run(generateArgs(config));
+    }
+
+    async generateFromConfig(config: EntityConfig): Promise<{ result: ArtisanResult; document: GenerationDocument | null }> {
+        const result = await this.run(schemaGenerationArgs(config), 120000, JSON.stringify(schemaFromConfig(config)));
+        return { result, document: lastProtocolDocument(result.output) };
     }
 
     async generateFromJson(onlyTypes?: string[], options?: SourceOptions): Promise<ArtisanResult> {
@@ -43,11 +51,11 @@ export class ArtisanRunner {
     }
 
     async generateFromSchema(schemaPath: string, options?: SourceOptions): Promise<ArtisanResult> {
-        return this.run(sourceArgs([`--schema=${schemaPath}`], options), 180000);
+        return this.run(sourceArgs([`--schema=${projectRelative(this.workspaceRoot, schemaPath)}`], options), 180000);
     }
 
     async generateFromMermaid(diagramPath: string, options?: SourceOptions): Promise<ArtisanResult> {
-        return this.run(sourceArgs([`--mermaid=${diagramPath}`], options), 180000);
+        return this.run(sourceArgs([`--mermaid=${projectRelative(this.workspaceRoot, diagramPath)}`], options), 180000);
     }
 
     async addFields(entityName: string, fields: string): Promise<ArtisanResult> {
@@ -186,9 +194,9 @@ export class ArtisanRunner {
         }
 
         // Start php artisan serve
-        const phpPath = this.getPhpPath();
+        const php = this.phpCommand();
         return new Promise((resolve) => {
-            const proc = spawn(phpPath, ['artisan', 'serve'], {
+            const proc = spawn(php.command, [...php.args, 'artisan', 'serve'], {
                 cwd: this.workspaceRoot,
                 env: { ...process.env },
                 stdio: ['ignore', 'pipe', 'pipe'],
@@ -248,13 +256,13 @@ export class ArtisanRunner {
         }
     }
 
-    private run(args: string[], timeout: number = 30000): Promise<ArtisanResult> {
-        const phpPath = this.getPhpPath();
+    private run(args: string[], timeout: number = 30000, input?: string): Promise<ArtisanResult> {
+        const php = this.phpCommand();
 
         return new Promise((resolve) => {
             const child = execFile(
-                phpPath,
-                args,
+                php.command,
+                [...php.args, ...args],
                 {
                     cwd: this.workspaceRoot,
                     timeout,
@@ -289,6 +297,9 @@ export class ArtisanRunner {
                 }
             );
             this.activeProcesses.add(child);
+            if (input !== undefined) {
+                child.stdin?.end(input);
+            }
         });
     }
 }

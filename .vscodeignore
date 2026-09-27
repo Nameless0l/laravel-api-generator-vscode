@@ -11,3 +11,4 @@ PUBLISHING.md
 **/*.ts
 **/*.map
 **/*.vsix
+.package-ref

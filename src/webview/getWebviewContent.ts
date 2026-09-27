@@ -27,6 +27,13 @@ interface LocaleData {
         optQueryBuilder: string;
         optPest: string;
         optJsonApi: string;
+        codePreview: string;
+        badgeCreate: string;
+        badgeUpdate: string;
+        badgeUnchanged: string;
+        showDiff: string;
+        runInTerminal: string;
+        useSail: string;
         enumValuesPlaceholder: string;
         pkTooltip: string;
         relTargetPlaceholder: string;
@@ -326,6 +333,38 @@ export function getWebviewContent(
         .php-string { color: var(--vscode-symbolIcon-stringForeground, #ce9178); }
         .php-variable { color: var(--vscode-symbolIcon-variableForeground, #9cdcfe); }
         .php-comment { color: var(--vscode-symbolIcon-enumeratorMemberForeground, #6a9955); }
+        .badge {
+            margin-left: 6px;
+            padding: 0 5px;
+            border: 1px solid currentColor;
+            border-radius: 3px;
+            font-size: 0.85em;
+        }
+        .badge-create { color: var(--vscode-gitDecoration-addedResourceForeground); }
+        .badge-update { color: var(--vscode-gitDecoration-modifiedResourceForeground); }
+        .badge-unchanged { color: var(--vscode-descriptionForeground); }
+        .file-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 12px;
+            border-bottom: 1px solid var(--vscode-panel-border);
+            color: var(--vscode-descriptionForeground);
+            font-size: 0.82em;
+        }
+        .preview-notice {
+            padding: 10px 12px;
+            border: 1px solid var(--vscode-panel-border);
+            border-radius: 3px;
+            white-space: pre-wrap;
+        }
+        .preview-notice .btn { margin-top: 8px; }
+        .preview-warnings {
+            margin: 8px 0;
+            padding-left: 18px;
+            color: var(--vscode-editorWarning-foreground);
+            font-size: 0.85em;
+        }
         .json-entities {
             display: flex;
             flex-wrap: wrap;
@@ -519,7 +558,9 @@ export function getWebviewContent(
     </div>
 
     <div id="codePreviewSection" class="section hidden">
-        <h2>Code Preview</h2>
+        <h2>${L.codePreview}</h2>
+        <div id="codePreviewNotice" class="preview-notice hidden"></div>
+        <ul id="codePreviewWarnings" class="preview-warnings hidden"></ul>
         <div class="code-preview">
             <div class="tab-bar" id="codeTabs"></div>
             <div id="codeTabContents"></div>
@@ -535,7 +576,7 @@ export function getWebviewContent(
     <script nonce="${nonce}">
         (function() {
             const vscode = acquireVsCodeApi();
-            const typeOptions = \`${typeOptions}\`;
+            var typeOptions = \`${typeOptions}\`;
 
             function addField(name, type) {
                 const container = document.getElementById('fieldsContainer');
@@ -1071,7 +1112,7 @@ export function getWebviewContent(
                     } else {
                         document.getElementById('codePreviewSection').classList.add('hidden');
                     }
-                }, 600);
+                }, 200);
             }
 
             // Listen for field changes
@@ -1120,34 +1161,108 @@ export function getWebviewContent(
                 return s;
             }
 
-            function showCodePreview(code) {
+            function tabLabel(file) {
+                if (file.kind === 'Migration' || file.kind === 'PivotMigration') { return file.kind; }
+                if (file.kind === 'Routes' || file.kind === 'Bootstrap') { return file.path; }
+                return file.path.split('/').pop().replace(/\\.(php|json)$/, '');
+            }
+
+            function badgeText(action) {
+                if (action === 'create') { return '${L.badgeCreate}'; }
+                if (action === 'update') { return '${L.badgeUpdate}'; }
+                return '${L.badgeUnchanged}';
+            }
+
+            function showPreviewNotice(msg) {
+                var notice = document.getElementById('codePreviewNotice');
+                notice.innerHTML = '';
+                var text = document.createElement('div');
+                text.textContent = msg.hint ? msg.message + '\\n' + msg.hint : msg.message;
+                notice.appendChild(text);
+                if (msg.command || msg.useSail) {
+                    var btn = document.createElement('button');
+                    btn.className = 'btn btn-secondary';
+                    btn.textContent = msg.useSail ? '${L.useSail}' : '${L.runInTerminal}';
+                    btn.addEventListener('click', function() {
+                        vscode.postMessage({ type: 'previewAction', action: msg.useSail ? 'useSail' : 'runCommand' });
+                    });
+                    notice.appendChild(btn);
+                }
+                notice.classList.remove('hidden');
+            }
+
+            function showCodePreview(msg) {
                 var section = document.getElementById('codePreviewSection');
+                var notice = document.getElementById('codePreviewNotice');
+                var warnings = document.getElementById('codePreviewWarnings');
                 var tabBar = document.getElementById('codeTabs');
                 var contents = document.getElementById('codeTabContents');
                 section.classList.remove('hidden');
+                notice.classList.add('hidden');
+                warnings.classList.add('hidden');
+                warnings.innerHTML = '';
 
-                var tabs = Object.keys(code);
+                if (msg.state !== 'ready') {
+                    tabBar.innerHTML = '';
+                    contents.innerHTML = '';
+                    showPreviewNotice(msg);
+                    return;
+                }
+
+                (msg.warnings || []).forEach(function(warning) {
+                    var item = document.createElement('li');
+                    item.textContent = warning.message;
+                    warnings.appendChild(item);
+                });
+                if (warnings.children.length > 0) { warnings.classList.remove('hidden'); }
+
+                var current = tabBar.querySelector('.tab-btn.active');
+                var currentPath = current ? current.dataset.path : null;
+                var activeIndex = Math.max(0, msg.files.findIndex(function(f) { return f.path === currentPath; }));
                 tabBar.innerHTML = '';
                 contents.innerHTML = '';
 
-                tabs.forEach(function(tab, i) {
+                msg.files.forEach(function(file, i) {
                     var btn = document.createElement('button');
-                    btn.className = 'tab-btn' + (i === 0 ? ' active' : '');
-                    btn.textContent = tab;
-                    btn.dataset.tab = tab;
+                    btn.className = 'tab-btn' + (i === activeIndex ? ' active' : '');
+                    btn.dataset.path = file.path;
+                    btn.textContent = tabLabel(file);
+                    var badge = document.createElement('span');
+                    badge.className = 'badge badge-' + file.action;
+                    badge.textContent = badgeText(file.action);
+                    btn.appendChild(badge);
                     btn.addEventListener('click', function() {
-                        document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
-                        document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
+                        tabBar.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+                        contents.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
                         btn.classList.add('active');
-                        document.getElementById('tabContent-' + tab).classList.add('active');
+                        document.getElementById('tabContent-' + i).classList.add('active');
                     });
                     tabBar.appendChild(btn);
 
                     var div = document.createElement('div');
-                    div.className = 'tab-content' + (i === 0 ? ' active' : '');
-                    div.id = 'tabContent-' + tab;
+                    div.className = 'tab-content' + (i === activeIndex ? ' active' : '');
+                    div.id = 'tabContent-' + i;
+                    var header = document.createElement('div');
+                    header.className = 'file-header';
+                    var name = document.createElement('span');
+                    name.textContent = file.path;
+                    header.appendChild(name);
+                    if (file.action === 'update') {
+                        var diff = document.createElement('button');
+                        diff.className = 'btn btn-secondary';
+                        diff.textContent = '${L.showDiff}';
+                        diff.addEventListener('click', function() {
+                            vscode.postMessage({ type: 'openDiff', path: file.path });
+                        });
+                        header.appendChild(diff);
+                    }
+                    div.appendChild(header);
                     var pre = document.createElement('pre');
-                    pre.innerHTML = highlightPhp(code[tab]);
+                    if (/\\.php$/.test(file.path)) {
+                        pre.innerHTML = highlightPhp(file.content || '');
+                    } else {
+                        pre.textContent = file.content || '';
+                    }
                     div.appendChild(pre);
                     contents.appendChild(div);
                 });
@@ -1182,7 +1297,7 @@ export function getWebviewContent(
                         break;
                     }
                     case 'previewCodeResult':
-                        showCodePreview(msg.code);
+                        showCodePreview(msg);
                         break;
                     case 'jsonLoaded': {
                         var jsonSection = document.getElementById('jsonPreviewSection');
@@ -1236,6 +1351,21 @@ export function getWebviewContent(
                         showOutput('Imported "' + ent.name + '" from database with ' + ent.fields.length + ' field(s). Review and click Generate API.', false);
                         break;
                     }
+                    case 'capabilities': {
+                        typeOptions = msg.fieldTypes.concat(['enum']).map(function(t) {
+                            return '<option value="' + t + '">' + t + '</option>';
+                        }).join('');
+                        var jsonApiInput = document.getElementById('optJsonApi');
+                        if (jsonApiInput && msg.jsonApi && !msg.jsonApi.supported) {
+                            jsonApiInput.checked = false;
+                            jsonApiInput.disabled = true;
+                            jsonApiInput.parentElement.title = msg.jsonApi.reason || '';
+                        }
+                        break;
+                    }
+                    case 'refreshPreview':
+                        requestCodePreview();
+                        break;
                     case 'entityExistsResult': {
                         var warnEl = document.getElementById('entityNameWarning');
                         if (msg.exists) {

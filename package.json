@@ -2,7 +2,7 @@
   "name": "laravel-api-generator",
   "displayName": "Laravel API Generator",
   "description": "Generate complete REST APIs for Laravel with a visual interface",
-  "version": "0.11.1",
+  "version": "0.12.0",
   "publisher": "Nameless0l",
   "license": "MIT",
   "icon": "media/icon-marketplace.png",
@@ -269,7 +269,13 @@
         "laravelApiGenerator.phpPath": {
           "type": "string",
           "default": "php",
-          "description": "Path to the PHP executable"
+          "description": "Path to the PHP executable. Ignored when phpCommand is set."
+        },
+        "laravelApiGenerator.phpCommand": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [],
+          "markdownDescription": "Full command that runs PHP, one argument per item, for projects where PHP lives in a container. Examples: `[\"./vendor/bin/sail\", \"php\"]` or `[\"docker\", \"compose\", \"exec\", \"-T\", \"app\", \"php\"]`. When empty, `phpPath` is used."
         },
         "laravelApiGenerator.locale": {
           "type": "string",
@@ -298,6 +304,7 @@
     "@types/node": "^20.0.0",
     "@types/vscode": "^1.80.0",
     "@vscode/vsce": "^2.22.0",
+    "ajv": "^8.20.0",
     "typescript": "^5.3.0"
   }
 }

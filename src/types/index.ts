@@ -75,3 +75,69 @@ export const FIELD_TYPES = [
 ] as const;
 
 export type FieldType = (typeof FIELD_TYPES)[number];
+
+export const SUPPORTED_PROTOCOL = 1;
+
+export type PlannedAction = 'create' | 'update' | 'unchanged';
+
+export interface PlannedFile {
+    path: string;
+    kind: string;
+    entity?: string;
+    action: PlannedAction;
+    content?: string;
+}
+
+export interface ProtocolMessage {
+    code: string;
+    message: string;
+    hint?: string;
+}
+
+export interface PlanResult {
+    files: PlannedFile[];
+    warnings: ProtocolMessage[];
+}
+
+export interface HandshakeResult {
+    protocol: number;
+    package: { version: string };
+    laravel: string;
+    php: string;
+    capabilities: {
+        fieldTypes: string[];
+        relationTypes: string[];
+        options: { json_api: { supported: boolean; reason?: string } };
+    };
+}
+
+export interface GenerationDocument {
+    protocol: number;
+    dryRun: boolean;
+    files: PlannedFile[];
+    warnings: ProtocolMessage[];
+    errors: ProtocolMessage[];
+}
+
+export interface ApiSchemaField {
+    type: string;
+    primary?: boolean;
+    enum?: string[];
+}
+
+export interface ApiSchemaEntity {
+    fields: Record<string, ApiSchemaField>;
+    relations?: Record<string, string>;
+    soft_deletes?: boolean;
+}
+
+export interface ApiSchema {
+    options?: { query_builder?: boolean; pest?: boolean; json_api?: boolean };
+    entities: Record<string, ApiSchemaEntity>;
+}
+
+export interface PlanFlags {
+    auth?: boolean;
+    postman?: boolean;
+    only?: string[];
+}

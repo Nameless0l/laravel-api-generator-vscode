@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import * as assert from 'node:assert/strict';
-import { generateArgs, sourceArgs } from '../services/artisanArgs';
+import { generateArgs, schemaGenerationArgs, sourceArgs } from '../services/artisanArgs';
 
 test('entity generation passes fields, primary keys and every enabled option', () => {
     const args = generateArgs({
@@ -33,4 +33,17 @@ test('source generation forwards the shared options after the source flag', () =
         'artisan', 'make:fullapi', '--schema=api-schema.yaml', '--query-builder', '--pest', '--json-api',
     ]);
     assert.deepEqual(sourceArgs([]), ['artisan', 'make:fullapi']);
+});
+
+test('schema generation reads stdin and asks for a JSON report', () => {
+    const config = {
+        name: 'Post',
+        fields: [{ name: 'title', type: 'string' }],
+        options: { auth: true, postman: true, softDeletes: true, queryBuilder: true },
+        onlyTypes: ['Model'],
+    };
+
+    assert.deepEqual(schemaGenerationArgs(config), [
+        'artisan', 'make:fullapi', '--schema=-', '--json', '--auth', '--postman', '--only=Model',
+    ]);
 });
