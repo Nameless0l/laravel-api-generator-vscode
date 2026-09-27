@@ -7,6 +7,7 @@ import { ArtisanRunner } from '../services/artisanRunner';
 import { EntityScanner } from '../services/entityScanner';
 import { describeGeneration } from '../services/generationOutput';
 import { GeneratorBridge, PreviewOutcome } from '../services/generatorBridge';
+import { OverwriteCheck, overwriteCheck } from '../services/overwriteCheck';
 import { detectPackageState, PackageState, PREVIEW_MIN_VERSION } from '../services/packageState';
 import { flagsFromConfig, schemaFromConfig } from '../services/schemaBuilder';
 import { LaravelDetector } from '../services/laravelDetector';
@@ -16,8 +17,6 @@ import { EntityConfig, PlannedFile } from '../types';
 import { t, getLocaleData } from '../i18n';
 
 const PLAN_SCHEME = 'laravel-api-plan';
-
-const SHARED_KINDS = ['Routes', 'DatabaseSeeder', 'Bootstrap'];
 
 export class GeneratorPanel {
     public static currentPanel: GeneratorPanel | undefined;
@@ -213,27 +212,31 @@ export class GeneratorPanel {
             }
         }
 
-        const overwritten = await this.filesToOverwrite(config);
+        const check = await this.overwriteCheck(config);
+        const overwriteLabel = t('generate.overwrite');
+        let force = false;
 
-        if (overwritten.length > 0) {
-            const fileList = overwritten
-                .slice(0, 5)
-                .map((file) => `  • ${file}`)
-                .join('\n');
-            const more = overwritten.length > 5 ? t('generate.andMore', overwritten.length - 5) : '';
-            const overwriteLabel = t('generate.overwrite');
+        if (check.kept.length > 0) {
+            const keepLabel = t('generate.keepMine');
             const choice = await vscode.window.showWarningMessage(
-                t('generate.willOverwrite', config.name, fileList + more),
+                t('generate.editedByHand', config.name, this.fileList(check.kept)),
+                { modal: true },
+                overwriteLabel,
+                keepLabel
+            );
+            if (choice === undefined) {
+                this.postCancelled();
+                return;
+            }
+            force = choice === overwriteLabel;
+        } else if (check.overwritten.length > 0) {
+            const choice = await vscode.window.showWarningMessage(
+                t('generate.willOverwrite', config.name, this.fileList(check.overwritten)),
                 { modal: true },
                 overwriteLabel
             );
             if (choice !== overwriteLabel) {
-                this.panel.webview.postMessage({
-                    type: 'generationResult',
-                    success: false,
-                    output: t('generate.cancelledOverwrite'),
-                    errors: [],
-                });
+                this.postCancelled();
                 return;
             }
         }
@@ -280,7 +283,7 @@ export class GeneratorPanel {
 
         let result;
         if (this.usesSchemaGeneration()) {
-            result = await this.generateThroughSchema(config);
+            result = await this.generateThroughSchema(config, force);
         } else if (config.relationships && config.relationships.length > 0) {
             result = await this.generateWithRelationships(config);
         } else {
@@ -315,23 +318,39 @@ export class GeneratorPanel {
         return this.packageState.preview === 'supported' || (this.packageState.preview === 'unknown' && this.handshakeOk);
     }
 
-    private async filesToOverwrite(config: EntityConfig): Promise<string[]> {
+    private async overwriteCheck(config: EntityConfig): Promise<OverwriteCheck> {
         if (this.usesSchemaGeneration()) {
             const outcome = await this.bridge.planOnce(schemaFromConfig(config), flagsFromConfig(config));
             if (outcome.state === 'ready') {
-                return outcome.plan.files
-                    .filter((file) => file.action === 'update' && !SHARED_KINDS.includes(file.kind))
-                    .map((file) => file.path);
+                const handshake = await this.bridge.capabilities();
+                return overwriteCheck(outcome.plan.files, handshake?.capabilities.keepsEditedFiles === true);
             }
         }
-        return this.scanner
-            .getEntityFiles(config.name)
-            .filter((f) => f.exists)
-            .map((f) => path.relative(this.workspaceRoot, f.path));
+        return {
+            kept: [],
+            overwritten: this.scanner
+                .getEntityFiles(config.name)
+                .filter((f) => f.exists)
+                .map((f) => path.relative(this.workspaceRoot, f.path)),
+        };
     }
 
-    private async generateThroughSchema(config: EntityConfig): Promise<{ success: boolean; output: string; errors: string[] }> {
-        const { result, document } = await this.artisan.generateFromConfig(config);
+    private fileList(files: string[]): string {
+        const list = files.slice(0, 5).map((file) => `  • ${file}`).join('\n');
+        return files.length > 5 ? list + t('generate.andMore', files.length - 5) : list;
+    }
+
+    private postCancelled(): void {
+        this.panel.webview.postMessage({
+            type: 'generationResult',
+            success: false,
+            output: t('generate.cancelledOverwrite'),
+            errors: [],
+        });
+    }
+
+    private async generateThroughSchema(config: EntityConfig, force: boolean): Promise<{ success: boolean; output: string; errors: string[] }> {
+        const { result, document } = await this.artisan.generateFromConfig(config, force);
         if (!document) {
             return result;
         }

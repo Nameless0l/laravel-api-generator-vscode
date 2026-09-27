@@ -2,6 +2,14 @@
 
 All notable changes to the Laravel API Generator VS Code extension will be documented in this file.
 
+## [0.14.0] - Unreleased
+
+Pairs with `nameless/laravel-api-generator` >= 3.11.
+
+### Changed
+- **Regenerating keeps your edits.** The package now leaves files edited by hand as they are. Before generating, a modal names them: **Overwrite** passes `--force`, **Keep my changes** generates everything else. Files the package would simply refresh no longer trigger a warning.
+- The live preview marks those files with a **kept** badge, and **Show diff** still compares your version with the generated one.
+
 ## [0.13.0] - Unreleased
 
 ### Added
