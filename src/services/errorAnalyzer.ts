@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
+import { t } from '../i18n';
 
 export interface ErrorAction {
     label: string;
@@ -164,6 +165,14 @@ const PATTERNS: Pattern[] = [
     },
 
     // ---- Generator-specific ----
+    {
+        match: /option does not exist/i,
+        contexts: ['generate'],
+        build: () => ({
+            diagnosis: t('sources.packageTooOld'),
+            actions: [runInTerminal(t('sources.updatePackage'), 'composer update nameless/laravel-api-generator -W')],
+        }),
+    },
     {
         match: /Command "?make:fullapi"? is not defined|There are no commands defined in the "make:fullapi"/i,
         contexts: ['generate'],

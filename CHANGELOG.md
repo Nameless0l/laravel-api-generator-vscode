@@ -2,6 +2,14 @@
 
 All notable changes to the Laravel API Generator VS Code extension will be documented in this file.
 
+## [0.11.1] - 2026-09-26
+
+### Fixed
+- The builder form now recognizes the "option does not exist" error returned by an older `nameless/laravel-api-generator` and offers the one-click `composer update nameless/laravel-api-generator -W`, as the import commands already did.
+
+### Changed
+- Artisan arguments are built in a single tested module. The test suite grows from 13 to 20 tests, now covering argument building and error diagnosis.
+
 ## [0.11.0] - 2026-07-21
 
 ### Added
