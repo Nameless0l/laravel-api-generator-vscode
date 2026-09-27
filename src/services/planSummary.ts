@@ -1,6 +1,6 @@
 import { GenerationDocument } from '../types';
 
-export interface OpenApiPlanSummary {
+export interface PlanSummary {
     entities: string[];
     create: number;
     update: number;
@@ -9,7 +9,7 @@ export interface OpenApiPlanSummary {
     otherWarnings: string[];
 }
 
-export function summarizeOpenApiPlan(document: GenerationDocument): OpenApiPlanSummary {
+export function summarizePlan(document: GenerationDocument): PlanSummary {
     const entities = new Set<string>();
     let create = 0;
     let update = 0;

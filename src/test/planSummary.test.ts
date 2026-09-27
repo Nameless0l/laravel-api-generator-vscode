@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import * as assert from 'node:assert/strict';
-import { summarizeOpenApiPlan } from '../services/openApiPlan';
+import { summarizePlan } from '../services/planSummary';
 import { GenerationDocument } from '../types';
 
 const document: GenerationDocument = {
@@ -22,8 +22,8 @@ const document: GenerationDocument = {
     errors: [],
 };
 
-test('the preview names the entities, counts the files and lists the skipped schemas', () => {
-    assert.deepEqual(summarizeOpenApiPlan(document), {
+test('a plan summary names the entities, counts the files and lists the skipped schemas', () => {
+    assert.deepEqual(summarizePlan(document), {
         entities: ['Customer', 'Order', 'Product'],
         create: 2,
         update: 2,

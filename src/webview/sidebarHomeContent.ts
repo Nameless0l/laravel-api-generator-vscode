@@ -10,6 +10,8 @@ export interface SidebarHomeStrings {
     mermaidDesc: string;
     openapi: string;
     openapiDesc: string;
+    describe: string;
+    describeDesc: string;
     explore: string;
     diagram: string;
     snippets: string;
@@ -34,6 +36,7 @@ const ICONS = {
     file: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M9.3 1.5H4.2c-.6 0-1 .4-1 1v11c0 .6.4 1 1 1h7.6c.6 0 1-.4 1-1V5z"/><path d="M9.3 1.5V5h3.5"/><path d="M6.2 8 5 9.5 6.2 11M9.8 8l1.2 1.5L9.8 11"/></svg>',
     mermaid: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="1.5" y="1.5" width="5.2" height="3.8" rx="1"/><rect x="9.3" y="10.7" width="5.2" height="3.8" rx="1"/><path d="M4.1 5.3v3.2h7.8v2.2"/></svg>',
     openapi: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M2.5 5.5h9.5M9.5 3l2.5 2.5-2.5 2.5"/><path d="M13.5 10.5H4M6.5 8 4 10.5 6.5 13"/></svg>',
+    sparkle: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M7 1.8 8.3 5.7 12.2 7 8.3 8.3 7 12.2 5.7 8.3 1.8 7 5.7 5.7z"/><path d="M12.5 10.5v4M10.5 12.5h4"/></svg>',
     hierarchy: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="5.4" y="1.5" width="5.2" height="3.8" rx="1"/><rect x="1.5" y="10.7" width="5.2" height="3.8" rx="1"/><rect x="9.3" y="10.7" width="5.2" height="3.8" rx="1"/><path d="M8 5.3v2.5M4.1 10.7V7.8h7.8v2.9"/></svg>',
     braces: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M5.5 2C4.3 2 3.9 2.8 3.9 4v1.9c0 .8-.6 1.3-1.4 1.6.8.3 1.4.8 1.4 1.6V13c0 1.2.4 2 1.6 2"/><path d="M10.5 2c1.2 0 1.6.8 1.6 2v1.9c0 .8.6 1.3 1.4 1.6-.8.3-1.4.8-1.4 1.6V13c0 1.2-.4 2-1.6 2"/></svg>',
     external: '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M6.5 3H4a1.5 1.5 0 0 0-1.5 1.5v7A1.5 1.5 0 0 0 4 13h7a1.5 1.5 0 0 0 1.5-1.5V9.5"/><path d="M9.5 2H14v4.5"/><path d="M13.6 2.4 7.5 8.5"/></svg>',
@@ -163,6 +166,10 @@ export function getSidebarHomeHtml(o: SidebarHomeOptions): string {
     <button class="primary" data-command="laravelApiGenerator.generate">${ICONS.zap} ${s.newApi}</button>
 
     <div class="section">${s.generateFrom}</div>
+    <button class="row" data-command="laravelApiGenerator.describeApi">
+        ${ICONS.sparkle}
+        <span><span class="title">${s.describe}</span><div class="desc">${s.describeDesc}</div></span>
+    </button>
     <button class="row" data-command="laravelApiGenerator.generateFromDatabase">
         ${ICONS.database}
         <span><span class="title">${s.database}</span><div class="desc">${s.databaseDesc}</div></span>
