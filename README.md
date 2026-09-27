@@ -52,6 +52,7 @@ Create API entities through a form instead of CLI flags:
 - **Sail and Docker** -- point `laravelApiGenerator.phpCommand` at `["./vendor/bin/sail", "php"]` or `["docker", "compose", "exec", "-T", "app", "php"]` and every action runs inside the container
 - **Real-time code preview** -- rendered by the package installed in your project, so it is exactly the code that will be written: every generated file, routes and seeder included, your published stubs, badges for new, modified and unchanged files, and a diff for modified ones
 - **Copilot skill** -- in Laravel projects, GitHub Copilot (VS Code 1.109+) gets the package's `laravel-api-generator` skill, so it generates APIs with `make:fullapi` instead of writing the files by hand
+- **MCP server for agents** -- with package 3.12 or later and `laravel/mcp` in the project, Copilot's agent mode (VS Code 1.101+) lists a Laravel API Generator server: the agent lists your entities, previews a generation, then generates the API or adds fields itself, and never overwrites a file you edited. It runs with your PHP command, Sail and Docker included
 - **Schema file autocompletion** -- `api-schema.yaml`, `.yml` and `.json` are checked against the package's JSON Schema: completion for keys and types, typos flagged before you generate (YAML needs the Red Hat YAML extension)
 - **Your edits are safe** -- with package 3.11 or later, regenerating keeps the files you edited by hand; a modal names them and lets you overwrite them or keep your changes (older packages: a modal lists every file that will be overwritten)
 - **Auto-open generated files** -- after a successful generation, the new Model and Controller open in the editor
@@ -248,6 +249,7 @@ database/seeders/DatabaseSeeder.php             -- Seeder auto-registered
 |---------|---------|-------------|
 | `laravelApiGenerator.phpPath` | `php` | Path to the PHP executable |
 | `laravelApiGenerator.phpCommand` | `[]` | Full command that runs PHP, one argument per item (Sail, Docker). Wins over `phpPath` when set. |
+| `laravelApiGenerator.mcp.enabled` | `true` | Offer the package's MCP server to Copilot's agent mode (needs `laravel/mcp` and package 3.12+) |
 | `laravelApiGenerator.locale` | `auto` | UI language: `auto` (follow VS Code), `en`, or `fr` |
 
 ---
