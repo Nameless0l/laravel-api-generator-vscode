@@ -2,7 +2,7 @@
   "name": "laravel-api-generator",
   "displayName": "Laravel API Generator",
   "description": "Generate complete REST APIs for Laravel with a visual interface",
-  "version": "0.15.0",
+  "version": "0.16.0",
   "publisher": "Nameless0l",
   "license": "MIT",
   "icon": "media/icon-marketplace.png",
@@ -108,6 +108,12 @@
         "icon": "$(type-hierarchy-sub)"
       },
       {
+        "command": "laravelApiGenerator.generateFromOpenApi",
+        "title": "Generate APIs from OpenAPI Spec",
+        "category": "Laravel API Generator",
+        "icon": "$(arrow-swap)"
+      },
+      {
         "command": "laravelApiGenerator.addFields",
         "title": "Add Fields to Entity...",
         "category": "Laravel API Generator",
@@ -211,7 +217,8 @@
             "completionEvents": [
               "onCommand:laravelApiGenerator.generateFromDatabase",
               "onCommand:laravelApiGenerator.generateFromSchema",
-              "onCommand:laravelApiGenerator.generateFromMermaid"
+              "onCommand:laravelApiGenerator.generateFromMermaid",
+              "onCommand:laravelApiGenerator.generateFromOpenApi"
             ]
           },
           {
@@ -266,6 +273,11 @@
           "command": "laravelApiGenerator.generateFromMermaid",
           "when": "view == laravelApiGenerator.entities",
           "group": "1_sources@3"
+        },
+        {
+          "command": "laravelApiGenerator.generateFromOpenApi",
+          "when": "view == laravelApiGenerator.entities",
+          "group": "1_sources@4"
         },
         {
           "command": "laravelApiGenerator.diagram",

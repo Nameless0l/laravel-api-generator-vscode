@@ -27,22 +27,26 @@ export async function presentGenerationResult(
     }
 
     if (isUnsupportedOption(result)) {
-        const updateLabel = t('sources.updatePackage');
-        const action = await vscode.window.showErrorMessage(t('sources.packageTooOld'), updateLabel);
-        if (action === updateLabel) {
-            const terminal = vscode.window.createTerminal({
-                name: 'Laravel API Generator',
-                cwd: workspaceRoot,
-            });
-            terminal.sendText('composer update nameless/laravel-api-generator -W');
-            terminal.show();
-        }
+        await offerPackageUpdate(workspaceRoot);
         return;
     }
 
     const output = result.output || result.errors.join('\n');
     const truncated = output.length > 800 ? `${output.slice(0, 800)}\n...` : output;
     vscode.window.showErrorMessage(t('sources.failed', truncated));
+}
+
+export async function offerPackageUpdate(workspaceRoot: string): Promise<void> {
+    const updateLabel = t('sources.updatePackage');
+    const action = await vscode.window.showErrorMessage(t('sources.packageTooOld'), updateLabel);
+    if (action === updateLabel) {
+        const terminal = vscode.window.createTerminal({
+            name: 'Laravel API Generator',
+            cwd: workspaceRoot,
+        });
+        terminal.sendText('composer update nameless/laravel-api-generator -W');
+        terminal.show();
+    }
 }
 
 /**

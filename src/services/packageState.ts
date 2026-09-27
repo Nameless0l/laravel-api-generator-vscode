@@ -7,6 +7,8 @@ export const PREVIEW_MIN_VERSION = '3.9.0';
 
 export const MCP_MIN_VERSION = '3.12.0';
 
+export const OPENAPI_MIN_VERSION = '3.13.0';
+
 export type PreviewSupport = 'supported' | 'tooOld' | 'unknown';
 
 export type PackageState =

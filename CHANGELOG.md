@@ -2,6 +2,17 @@
 
 All notable changes to the Laravel API Generator VS Code extension will be documented in this file.
 
+## [0.16.0] - Unreleased
+
+Pairs with `nameless/laravel-api-generator` >= 3.13.
+
+### Added
+- **Generate APIs from an OpenAPI spec.** A new command, an entry in the sidebar home and the builder's **Import OpenAPI** button hand OpenAPI 3.0, 3.1 and Swagger 2.0 specs, JSON or YAML, to the package. A dry run first names the entities it found, counts the files to create and update, and lists the schemas left aside with the reason; **Generate** then writes them. A spec outside the project goes through stdin, so Sail and Docker work too.
+
+### Changed
+- With packages older than 3.13, **Import OpenAPI** keeps the previous JSON-only importer.
+- The bundled Copilot skill knows the OpenAPI source.
+
 ## [0.15.0] - Unreleased
 
 Pairs with `nameless/laravel-api-generator` >= 3.12 and `laravel/mcp`.

@@ -100,7 +100,14 @@
     "browseSchema": "Browse for a schema file...",
     "mermaidTitle": "Generate from Mermaid Diagram",
     "useCurrentFile": "Use current file ({0})",
-    "browseMermaid": "Browse for a Mermaid file..."
+    "browseMermaid": "Browse for a Mermaid file...",
+    "openApiTitle": "Generate from OpenAPI Spec",
+    "browseOpenApi": "Browse for an OpenAPI or Swagger file...",
+    "readingSpec": "Reading the OpenAPI spec...",
+    "openApiSummary": "{0} describes {1}.",
+    "openApiFiles": "Files: {0} to create, {1} to update, {2} kept because you edited them.",
+    "openApiSkipped": "Schemas left aside:",
+    "openApiGenerate": "Generate"
   },
   "routes": {
     "orphanDetected": "route:list failed because a route file references a deleted controller. Remove the orphan routes?",
@@ -131,6 +138,8 @@
     "schemaDesc": "api-schema.yaml or JSON, versioned with your repo.",
     "mermaid": "Mermaid diagram",
     "mermaidDesc": "Turn a class diagram into matching APIs.",
+    "openapi": "OpenAPI spec",
+    "openapiDesc": "OpenAPI 3 or Swagger 2, JSON or YAML.",
     "explore": "Explore",
     "diagram": "Entity diagram",
     "snippets": "Snippets",
