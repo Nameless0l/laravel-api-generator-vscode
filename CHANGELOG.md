@@ -2,7 +2,7 @@
 
 All notable changes to the Laravel API Generator VS Code extension will be documented in this file.
 
-## [0.17.0] - Unreleased
+## [0.17.0] - 2026-09-27
 
 Works with `nameless/laravel-api-generator` 3.9 or later.
 
@@ -12,7 +12,7 @@ Works with `nameless/laravel-api-generator` 3.9 or later.
 ### Changed
 - The OpenAPI import and this command share the same dry run dialog.
 
-## [0.16.0] - Unreleased
+## [0.16.0] - 2026-09-27
 
 Pairs with `nameless/laravel-api-generator` >= 3.13.
 
@@ -23,7 +23,7 @@ Pairs with `nameless/laravel-api-generator` >= 3.13.
 - With packages older than 3.13, **Import OpenAPI** keeps the previous JSON-only importer.
 - The bundled Copilot skill knows the OpenAPI source.
 
-## [0.15.0] - Unreleased
+## [0.15.0] - 2026-09-27
 
 Pairs with `nameless/laravel-api-generator` >= 3.12 and `laravel/mcp`.
 
@@ -31,7 +31,7 @@ Pairs with `nameless/laravel-api-generator` >= 3.12 and `laravel/mcp`.
 - **MCP server for Copilot.** In a Laravel project with `laravel/mcp` installed, the extension registers the package's MCP server (VS Code 1.101+), so Copilot's agent mode can list your generated entities, preview a generation, generate APIs and add fields by itself, without ever overwriting a file you edited. The server runs `php artisan api-generator:mcp` with your PHP command, Sail and Docker included, and the list refreshes when `vendor/composer/installed.json` or the PHP settings change. Set `laravelApiGenerator.mcp.enabled` to `false` to hide it.
 - The bundled Copilot skill describes the MCP tools and the files kept after hand edits.
 
-## [0.14.0] - Unreleased
+## [0.14.0] - 2026-09-27
 
 Pairs with `nameless/laravel-api-generator` >= 3.11.
 
@@ -39,13 +39,13 @@ Pairs with `nameless/laravel-api-generator` >= 3.11.
 - **Regenerating keeps your edits.** The package now leaves files edited by hand as they are. Before generating, a modal names them: **Overwrite** passes `--force`, **Keep my changes** generates everything else. Files the package would simply refresh no longer trigger a warning.
 - The live preview marks those files with a **kept** badge, and **Show diff** still compares your version with the generated one.
 
-## [0.13.0] - Unreleased
+## [0.13.0] - 2026-09-27
 
 ### Added
 - **GitHub Copilot skill.** In Laravel projects, the extension contributes the package's `laravel-api-generator` agent skill (VS Code 1.109+), so Copilot generates APIs with `make:fullapi` instead of writing the files by hand.
 - **Schema file validation.** `api-schema.yaml`, `api-schema.yml` and `api-schema.json` get completion and typo checks from the package's JSON Schema. YAML files need the Red Hat YAML extension.
 
-## [0.12.0] - Unreleased
+## [0.12.0] - 2026-09-27
 
 Pairs with `nameless/laravel-api-generator` >= 3.9 for the live preview. Older packages keep generating as before.
 
@@ -65,7 +65,7 @@ Pairs with `nameless/laravel-api-generator` >= 3.9 for the live preview. Older p
 ### Removed
 - The TypeScript copy of the stubs that used to render the preview.
 
-## [0.11.1] - 2026-09-26
+## [0.11.1] - 2026-09-27
 
 ### Fixed
 - The builder form now recognizes the "option does not exist" error returned by an older `nameless/laravel-api-generator` and offers the one-click `composer update nameless/laravel-api-generator -W`, as the import commands already did.
