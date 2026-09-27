@@ -26,6 +26,8 @@
     "dbImportCancelled": "Introspection de la base annulée : le fichier .env est requis."
   },
   "generate": {
+    "created": "créé",
+    "updated": "modifié",
     "willOverwrite": "\"{0}\" existe déjà. Les fichiers suivants seront écrasés :\n\n{1}",
     "andMore": "\n  ...et {0} de plus",
     "overwrite": "Écraser",

@@ -26,6 +26,8 @@
     "dbImportCancelled": "Database introspection cancelled: .env file is required."
   },
   "generate": {
+    "created": "created",
+    "updated": "updated",
     "willOverwrite": "\"{0}\" already exists. The following files will be overwritten:\n\n{1}",
     "andMore": "\n  ...and {0} more",
     "overwrite": "Overwrite",

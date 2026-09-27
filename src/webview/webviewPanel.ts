@@ -5,6 +5,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { ArtisanRunner } from '../services/artisanRunner';
 import { EntityScanner } from '../services/entityScanner';
+import { describeGeneration } from '../services/generationOutput';
 import { GeneratorBridge, PreviewOutcome } from '../services/generatorBridge';
 import { detectPackageState, PackageState, PREVIEW_MIN_VERSION } from '../services/packageState';
 import { flagsFromConfig, schemaFromConfig } from '../services/schemaBuilder';
@@ -15,6 +16,8 @@ import { EntityConfig, PlannedFile } from '../types';
 import { t, getLocaleData } from '../i18n';
 
 const PLAN_SCHEME = 'laravel-api-plan';
+
+const SHARED_KINDS = ['Routes', 'DatabaseSeeder', 'Bootstrap'];
 
 export class GeneratorPanel {
     public static currentPanel: GeneratorPanel | undefined;
@@ -210,16 +213,14 @@ export class GeneratorPanel {
             }
         }
 
-        const existingFiles = this.scanner
-            .getEntityFiles(config.name)
-            .filter((f) => f.exists);
+        const overwritten = await this.filesToOverwrite(config);
 
-        if (existingFiles.length > 0) {
-            const fileList = existingFiles
+        if (overwritten.length > 0) {
+            const fileList = overwritten
                 .slice(0, 5)
-                .map((f) => `  • ${path.relative(this.workspaceRoot, f.path)}`)
+                .map((file) => `  • ${file}`)
                 .join('\n');
-            const more = existingFiles.length > 5 ? t('generate.andMore', existingFiles.length - 5) : '';
+            const more = overwritten.length > 5 ? t('generate.andMore', overwritten.length - 5) : '';
             const overwriteLabel = t('generate.overwrite');
             const choice = await vscode.window.showWarningMessage(
                 t('generate.willOverwrite', config.name, fileList + more),
@@ -278,7 +279,9 @@ export class GeneratorPanel {
         }
 
         let result;
-        if (config.relationships && config.relationships.length > 0) {
+        if (this.usesSchemaGeneration()) {
+            result = await this.generateThroughSchema(config);
+        } else if (config.relationships && config.relationships.length > 0) {
             result = await this.generateWithRelationships(config);
         } else {
             result = await this.artisan.generate(config);
@@ -303,6 +306,44 @@ export class GeneratorPanel {
                 void presentSuggestion(this.workspaceRoot, suggestion);
             }
         }
+    }
+
+    private usesSchemaGeneration(): boolean {
+        if (this.packageState.kind !== 'installed') {
+            return false;
+        }
+        return this.packageState.preview === 'supported' || (this.packageState.preview === 'unknown' && this.handshakeOk);
+    }
+
+    private async filesToOverwrite(config: EntityConfig): Promise<string[]> {
+        if (this.usesSchemaGeneration()) {
+            const outcome = await this.bridge.planOnce(schemaFromConfig(config), flagsFromConfig(config));
+            if (outcome.state === 'ready') {
+                return outcome.plan.files
+                    .filter((file) => file.action === 'update' && !SHARED_KINDS.includes(file.kind))
+                    .map((file) => file.path);
+            }
+        }
+        return this.scanner
+            .getEntityFiles(config.name)
+            .filter((f) => f.exists)
+            .map((f) => path.relative(this.workspaceRoot, f.path));
+    }
+
+    private async generateThroughSchema(config: EntityConfig): Promise<{ success: boolean; output: string; errors: string[] }> {
+        const { result, document } = await this.artisan.generateFromConfig(config);
+        if (!document) {
+            return result;
+        }
+        if (document.errors.length > 0) {
+            const lines = document.errors.flatMap((error) => (error.hint ? [error.message, error.hint] : [error.message]));
+            return { success: false, output: lines.join('\n'), errors: lines };
+        }
+        return {
+            success: true,
+            output: describeGeneration(document, { created: t('generate.created'), updated: t('generate.updated') }),
+            errors: [],
+        };
     }
 
     /**
