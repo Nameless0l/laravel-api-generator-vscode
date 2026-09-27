@@ -16,6 +16,7 @@ import { registerAddFieldsCommand } from './commands/addFields';
 import { registerGenerateFromSchemaCommand } from './commands/generateFromSchema';
 import { registerGenerateFromMermaidCommand } from './commands/generateFromMermaid';
 import { registerGenerateFromOpenApiCommand } from './commands/generateFromOpenApi';
+import { registerDescribeApiCommand } from './commands/describeApi';
 
 export function activate(context: vscode.ExtensionContext): void {
     initLocale();
@@ -99,6 +100,7 @@ export function activate(context: vscode.ExtensionContext): void {
         registerGenerateFromSchemaCommand(refresh),
         registerGenerateFromMermaidCommand(refresh),
         registerGenerateFromOpenApiCommand(refresh),
+        registerDescribeApiCommand(refresh),
         vscode.commands.registerCommand('laravelApiGenerator.refresh', refresh)
     );
 }

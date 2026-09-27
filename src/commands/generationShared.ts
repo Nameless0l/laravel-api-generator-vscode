@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
 import { ArtisanResult } from '../types';
+import { lastProtocolDocument } from '../services/generationOutput';
+import { summarizePlan } from '../services/planSummary';
 import { t } from '../i18n';
 
 /**
@@ -47,6 +49,39 @@ export async function offerPackageUpdate(workspaceRoot: string): Promise<void> {
         terminal.sendText('composer update nameless/laravel-api-generator -W');
         terminal.show();
     }
+}
+
+/**
+ * Shows what a dry run found and asks before writing. False when the dry run
+ * failed (the error is shown) or the user closes the dialog.
+ */
+export async function confirmPlannedGeneration(dryRun: ArtisanResult, source: string, workspaceRoot: string): Promise<boolean> {
+    const document = lastProtocolDocument(dryRun.output);
+    if (!document) {
+        await presentGenerationResult(dryRun, workspaceRoot);
+        return false;
+    }
+    if (document.errors.length > 0) {
+        vscode.window.showErrorMessage(
+            t('sources.failed', document.errors.map((e) => (e.hint ? `${e.message} ${e.hint}` : e.message)).join('\n'))
+        );
+        return false;
+    }
+
+    const summary = summarizePlan(document);
+    const detail = [
+        t('sources.planFiles', summary.create, summary.update, summary.kept),
+        ...(summary.skipped.length > 0 ? ['', t('sources.planSkipped'), ...summary.skipped] : []),
+        ...(summary.otherWarnings.length > 0 ? ['', ...summary.otherWarnings] : []),
+    ].join('\n');
+    const generate = t('sources.planGenerate');
+    const choice = await vscode.window.showInformationMessage(
+        t('sources.planSummary', source, summary.entities.join(', ')),
+        { modal: true, detail },
+        generate
+    );
+
+    return choice === generate;
 }
 
 /**

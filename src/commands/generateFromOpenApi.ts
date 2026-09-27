@@ -2,10 +2,8 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { LaravelDetector } from '../services/laravelDetector';
 import { ArtisanRunner } from '../services/artisanRunner';
-import { lastProtocolDocument } from '../services/generationOutput';
-import { summarizeOpenApiPlan } from '../services/openApiPlan';
 import { OPENAPI_MIN_VERSION, readInstalledVersion, versionSupport } from '../services/packageState';
-import { offerPackageUpdate, pickGenerationOptions, presentGenerationResult } from './generationShared';
+import { confirmPlannedGeneration, offerPackageUpdate, pickGenerationOptions, presentGenerationResult } from './generationShared';
 import { t } from '../i18n';
 
 const SPEC_EXTENSIONS = ['.yaml', '.yml', '.json'];
@@ -46,31 +44,7 @@ export function registerGenerateFromOpenApiCommand(onDidGenerate: () => void): v
             () => artisan.generateFromOpenApi(specPath, sourceOptions, true)
         );
 
-        const document = lastProtocolDocument(preview.output);
-        if (!document) {
-            await presentGenerationResult(preview, root);
-            return;
-        }
-        if (document.errors.length > 0) {
-            vscode.window.showErrorMessage(
-                t('sources.failed', document.errors.map((e) => (e.hint ? `${e.message} ${e.hint}` : e.message)).join('\n'))
-            );
-            return;
-        }
-
-        const summary = summarizeOpenApiPlan(document);
-        const detail = [
-            t('sources.openApiFiles', String(summary.create), String(summary.update), String(summary.kept)),
-            ...(summary.skipped.length > 0 ? ['', t('sources.openApiSkipped'), ...summary.skipped] : []),
-            ...(summary.otherWarnings.length > 0 ? ['', ...summary.otherWarnings] : []),
-        ].join('\n');
-        const generate = t('sources.openApiGenerate');
-        const choice = await vscode.window.showInformationMessage(
-            t('sources.openApiSummary', path.basename(specPath), summary.entities.join(', ')),
-            { modal: true, detail },
-            generate
-        );
-        if (choice !== generate) {
+        if (!(await confirmPlannedGeneration(preview, path.basename(specPath), root))) {
             return;
         }
 

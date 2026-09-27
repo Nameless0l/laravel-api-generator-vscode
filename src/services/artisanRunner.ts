@@ -59,6 +59,10 @@ export class ArtisanRunner {
         return this.run(sourceArgs([`--mermaid=${projectRelative(this.workspaceRoot, diagramPath)}`], options), 180000);
     }
 
+    async generateFromSchemaText(schema: string, dryRun = false): Promise<ArtisanResult> {
+        return this.run(sourceArgs(['--schema=-', ...(dryRun ? ['--dry-run', '--json'] : [])]), 180000, schema);
+    }
+
     /** A spec outside the project goes through stdin, so PHP running in a container can read it too. */
     async generateFromOpenApi(specPath: string, options?: SourceOptions, dryRun = false): Promise<ArtisanResult> {
         const relative = projectRelative(this.workspaceRoot, specPath);

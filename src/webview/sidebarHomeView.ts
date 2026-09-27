@@ -11,6 +11,7 @@ const ALLOWED_COMMANDS = new Set([
     'laravelApiGenerator.generateFromSchema',
     'laravelApiGenerator.generateFromMermaid',
     'laravelApiGenerator.generateFromOpenApi',
+    'laravelApiGenerator.describeApi',
     'laravelApiGenerator.diagram',
     'laravelApiGenerator.showSnippets',
 ]);
@@ -58,6 +59,8 @@ export class SidebarHomeViewProvider implements vscode.WebviewViewProvider {
             mermaidDesc: t('sidebar.mermaidDesc'),
             openapi: t('sidebar.openapi'),
             openapiDesc: t('sidebar.openapiDesc'),
+            describe: t('sidebar.describe'),
+            describeDesc: t('sidebar.describeDesc'),
             explore: t('sidebar.explore'),
             diagram: t('sidebar.diagram'),
             snippets: t('sidebar.snippets'),

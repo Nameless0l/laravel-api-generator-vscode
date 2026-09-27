@@ -114,6 +114,12 @@
         "icon": "$(arrow-swap)"
       },
       {
+        "command": "laravelApiGenerator.describeApi",
+        "title": "Describe an API with Copilot",
+        "category": "Laravel API Generator",
+        "icon": "$(sparkle)"
+      },
+      {
         "command": "laravelApiGenerator.addFields",
         "title": "Add Fields to Entity...",
         "category": "Laravel API Generator",
@@ -218,7 +224,8 @@
               "onCommand:laravelApiGenerator.generateFromDatabase",
               "onCommand:laravelApiGenerator.generateFromSchema",
               "onCommand:laravelApiGenerator.generateFromMermaid",
-              "onCommand:laravelApiGenerator.generateFromOpenApi"
+              "onCommand:laravelApiGenerator.generateFromOpenApi",
+              "onCommand:laravelApiGenerator.describeApi"
             ]
           },
           {
@@ -278,6 +285,11 @@
           "command": "laravelApiGenerator.generateFromOpenApi",
           "when": "view == laravelApiGenerator.entities",
           "group": "1_sources@4"
+        },
+        {
+          "command": "laravelApiGenerator.describeApi",
+          "when": "view == laravelApiGenerator.entities",
+          "group": "1_sources@0"
         },
         {
           "command": "laravelApiGenerator.diagram",
