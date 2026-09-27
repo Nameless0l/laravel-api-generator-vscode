@@ -172,6 +172,13 @@
     "optQueryBuilder": "Spatie QueryBuilder",
     "optPest": "Tests Pest",
     "optJsonApi": "Resources JSON:API",
+    "codePreview": "Aperçu du code",
+    "badgeCreate": "nouveau",
+    "badgeUpdate": "modifié",
+    "badgeUnchanged": "identique",
+    "showDiff": "Voir le diff",
+    "runInTerminal": "Lancer dans le terminal",
+    "useSail": "Utiliser Sail",
     "enumValuesPlaceholder": "valeurs : draft,published",
     "pkTooltip": "Clé primaire : remplace l'id auto-incrémenté par défaut",
     "relTargetPlaceholder": "Modèle cible (ex. Post)",
@@ -200,5 +207,15 @@
     "generating": "Génération...",
     "starting": "Démarrage du serveur...",
     "publishing": "Publication..."
+  },
+  "preview": {
+    "notInstalled": "Le package figure dans composer.json mais n'est pas encore installé. Lancez composer install pour voir l'aperçu en direct.",
+    "tooOld": "L'aperçu en direct demande nameless/laravel-api-generator {1} ou plus récent (installé : {0}). La génération fonctionne toujours.",
+    "phpNotFound": "PHP est introuvable. Réglez laravelApiGenerator.phpCommand, ou phpPath, dans les paramètres.",
+    "phpNotFoundSail": "PHP est introuvable sur cette machine, mais le projet embarque Laravel Sail. Lancer PHP via Sail ?",
+    "bootFailed": "L'application Laravel n'a pas démarré, l'aperçu est donc indisponible.\n{0}",
+    "timeout": "Le processus d'aperçu n'a pas répondu à temps.",
+    "extensionTooOld": "Le package installé parle un protocole plus récent. Mettez à jour l'extension Laravel API Generator.",
+    "diffTitle": "{0} : actuel et généré"
   }
 }

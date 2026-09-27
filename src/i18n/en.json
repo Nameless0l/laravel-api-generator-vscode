@@ -172,6 +172,13 @@
     "optQueryBuilder": "Spatie QueryBuilder",
     "optPest": "Pest tests",
     "optJsonApi": "JSON:API resources",
+    "codePreview": "Code Preview",
+    "badgeCreate": "new",
+    "badgeUpdate": "modified",
+    "badgeUnchanged": "unchanged",
+    "showDiff": "Show diff",
+    "runInTerminal": "Run in terminal",
+    "useSail": "Use Sail",
     "enumValuesPlaceholder": "values: draft,published",
     "pkTooltip": "Primary key: replaces the default auto-increment id",
     "relTargetPlaceholder": "Target model (e.g. Post)",
@@ -200,5 +207,15 @@
     "generating": "Generating...",
     "starting": "Starting Server...",
     "publishing": "Publishing..."
+  },
+  "preview": {
+    "notInstalled": "The package is in composer.json but not installed yet. Run composer install to see the live preview.",
+    "tooOld": "The live preview needs nameless/laravel-api-generator {1} or later (installed: {0}). Generation still works.",
+    "phpNotFound": "PHP was not found. Set laravelApiGenerator.phpCommand, or phpPath, in the settings.",
+    "phpNotFoundSail": "PHP was not found on this machine, but the project ships Laravel Sail. Run PHP through Sail?",
+    "bootFailed": "The Laravel app did not start, so the preview is unavailable.\n{0}",
+    "timeout": "The preview process did not answer in time.",
+    "extensionTooOld": "The installed package speaks a newer protocol. Update the Laravel API Generator extension.",
+    "diffTitle": "{0}: current and generated"
   }
 }

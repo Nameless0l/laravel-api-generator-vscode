@@ -5,12 +5,16 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { ArtisanRunner } from '../services/artisanRunner';
 import { EntityScanner } from '../services/entityScanner';
-import { StubPreview } from '../services/stubPreview';
+import { GeneratorBridge, PreviewOutcome } from '../services/generatorBridge';
+import { detectPackageState, PackageState, PREVIEW_MIN_VERSION } from '../services/packageState';
+import { flagsFromConfig, schemaFromConfig } from '../services/schemaBuilder';
 import { LaravelDetector } from '../services/laravelDetector';
 import { parseOpenApi } from '../services/openApiImporter';
 import { analyzeError, presentSuggestion } from '../services/errorAnalyzer';
-import { EntityConfig } from '../types';
+import { EntityConfig, PlannedFile } from '../types';
 import { t, getLocaleData } from '../i18n';
+
+const PLAN_SCHEME = 'laravel-api-plan';
 
 export class GeneratorPanel {
     public static currentPanel: GeneratorPanel | undefined;
@@ -19,6 +23,13 @@ export class GeneratorPanel {
     private readonly scanner: EntityScanner;
     private disposables: vscode.Disposable[] = [];
     private onDidGenerate: (() => void) | undefined;
+    private readonly bridge: GeneratorBridge;
+    private readonly output: vscode.OutputChannel;
+    private readonly planChanged = new vscode.EventEmitter<vscode.Uri>();
+    private packageState: PackageState;
+    private plannedContents = new Map<string, string>();
+    private handshakeOk = false;
+    private pendingCommand: string | undefined;
 
     private constructor(
         panel: vscode.WebviewPanel,
@@ -27,6 +38,14 @@ export class GeneratorPanel {
         this.panel = panel;
         this.artisan = new ArtisanRunner(workspaceRoot);
         this.scanner = new EntityScanner(workspaceRoot);
+        this.output = vscode.window.createOutputChannel('Laravel API Generator');
+        this.packageState = detectPackageState(workspaceRoot, LaravelDetector.isPackageInstalled(workspaceRoot));
+        this.bridge = new GeneratorBridge({
+            root: workspaceRoot,
+            php: () => this.artisan.phpCommand(),
+            clientVersion: String(vscode.extensions.getExtension('Nameless0l.laravel-api-generator')?.packageJSON?.version ?? 'unknown'),
+            onJunk: (line) => this.output.appendLine(line),
+        });
 
         const nonce = crypto.randomBytes(16).toString('hex');
         this.panel.webview.html = getWebviewContent(this.panel.webview, nonce, getLocaleData());
@@ -38,6 +57,22 @@ export class GeneratorPanel {
         );
 
         this.panel.onDidDispose(() => this.dispose(), null, this.disposables);
+
+        this.disposables.push(
+            this.output,
+            this.planChanged,
+            vscode.workspace.registerTextDocumentContentProvider(PLAN_SCHEME, {
+                onDidChange: this.planChanged.event,
+                provideTextDocumentContent: (uri) => this.plannedContents.get(uri.path.replace(/^\//, '')) ?? '',
+            }),
+            ...this.watchRestartTriggers(),
+            vscode.workspace.onDidChangeConfiguration((event) => {
+                if (event.affectsConfiguration('laravelApiGenerator.phpCommand') || event.affectsConfiguration('laravelApiGenerator.phpPath')) {
+                    this.restartPreview();
+                }
+            })
+        );
+        void this.announceCapabilities();
     }
 
     static show(workspaceRoot: string, onDidGenerate?: () => void): void {
@@ -61,7 +96,7 @@ export class GeneratorPanel {
         GeneratorPanel.currentPanel.onDidGenerate = onDidGenerate;
     }
 
-    private async handleMessage(message: { type: string; payload?: EntityConfig; action?: string; name?: string }): Promise<void> {
+    private async handleMessage(message: { type: string; payload?: EntityConfig; action?: string; name?: string; path?: string }): Promise<void> {
         switch (message.type) {
             case 'generate':
                 if (message.payload) {
@@ -70,7 +105,7 @@ export class GeneratorPanel {
                 break;
             case 'preview':
                 if (message.payload) {
-                    this.handlePreview(message.payload);
+                    await this.handlePreview(message.payload);
                 }
                 break;
             case 'action':
@@ -80,8 +115,16 @@ export class GeneratorPanel {
                 break;
             case 'requestPreviewCode':
                 if (message.payload) {
-                    this.handlePreviewCode(message.payload);
+                    await this.handlePreviewCode(message.payload);
                 }
+                break;
+            case 'openDiff':
+                if (message.path) {
+                    await this.openDiff(message.path);
+                }
+                break;
+            case 'previewAction':
+                await this.handlePreviewAction(message.action);
                 break;
             case 'importJson':
                 await this.handleImportJson();
@@ -650,15 +693,27 @@ export class GeneratorPanel {
         }
     }
 
-    private handlePreview(config: EntityConfig): void {
-        const files = this.scanner
-            .getEntityFiles(config.name)
-            .map((f) => `${f.exists ? '⚠ EXISTS' : '  NEW  '} ${f.path}`);
+    private async handlePreview(config: EntityConfig): Promise<void> {
+        let files: string[];
+        const outcome = this.previewBlocker() ? undefined : await this.bridge.planOnce(schemaFromConfig(config), flagsFromConfig(config));
 
-        this.panel.webview.postMessage({
-            type: 'previewResult',
-            files,
-        });
+        if (outcome?.state === 'ready') {
+            files = outcome.plan.files.map((file) => `${this.actionLabel(file)} ${file.path}`);
+        } else {
+            files = this.scanner
+                .getEntityFiles(config.name)
+                .map((f) => `${f.exists ? '⚠ EXISTS' : '  NEW  '} ${f.path}`);
+        }
+
+        this.panel.webview.postMessage({ type: 'previewResult', files });
+    }
+
+    private actionLabel(file: PlannedFile): string {
+        const labels = getLocaleData().ui;
+        if (file.action === 'create') {
+            return labels.badgeCreate;
+        }
+        return file.action === 'update' ? labels.badgeUpdate : labels.badgeUnchanged;
     }
 
     private async handleImportFromDb(): Promise<void> {
@@ -937,18 +992,133 @@ export class GeneratorPanel {
         return entities;
     }
 
-    private handlePreviewCode(config: EntityConfig): void {
-        const preview = new StubPreview();
-        const code = preview.generatePreview(config);
+    private async handlePreviewCode(config: EntityConfig): Promise<void> {
+        const blocker = this.previewBlocker();
+        if (blocker) {
+            this.postUnavailable(blocker.message, blocker.command);
+            return;
+        }
+
+        const outcome = await this.bridge.plan(schemaFromConfig(config), flagsFromConfig(config));
+        if (!outcome) {
+            return;
+        }
+
+        if (outcome.state === 'ready') {
+            this.plannedContents = new Map(outcome.plan.files.map((file) => [file.path, file.content ?? '']));
+            for (const file of outcome.plan.files) {
+                this.planChanged.fire(vscode.Uri.from({ scheme: PLAN_SCHEME, path: '/' + file.path }));
+            }
+            this.panel.webview.postMessage({ type: 'previewCodeResult', state: 'ready', files: outcome.plan.files, warnings: outcome.plan.warnings });
+            return;
+        }
+
+        if (outcome.state === 'invalid') {
+            this.panel.webview.postMessage({ type: 'previewCodeResult', state: 'invalid', message: outcome.error.message, hint: outcome.error.hint });
+            return;
+        }
+
+        this.describeUnavailable(outcome);
+    }
+
+    private previewBlocker(): { message: string; command?: string } | undefined {
+        if (this.packageState.kind === 'notDeclared') {
+            return { message: t('package.missing'), command: 'composer require --dev nameless/laravel-api-generator' };
+        }
+        if (this.packageState.kind === 'notInstalled') {
+            return { message: t('preview.notInstalled'), command: 'composer install' };
+        }
+        if (this.packageState.preview === 'tooOld') {
+            return {
+                message: t('preview.tooOld', this.packageState.version, PREVIEW_MIN_VERSION),
+                command: 'composer update nameless/laravel-api-generator -W',
+            };
+        }
+        return undefined;
+    }
+
+    private describeUnavailable(outcome: Extract<PreviewOutcome, { state: 'unavailable' }>): void {
+        if (outcome.reason === 'phpNotFound') {
+            const hasSail = fs.existsSync(path.join(this.workspaceRoot, 'vendor', 'bin', 'sail'));
+            this.pendingCommand = undefined;
+            this.panel.webview.postMessage({
+                type: 'previewCodeResult',
+                state: 'unavailable',
+                message: hasSail ? t('preview.phpNotFoundSail') : t('preview.phpNotFound'),
+                useSail: hasSail,
+            });
+            return;
+        }
+
+        const message = outcome.reason === 'protocolMismatch'
+            ? t('preview.extensionTooOld')
+            : outcome.reason === 'timeout'
+                ? t('preview.timeout')
+                : t('preview.bootFailed', outcome.detail);
+        this.postUnavailable(message);
+    }
+
+    private postUnavailable(message: string, command?: string): void {
+        this.pendingCommand = command;
+        this.panel.webview.postMessage({ type: 'previewCodeResult', state: 'unavailable', message, command });
+    }
+
+    private async announceCapabilities(): Promise<void> {
+        if (this.previewBlocker()) {
+            return;
+        }
+        const handshake = await this.bridge.capabilities();
+        if (!handshake) {
+            return;
+        }
+        this.handshakeOk = true;
         this.panel.webview.postMessage({
-            type: 'previewCodeResult',
-            code,
+            type: 'capabilities',
+            fieldTypes: handshake.capabilities.fieldTypes,
+            jsonApi: handshake.capabilities.options.json_api,
         });
+    }
+
+    private watchRestartTriggers(): vscode.Disposable[] {
+        const watcher = vscode.workspace.createFileSystemWatcher(
+            new vscode.RelativePattern(this.workspaceRoot, '{vendor/composer/installed.json,.env,config/**/*.php}')
+        );
+        const restart = () => this.restartPreview();
+        return [watcher, watcher.onDidChange(restart), watcher.onDidCreate(restart), watcher.onDidDelete(restart)];
+    }
+
+    private restartPreview(): void {
+        this.packageState = detectPackageState(this.workspaceRoot, LaravelDetector.isPackageInstalled(this.workspaceRoot));
+        this.handshakeOk = false;
+        this.bridge.restart();
+        void this.announceCapabilities();
+        this.panel.webview.postMessage({ type: 'refreshPreview' });
+    }
+
+    private async openDiff(relativePath: string): Promise<void> {
+        const current = vscode.Uri.file(path.join(this.workspaceRoot, ...relativePath.split('/')));
+        const planned = vscode.Uri.from({ scheme: PLAN_SCHEME, path: '/' + relativePath });
+        await vscode.commands.executeCommand('vscode.diff', current, planned, t('preview.diffTitle', relativePath));
+    }
+
+    private async handlePreviewAction(action: string | undefined): Promise<void> {
+        if (action === 'runCommand' && this.pendingCommand) {
+            const terminal = vscode.window.createTerminal({ name: 'Laravel API Generator', cwd: this.workspaceRoot });
+            terminal.sendText(this.pendingCommand);
+            terminal.show();
+            return;
+        }
+        if (action === 'useSail') {
+            await vscode.workspace
+                .getConfiguration('laravelApiGenerator')
+                .update('phpCommand', ['./vendor/bin/sail', 'php'], vscode.ConfigurationTarget.Workspace);
+        }
     }
 
     private dispose(): void {
         GeneratorPanel.currentPanel = undefined;
         this.artisan.stopServe();
+        this.bridge.dispose();
         this.panel.dispose();
         while (this.disposables.length) {
             const d = this.disposables.pop();
