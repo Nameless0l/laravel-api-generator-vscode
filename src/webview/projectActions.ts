@@ -139,6 +139,7 @@ export class ProjectActions {
     private readonly runners = new Map<StepId, ArtisanRunner>();
     private readonly halted = new WeakSet<ArtisanRunner>();
     private readonly server: ArtisanRunner;
+    private readonly disposables: vscode.Disposable[] = [];
 
     constructor(
         private readonly root: string,
@@ -146,6 +147,21 @@ export class ProjectActions {
         private readonly onDidChange?: () => void
     ) {
         this.server = new ArtisanRunner(root);
+        const watcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(root, `{vendor/composer/installed.json,${STUBS_PATH}/**}`));
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        const refresh = () => {
+            clearTimeout(timer);
+            timer = setTimeout(
+                () =>
+                    this.post({
+                        type: 'projectState',
+                        scramble: LaravelDetector.isScrambleInstalled(root),
+                        stubsPublished: fs.existsSync(path.join(root, ...STUBS_PATH.split('/'))),
+                    }),
+                400
+            );
+        };
+        this.disposables.push(watcher, watcher.onDidChange(refresh), watcher.onDidCreate(refresh), watcher.onDidDelete(refresh), { dispose: () => clearTimeout(timer) });
     }
 
     /** True when the message belongs to the ready screen. */
@@ -316,6 +332,9 @@ export class ProjectActions {
         }
         this.runners.clear();
         this.server.stopServe();
+        while (this.disposables.length > 0) {
+            this.disposables.pop()?.dispose();
+        }
     }
 
     /** A run stopped by the user reports it; one replaced by a newer run ends silently. */

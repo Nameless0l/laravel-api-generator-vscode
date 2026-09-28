@@ -2,7 +2,7 @@
   "name": "laravel-api-generator",
   "displayName": "Laravel API Generator",
   "description": "Generate complete REST APIs for Laravel with a visual interface",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "publisher": "Nameless0l",
   "license": "MIT",
   "icon": "media/icon-marketplace.png",
@@ -152,7 +152,10 @@
     ],
     "yamlValidation": [
       {
-        "fileMatch": ["api-schema.yaml", "api-schema.yml"],
+        "fileMatch": [
+          "api-schema.yaml",
+          "api-schema.yml"
+        ],
         "url": "./schemas/api-schema.json"
       }
     ],
@@ -335,7 +338,9 @@
         },
         "laravelApiGenerator.phpCommand": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "default": [],
           "markdownDescription": "Full command that runs PHP, one argument per item, for projects where PHP lives in a container. Examples: `[\"./vendor/bin/sail\", \"php\"]` or `[\"docker\", \"compose\", \"exec\", \"-T\", \"app\", \"php\"]`. When empty, `phpPath` is used."
         },
@@ -346,7 +351,11 @@
         },
         "laravelApiGenerator.locale": {
           "type": "string",
-          "enum": ["auto", "en", "fr"],
+          "enum": [
+            "auto",
+            "en",
+            "fr"
+          ],
           "default": "auto",
           "enumDescriptions": [
             "Follow VS Code display language",

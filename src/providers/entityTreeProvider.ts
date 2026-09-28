@@ -103,10 +103,10 @@ export class EntityDecorations implements vscode.FileDecorationProvider {
         const id = rest.join('/');
         if (kind === 'entity') {
             const edited = this.editedByEntity.get(id);
-            return edited ? new vscode.FileDecoration(String(Math.min(edited.length, 99)), t('tree.editedTooltip'), new vscode.ThemeColor('list.warningForeground')) : undefined;
+            return edited ? new vscode.FileDecoration(String(Math.min(edited.length, 99)), undefined, new vscode.ThemeColor('list.warningForeground')) : undefined;
         }
         if (kind === 'file' && this.editedFiles.has(id)) {
-            return new vscode.FileDecoration(undefined, t('tree.editedTooltip'), new vscode.ThemeColor('list.warningForeground'));
+            return new vscode.FileDecoration(undefined, undefined, new vscode.ThemeColor('list.warningForeground'));
         }
         return undefined;
     }

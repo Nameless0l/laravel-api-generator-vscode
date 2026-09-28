@@ -2,6 +2,18 @@
 
 All notable changes to the Laravel API Generator VS Code extension will be documented in this file.
 
+## [1.1.1] - 2026-09-28
+
+Pairs with `nameless/laravel-api-generator` 4.0 and still works with 3.9 or later.
+
+### Fixed
+- A file edited by hand no longer shows its note twice in the entity tree tooltip.
+- **Open the API documentation** follows the Scramble install. After **Install**, the step says the install runs in the terminal, then switches to **Open** once Composer has put Scramble in `vendor`. A package named in `composer.json` but missing from `vendor` no longer counts as installed.
+- **Customize the generated code** notices stubs published or removed from the terminal.
+
+### Changed
+- The README and the Marketplace page show the 1.1 interface, with new demo GIFs.
+
 ## [1.1.0] - 2026-09-28
 
 A redesigned interface. Pairs with `nameless/laravel-api-generator` 4.0 and still works with 3.9 or later. Needs VS Code 1.82 or later.
