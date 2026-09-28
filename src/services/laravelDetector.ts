@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import { t } from '../i18n';
-import { readLaravelMajor, requirePackageCommand, usesLegacyLine } from './packageState';
+import { readInstalledPackages, readLaravelMajor, requirePackageCommand, usesLegacyLine } from './packageState';
 
 export class LaravelDetector {
     static isLaravelProject(workspaceRoot: string): boolean {
@@ -15,7 +15,7 @@ export class LaravelDetector {
     }
 
     static isScrambleInstalled(workspaceRoot: string): boolean {
-        return this.hasComposerPackage(workspaceRoot, 'dedoc/scramble');
+        return readInstalledPackages(workspaceRoot).has('dedoc/scramble');
     }
 
     static isSanctumInstalled(workspaceRoot: string): boolean {

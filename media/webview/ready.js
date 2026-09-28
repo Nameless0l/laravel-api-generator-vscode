@@ -84,7 +84,7 @@
             parts.push(h('span', { class: 'mono', text: def.command }));
         }
         if (def.id === 'docs') {
-            parts.push(data.scramble ? t('ready.docsDesc', data.docsPath) : t('ready.docsMissing'));
+            parts.push(data.scramble ? t('ready.docsDesc', data.docsPath) : step.installing ? t('ready.installing') : t('ready.docsMissing'));
         }
         if (def.id === 'stubs') {
             parts.push(data.stubsPublished ? t('ready.stubsPublished', data.stubsPath) : t('ready.stubsDesc'));
@@ -148,7 +148,16 @@
             step.buttonsEl.appendChild(h('button', { class: 'btn btn-ghost', onclick: () => post({ type: 'showOutput' }) }, t('ready.showOutput')));
         }
         if (def.id === 'docs' && !data.scramble) {
-            step.buttonsEl.appendChild(h('button', { class: 'btn btn-soft', onclick: () => post({ type: 'installScramble' }) }, svg('download'), t('ready.install')));
+            const install = () => {
+                step.installing = true;
+                post({ type: 'installScramble' });
+                paint(step);
+            };
+            step.buttonsEl.appendChild(
+                step.installing
+                    ? h('button', { class: 'btn btn-ghost', onclick: install }, svg('refresh'), t('ready.installAgain'))
+                    : h('button', { class: 'btn btn-soft', onclick: install }, svg('download'), t('ready.install'))
+            );
             return;
         }
         if (def.id === 'docs') {
@@ -282,6 +291,25 @@
                 view.data.scramble = false;
             }
             paint(step);
+            return true;
+        }
+        if (message.type === 'projectState') {
+            view.data.scramble = message.scramble;
+            view.data.stubsPublished = message.stubsPublished;
+            ['docs', 'stubs'].forEach((id) => {
+                const step = view.steps.get(id);
+                if (!step || step.state === 'running') {
+                    return;
+                }
+                if (id === 'docs' && message.scramble) {
+                    step.installing = false;
+                    if (step.state === 'failed') {
+                        step.state = 'idle';
+                        step.detail = '';
+                    }
+                }
+                paint(step);
+            });
             return true;
         }
         if (message.type === 'routes') {
