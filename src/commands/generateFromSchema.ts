@@ -2,56 +2,33 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import { LaravelDetector } from '../services/laravelDetector';
-import { ArtisanRunner } from '../services/artisanRunner';
-import { pickGenerationOptions, presentGenerationResult } from './generationShared';
+import { SCHEMA_FILES } from '../services/projectInfo';
+import { FlowPanel } from '../webview/flowPanel';
 import { t } from '../i18n';
-
-const DEFAULT_SCHEMA_FILES = ['api-schema.yaml', 'api-schema.yml', 'api-schema.json'];
 
 /**
  * Generate complete APIs from a declarative YAML/JSON schema file
- * (package `make:fullapi --schema=`, >= 3.5).
+ * (package `make:fullapi --schema=`), after reviewing the dry run.
  */
-export function registerGenerateFromSchemaCommand(onDidGenerate: () => void): vscode.Disposable {
-    return vscode.commands.registerCommand('laravelApiGenerator.generateFromSchema', async () => {
+export function registerGenerateFromSchemaCommand(extensionUri: vscode.Uri, onDidGenerate: () => void): vscode.Disposable {
+    return vscode.commands.registerCommand('laravelApiGenerator.generateFromSchema', async (schema?: vscode.Uri) => {
         const check = await LaravelDetector.validateOrPromptInstall();
         if (!check.valid || !check.root) {
             return;
         }
         const root = check.root;
 
-        const schemaPath = await resolveSchemaPath(root);
+        const schemaPath = schema?.fsPath ?? (await resolveSchemaPath(root));
         if (!schemaPath) {
             return;
         }
 
-        const options = await pickGenerationOptions(false);
-        if (options === undefined) {
-            return;
-        }
-
-        if (options.queryBuilder) {
-            void LaravelDetector.promptQueryBuilderInstallIfMissing(root);
-        }
-
-        const artisan = new ArtisanRunner(root);
-        const result = await vscode.window.withProgress(
-            {
-                location: vscode.ProgressLocation.Notification,
-                title: t('sources.generating'),
-                cancellable: false,
-            },
-            () => artisan.generateFromSchema(schemaPath, { queryBuilder: options.queryBuilder, pest: options.pest, jsonApi: options.jsonApi })
-        );
-
-        await presentGenerationResult(result, root, onDidGenerate);
+        FlowPanel.plan(extensionUri, root, { kind: 'schema', path: schemaPath }, onDidGenerate);
     });
 }
 
 async function resolveSchemaPath(root: string): Promise<string | undefined> {
-    const detected = DEFAULT_SCHEMA_FILES.map((f) => path.join(root, f)).find((p) =>
-        fs.existsSync(p)
-    );
+    const detected = SCHEMA_FILES.map((file) => path.join(root, file)).find((file) => fs.existsSync(file));
 
     if (detected) {
         const useDetected = t('sources.useDetectedSchema', path.basename(detected));

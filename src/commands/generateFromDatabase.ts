@@ -1,35 +1,31 @@
 import * as vscode from 'vscode';
 import { LaravelDetector } from '../services/laravelDetector';
 import { ArtisanRunner } from '../services/artisanRunner';
-import { pickGenerationOptions, presentGenerationResult } from './generationShared';
+import { ensureEnvReady } from '../webview/projectActions';
+import { FlowPanel } from '../webview/flowPanel';
 import { t } from '../i18n';
 
 /**
  * Generate complete APIs from the project's existing database
- * (package `make:fullapi --from-database`, >= 3.5).
+ * (package `make:fullapi --from-database`), after reviewing the dry run.
  */
-export function registerGenerateFromDatabaseCommand(onDidGenerate: () => void): vscode.Disposable {
+export function registerGenerateFromDatabaseCommand(extensionUri: vscode.Uri, onDidGenerate: () => void): vscode.Disposable {
     return vscode.commands.registerCommand('laravelApiGenerator.generateFromDatabase', async () => {
         const check = await LaravelDetector.validateOrPromptInstall();
         if (!check.valid || !check.root) {
             return;
         }
         const root = check.root;
-        const artisan = new ArtisanRunner(root);
+        if (!(await ensureEnvReady(root))) {
+            return;
+        }
 
         const tablesResult = await vscode.window.withProgress(
-            {
-                location: vscode.ProgressLocation.Notification,
-                title: t('sources.readingDatabase'),
-                cancellable: false,
-            },
-            () => artisan.introspectTables()
+            { location: vscode.ProgressLocation.Notification, title: t('sources.readingDatabase'), cancellable: false },
+            () => new ArtisanRunner(root).introspectTables()
         );
-
         if (!tablesResult.success) {
-            vscode.window.showErrorMessage(
-                t('sources.couldNotListTables', tablesResult.output || tablesResult.errors.join('\n'))
-            );
+            vscode.window.showErrorMessage(t('sources.couldNotListTables', tablesResult.output || tablesResult.errors.join('\n')));
             return;
         }
 
@@ -48,49 +44,18 @@ export function registerGenerateFromDatabaseCommand(onDidGenerate: () => void): 
             return;
         }
 
-        // Everything preselected except users (would overwrite app/Models/User.php)
-        const tablePicks = await vscode.window.showQuickPick(
-            tables.map((tbl) => ({
-                label: tbl.name,
-                description: t('sources.columnsCount', tbl.columns),
-                picked: tbl.name !== 'users',
+        const picks = await vscode.window.showQuickPick(
+            tables.map((table) => ({
+                label: table.name,
+                description: t('sources.columnsCount', table.columns),
+                picked: table.name !== 'users',
             })),
-            {
-                canPickMany: true,
-                title: t('sources.pickTablesTitle'),
-                placeHolder: t('sources.pickTablesPlaceholder'),
-            }
+            { canPickMany: true, title: t('sources.pickTablesTitle'), placeHolder: t('sources.pickTablesPlaceholder') }
         );
-
-        if (!tablePicks || tablePicks.length === 0) {
+        if (!picks || picks.length === 0) {
             return;
         }
 
-        const options = await pickGenerationOptions(true);
-        if (options === undefined) {
-            return;
-        }
-
-        if (options.queryBuilder) {
-            void LaravelDetector.promptQueryBuilderInstallIfMissing(root);
-        }
-
-        const result = await vscode.window.withProgress(
-            {
-                location: vscode.ProgressLocation.Notification,
-                title: t('sources.generating'),
-                cancellable: false,
-            },
-            () =>
-                artisan.generateFromDatabase({
-                    tables: tablePicks.map((p) => p.label),
-                    withMigrations: options.withMigrations,
-                    queryBuilder: options.queryBuilder,
-                    pest: options.pest,
-                    jsonApi: options.jsonApi,
-                })
-        );
-
-        await presentGenerationResult(result, root, onDidGenerate);
+        FlowPanel.plan(extensionUri, root, { kind: 'database', tables: picks.map((pick) => pick.label) }, onDidGenerate);
     });
 }

@@ -45,3 +45,34 @@ export function extractSchema(answer: string): string {
 
     return `${(block ? block[1] : answer).trim()}\n`;
 }
+
+export interface ChatModelRef {
+    id: string;
+    vendor: string;
+}
+
+export function preferredModels<T extends ChatModelRef>(models: readonly T[]): T[] {
+    return [...models].sort((a, b) => Number(b.vendor === 'copilot') - Number(a.vendor === 'copilot'));
+}
+
+export interface ModelErrorLink {
+    label: string;
+    url: string;
+}
+
+/** Providers answer errors in Markdown, often with a command link to fix them. */
+export function readableModelError(raw: string): { text: string; links: ModelErrorLink[] } {
+    const links: ModelErrorLink[] = [];
+    const text = raw
+        .replace(/\[([^\]]+)\]\(((?:vscode|vscode-insiders|https):[^)\s]+)\)/g, (_match, label: string, url: string) => {
+            links.push({ label: label.replace(/[*_`]/g, '').trim(), url });
+            return '';
+        })
+        .replace(/\*\*|__|`/g, '')
+        .split(/\r?\n/)
+        .map((line) => line.replace(/\\\s*$/, '').trim())
+        .filter((line) => line !== '' && line !== '*')
+        .join('\n');
+
+    return { text, links };
+}

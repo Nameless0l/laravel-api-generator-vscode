@@ -3,6 +3,10 @@ export interface Field {
     type: string;
     /** Marks the field as the table's primary key instead of the default id (package >= 3.6). */
     primary?: boolean;
+    /** Column modifiers, only carried by schema generation (package >= 3.9). */
+    nullable?: boolean;
+    unique?: boolean;
+    default?: string;
 }
 
 export interface Relationship {
@@ -49,6 +53,10 @@ export interface GeneratedEntity {
     files: EntityFile[];
     fields?: string[];
     relations?: EntityRelation[];
+    /** Files the manifest recorded that were edited by hand since (package >= 3.11). */
+    edited?: string[];
+    /** True when the manifest records the entity, so edits can be detected. */
+    tracked?: boolean;
 }
 
 export interface EntityFile {
@@ -127,6 +135,9 @@ export interface GenerationDocument {
 export interface ApiSchemaField {
     type: string;
     primary?: boolean;
+    nullable?: boolean;
+    unique?: boolean;
+    default?: string;
     enum?: string[];
 }
 
@@ -146,3 +157,30 @@ export interface PlanFlags {
     postman?: boolean;
     only?: string[];
 }
+
+export type GenerationSource =
+    | { kind: 'schema'; path: string }
+    | { kind: 'describe'; text: string }
+    | { kind: 'mermaid'; path: string }
+    | { kind: 'openapi'; path: string }
+    | { kind: 'database'; tables: string[] };
+
+export interface FlowOptions {
+    queryBuilder: boolean;
+    pest: boolean;
+    jsonApi: boolean;
+    auth: boolean;
+    postman: boolean;
+    withMigrations: boolean;
+    force: boolean;
+}
+
+export const DEFAULT_FLOW_OPTIONS: FlowOptions = {
+    queryBuilder: false,
+    pest: false,
+    jsonApi: false,
+    auth: false,
+    postman: false,
+    withMigrations: false,
+    force: false,
+};

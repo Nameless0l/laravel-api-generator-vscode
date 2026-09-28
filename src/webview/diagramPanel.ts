@@ -1,676 +1,156 @@
 import * as vscode from 'vscode';
 import * as crypto from 'crypto';
-import { EntityAnalyzer, EntityInfo } from '../services/entityAnalyzer';
+import * as fs from 'fs';
+import * as path from 'path';
+import { diagramData, toMermaid } from '../services/diagramData';
+import { openProjectFile } from '../services/plannedContent';
+import { getLocale, t, webviewStrings } from '../i18n';
+import { iconSet } from './ui/icons';
+import { renderPage } from './ui/page';
+
+type Positions = Record<string, { x: number; y: number }>;
+
+interface DiagramMessage {
+    type: string;
+    path?: string;
+    command?: 'addFields' | 'regenerateFile' | 'delete';
+    entity?: string;
+    positions?: Positions;
+    format?: 'svg' | 'mermaid';
+    content?: string;
+}
+
+const POSITIONS_KEY = 'laravelApiGenerator.diagramPositions';
+const ENTITY_COMMANDS = new Set(['addFields', 'regenerateFile', 'delete']);
 
 export class DiagramPanel {
-    private static instance: DiagramPanel | undefined;
-    private panel: vscode.WebviewPanel;
+    private static current: DiagramPanel | undefined;
 
-    private constructor(panel: vscode.WebviewPanel, entities: EntityInfo[]) {
-        this.panel = panel;
-        this.panel.webview.html = this.getHtml(entities, panel.webview);
-        this.panel.onDidDispose(() => {
-            DiagramPanel.instance = undefined;
+    private readonly disposables: vscode.Disposable[] = [];
+    private loaded = false;
+    private disposed = false;
+
+    private constructor(
+        private readonly panel: vscode.WebviewPanel,
+        private readonly extensionUri: vscode.Uri,
+        private readonly root: string,
+        private readonly memento: vscode.Memento
+    ) {
+        this.panel.iconPath = vscode.Uri.joinPath(extensionUri, 'media', 'icon-dark.png');
+        this.panel.webview.html = this.html();
+        this.disposables.push(
+            this.panel.webview.onDidReceiveMessage((message: DiagramMessage) => void this.handle(message)),
+            this.panel.onDidDispose(() => this.dispose())
+        );
+    }
+
+    static show(extensionUri: vscode.Uri, root: string, memento: vscode.Memento): void {
+        if (DiagramPanel.current && DiagramPanel.current.root === root) {
+            DiagramPanel.current.panel.reveal();
+            DiagramPanel.current.sendData();
+            return;
+        }
+        DiagramPanel.current?.panel.dispose();
+
+        const panel = vscode.window.createWebviewPanel('laravelApiGenerator.diagram', t('diagram.title'), vscode.ViewColumn.One, {
+            enableScripts: true,
+            retainContextWhenHidden: true,
+            localResourceRoots: [vscode.Uri.joinPath(extensionUri, 'media')],
+        });
+        DiagramPanel.current = new DiagramPanel(panel, extensionUri, root, memento);
+    }
+
+    /** Redraws an open diagram after the entities changed. */
+    static refresh(): void {
+        DiagramPanel.current?.sendData();
+    }
+
+    private html(): string {
+        const webview = this.panel.webview;
+        const asset = (file: string) => webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, 'media', 'webview', file)).toString();
+        return renderPage({
+            cspSource: webview.cspSource,
+            nonce: crypto.randomBytes(16).toString('hex'),
+            lang: getLocale(),
+            title: t('diagram.title'),
+            styles: [asset('kit.css'), asset('diagram.css')],
+            scripts: [asset('common.js'), asset('diagram.js')],
+            body: '<div id="app" class="app"></div>',
+            bodyClass: 'diagram-view',
+            boot: { locale: getLocale(), strings: webviewStrings('diagram'), icons: iconSet() },
         });
     }
 
-    static show(workspaceRoot: string): void {
-        if (DiagramPanel.instance) {
-            DiagramPanel.instance.panel.reveal();
+    private sendData(): void {
+        if (!this.loaded || this.disposed) {
             return;
         }
-
-        const analyzer = new EntityAnalyzer(workspaceRoot);
-        const entities = analyzer.analyzeEntities();
-
-        const panel = vscode.window.createWebviewPanel(
-            'laravelApiGenerator.diagram',
-            'Entity Diagram',
-            vscode.ViewColumn.One,
-            { enableScripts: true }
-        );
-
-        DiagramPanel.instance = new DiagramPanel(panel, entities);
+        void this.panel.webview.postMessage({
+            type: 'data',
+            entities: diagramData(this.root),
+            positions: this.memento.get<Record<string, Positions>>(POSITIONS_KEY, {})[this.root] ?? {},
+        });
     }
 
-    private getHtml(entities: EntityInfo[], webview: vscode.Webview): string {
-        const nonce = crypto.randomBytes(16).toString('hex');
-        const entitiesJson = JSON.stringify(entities);
-
-        return /*html*/ `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'nonce-${nonce}'; script-src 'nonce-${nonce}';">
-    <title>Entity Diagram</title>
-    <style nonce="${nonce}">
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: var(--vscode-font-family);
-            color: var(--vscode-foreground);
-            background: var(--vscode-editor-background);
-            overflow: hidden;
-            height: 100vh;
-        }
-        .toolbar {
-            padding: 8px 16px;
-            background: var(--vscode-titleBar-activeBackground);
-            border-bottom: 1px solid var(--vscode-panel-border);
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        .toolbar h2 { font-size: 1.1em; }
-        .toolbar .count {
-            color: var(--vscode-descriptionForeground);
-            font-size: 0.85em;
-        }
-        .toolbar .zoom-controls {
-            margin-left: auto;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-        .toolbar .zoom-controls button {
-            background: var(--vscode-button-secondaryBackground);
-            color: var(--vscode-button-secondaryForeground);
-            border: none;
-            border-radius: 3px;
-            padding: 3px 9px;
-            cursor: pointer;
-            font-size: 0.85em;
-        }
-        .toolbar .zoom-controls button:hover {
-            background: var(--vscode-button-secondaryHoverBackground);
-        }
-        .toolbar .zoom-level {
-            min-width: 42px;
-            text-align: center;
-            font-size: 0.85em;
-            color: var(--vscode-descriptionForeground);
-        }
-        .canvas {
-            position: relative;
-            width: 100%;
-            height: calc(100vh - 45px);
-            overflow: hidden;
-            cursor: grab;
-            background: var(--vscode-editor-background);
-        }
-        .canvas.panning { cursor: grabbing; }
-        .canvas::before {
-            content: "";
-            position: absolute;
-            inset: 0;
-            z-index: 0;
-            pointer-events: none;
-            background-image:
-                radial-gradient(circle at center, var(--vscode-descriptionForeground) 1.3px, transparent 1.6px),
-                radial-gradient(circle at center, var(--vscode-descriptionForeground) 2px, transparent 2.4px);
-            background-size:
-                var(--grid-size, 26px) var(--grid-size, 26px),
-                var(--grid-major, 130px) var(--grid-major, 130px);
-            background-position: var(--grid-x, 0px) var(--grid-y, 0px);
-            opacity: 0.5;
-        }
-        .canvas-inner {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 0;
-            height: 0;
-            transform-origin: 0 0;
-            will-change: transform;
-            z-index: 1;
-        }
-        svg.lines {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 20000px;
-            height: 20000px;
-            pointer-events: none;
-            overflow: visible;
-            z-index: 0;
-        }
-        svg.lines path.edge {
-            stroke: var(--vscode-textLink-foreground);
-            stroke-width: 2;
-            fill: none;
-            opacity: 0.6;
-            stroke-linecap: round;
-            transition: opacity 0.15s ease, stroke-width 0.15s ease;
-        }
-        svg.lines path.edge.hl {
-            opacity: 1;
-            stroke-width: 2.5;
-        }
-        svg.lines .arrow-head {
-            fill: var(--vscode-textLink-foreground);
-        }
-        svg.lines .edge-label rect {
-            fill: var(--vscode-editorWidget-background);
-            stroke: var(--vscode-panel-border);
-            stroke-width: 1;
-        }
-        svg.lines .edge-label text {
-            fill: var(--vscode-descriptionForeground);
-            font-size: 10px;
-            font-weight: 600;
-        }
-        .entity-card {
-            position: absolute;
-            background: var(--vscode-editorWidget-background);
-            border: 1px solid var(--vscode-panel-border);
-            border-radius: 10px;
-            min-width: 210px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.35), 0 2px 6px rgba(0,0,0,0.25);
-            cursor: grab;
-            z-index: 1;
-            user-select: none;
-            overflow: hidden;
-            transition: box-shadow 0.15s ease, border-color 0.15s ease;
-        }
-        .entity-card:hover {
-            border-color: var(--vscode-focusBorder);
-            box-shadow: 0 16px 44px rgba(0,0,0,0.5), 0 0 0 1px var(--vscode-focusBorder);
-        }
-        .entity-card.dragging { cursor: grabbing; box-shadow: 0 20px 52px rgba(0,0,0,0.55); }
-        .entity-header {
-            background: var(--vscode-button-background);
-            color: var(--vscode-button-foreground);
-            padding: 10px 14px;
-            font-weight: 600;
-            font-size: 0.92em;
-            letter-spacing: 0.02em;
-            display: flex;
-            align-items: center;
-            gap: 9px;
-        }
-        .entity-header::before {
-            content: "";
-            width: 7px;
-            height: 7px;
-            border-radius: 2px;
-            background: currentColor;
-            opacity: 0.85;
-        }
-        .entity-fields {
-            padding: 8px 0;
-        }
-        .entity-field {
-            padding: 4px 14px;
-            font-size: 0.82em;
-            font-family: var(--vscode-editor-font-family);
-            color: var(--vscode-foreground);
-            display: flex;
-            align-items: baseline;
-            gap: 10px;
-        }
-        .entity-field .type {
-            color: var(--vscode-descriptionForeground);
-            margin-left: auto;
-            opacity: 0.85;
-        }
-        .entity-relations {
-            border-top: 1px solid var(--vscode-panel-border);
-            background: rgba(127,127,127,0.04);
-            padding: 8px 0 6px;
-        }
-        .entity-relations::before {
-            content: "RELATIONS";
-            display: block;
-            padding: 0 14px 5px;
-            font-size: 0.6em;
-            font-weight: 700;
-            letter-spacing: 0.14em;
-            color: var(--vscode-descriptionForeground);
-            opacity: 0.7;
-        }
-        .entity-relation {
-            padding: 3px 14px;
-            font-size: 0.78em;
-            color: var(--vscode-foreground);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .entity-relation .rel-badge {
-            font-family: var(--vscode-editor-font-family);
-            font-size: 0.9em;
-            font-weight: 700;
-            background: var(--vscode-badge-background);
-            color: var(--vscode-badge-foreground);
-            border-radius: 5px;
-            padding: 1px 6px;
-            min-width: 30px;
-            text-align: center;
-        }
-        .entity-relation .rel-text { color: var(--vscode-textLink-foreground); }
-        .empty-state {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-            color: var(--vscode-descriptionForeground);
-            gap: 12px;
-        }
-        .empty-state .icon { font-size: 3em; }
-    </style>
-</head>
-<body>
-    <div class="toolbar">
-        <h2>Entity Relationship Diagram</h2>
-        <span class="count" id="entityCount"></span>
-        <div class="zoom-controls">
-            <button id="zoomOut" title="Zoom out (Ctrl+wheel)">&minus;</button>
-            <span class="zoom-level" id="zoomLevel">100%</span>
-            <button id="zoomIn" title="Zoom in (Ctrl+wheel)">+</button>
-            <button id="zoomReset" title="Reset zoom">100%</button>
-            <button id="zoomFit" title="Fit all entities">Fit</button>
-        </div>
-    </div>
-    <div class="canvas" id="canvas">
-        <div class="canvas-inner" id="canvasInner">
-            <svg class="lines" id="linesLayer"></svg>
-        </div>
-    </div>
-
-    <script nonce="${nonce}">
-        const entities = ${entitiesJson};
-        const countEl = document.getElementById('entityCount');
-        countEl.textContent = entities.length + ' entities';
-
-        if (entities.length === 0) {
-            document.getElementById('canvas').innerHTML = \`
-                <div class="empty-state">
-                    <div class="icon">&#x1f4cb;</div>
-                    <div>No generated entities found</div>
-                    <div style="font-size:0.85em">Generate an API first, then open the diagram</div>
-                </div>
-            \`;
-        } else {
-            const positions = {};
-            const cols = Math.ceil(Math.sqrt(entities.length));
-            const cardW = 220;
-            const cardH = 200;
-            const gapX = 80;
-            const gapY = 60;
-
-            // Obsidian-canvas style infinite pan & zoom: the world is a single
-            // transformed layer, the dotted grid is a background that tracks it.
-            let scale = 1, tx = 0, ty = 0;
-            const canvasEl = document.getElementById('canvas');
-            const innerEl = document.getElementById('canvasInner');
-            innerEl.style.transformOrigin = '0 0';
-            const GRID = 26;
-
-            function applyTransform() {
-                innerEl.style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(' + scale + ')';
-                canvasEl.style.setProperty('--grid-size', (GRID * scale) + 'px');
-                canvasEl.style.setProperty('--grid-major', (GRID * 5 * scale) + 'px');
-                canvasEl.style.setProperty('--grid-x', tx + 'px');
-                canvasEl.style.setProperty('--grid-y', ty + 'px');
-                document.getElementById('zoomLevel').textContent = Math.round(scale * 100) + '%';
-            }
-
-            // Zoom around a screen anchor (cursor, or viewport centre by default)
-            // so the point under the anchor stays put.
-            function zoomAt(newScale, anchorX, anchorY) {
-                newScale = Math.min(2.5, Math.max(0.2, newScale));
-                const rect = canvasEl.getBoundingClientRect();
-                const ax = anchorX !== undefined ? anchorX - rect.left : rect.width / 2;
-                const ay = anchorY !== undefined ? anchorY - rect.top : rect.height / 2;
-                const wx = (ax - tx) / scale;
-                const wy = (ay - ty) / scale;
-                scale = newScale;
-                tx = ax - wx * scale;
-                ty = ay - wy * scale;
-                applyTransform();
-            }
-
-            // Wheel pans, Obsidian style; Ctrl/Cmd+wheel zooms toward the
-            // cursor (trackpad pinches arrive as Ctrl+wheel, so they zoom too).
-            canvasEl.addEventListener('wheel', (e) => {
-                e.preventDefault();
-                if (e.ctrlKey || e.metaKey) {
-                    zoomAt(scale * (e.deltaY < 0 ? 1.1 : 0.9), e.clientX, e.clientY);
-                    return;
+    private async handle(message: DiagramMessage): Promise<void> {
+        switch (message.type) {
+            case 'loaded':
+                this.loaded = true;
+                this.sendData();
+                break;
+            case 'positions':
+                if (message.positions) {
+                    const all = this.memento.get<Record<string, Positions>>(POSITIONS_KEY, {});
+                    await this.memento.update(POSITIONS_KEY, { ...all, [this.root]: message.positions });
                 }
-                if (e.shiftKey) {
-                    tx -= (e.deltaY || e.deltaX);
-                } else {
-                    tx -= e.deltaX;
-                    ty -= e.deltaY;
+                break;
+            case 'open':
+                if (message.path) {
+                    await openProjectFile(this.root, message.path);
                 }
-                applyTransform();
-            }, { passive: false });
-
-            function fitAll() {
-                let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-                Object.keys(positions).forEach((name) => {
-                    const el = document.querySelector('[data-entity="' + name + '"]');
-                    if (!el) return;
-                    const p = positions[name];
-                    minX = Math.min(minX, p.x);
-                    minY = Math.min(minY, p.y);
-                    maxX = Math.max(maxX, p.x + el.offsetWidth);
-                    maxY = Math.max(maxY, p.y + el.offsetHeight);
-                });
-                if (!isFinite(minX)) return;
-                const rect = canvasEl.getBoundingClientRect();
-                const pad = 60;
-                const w = maxX - minX, h = maxY - minY;
-                scale = Math.max(0.2, Math.min((rect.width - pad * 2) / w, (rect.height - pad * 2) / h, 1.5));
-                tx = (rect.width - w * scale) / 2 - minX * scale;
-                ty = (rect.height - h * scale) / 2 - minY * scale;
-                applyTransform();
-            }
-
-            document.getElementById('zoomIn').addEventListener('click', () => zoomAt(scale * 1.2));
-            document.getElementById('zoomOut').addEventListener('click', () => zoomAt(scale / 1.2));
-            document.getElementById('zoomReset').addEventListener('click', () => { zoomAt(1); });
-            document.getElementById('zoomFit').addEventListener('click', fitAll);
-
-            // Drag the background to pan
-            let panning = false;
-            let panStartX = 0, panStartY = 0, panTx = 0, panTy = 0;
-            canvasEl.addEventListener('mousedown', (e) => {
-                if (e.target.closest('.entity-card')) return;
-                panning = true;
-                canvasEl.classList.add('panning');
-                panStartX = e.clientX;
-                panStartY = e.clientY;
-                panTx = tx;
-                panTy = ty;
-                e.preventDefault();
-            });
-            document.addEventListener('mousemove', (e) => {
-                if (!panning) return;
-                tx = panTx + (e.clientX - panStartX);
-                ty = panTy + (e.clientY - panStartY);
-                applyTransform();
-            });
-            document.addEventListener('mouseup', () => {
-                panning = false;
-                canvasEl.classList.remove('panning');
-            });
-
-            applyTransform();
-
-            entities.forEach((entity, i) => {
-                const col = i % cols;
-                const row = Math.floor(i / cols);
-                const x = 40 + col * (cardW + gapX);
-                const y = 20 + row * (cardH + gapY);
-                positions[entity.name] = { x, y };
-
-                const card = document.createElement('div');
-                card.className = 'entity-card';
-                card.style.left = x + 'px';
-                card.style.top = y + 'px';
-                card.dataset.entity = entity.name;
-
-                let html = '<div class="entity-header">' + entity.name + '</div>';
-                html += '<div class="entity-fields">';
-                html += '<div class="entity-field"><b>id</b><span class="type">bigint PK</span></div>';
-                entity.fields.forEach(f => {
-                    const idx = f.indexOf(':');
-                    const fname = idx >= 0 ? f.slice(0, idx) : f;
-                    const ftype = idx >= 0 ? f.slice(idx + 1) : '';
-                    html += '<div class="entity-field"><span class="fname">' + fname + '</span>' +
-                            (ftype ? '<span class="type">' + ftype + '</span>' : '') + '</div>';
-                });
-                html += '</div>';
-
-                if (entity.relationships.length > 0) {
-                    html += '<div class="entity-relations">';
-                    entity.relationships.forEach(r => {
-                        const label = r.type === 'belongsTo' ? 'N:1' :
-                                      r.type === 'hasMany' ? '1:N' :
-                                      r.type === 'hasOne' ? '1:1' : 'N:N';
-                        html += '<div class="entity-relation"><span class="rel-badge">' + label + '</span>' +
-                                '<span class="rel-text">' + r.method + ' &rarr; ' + r.target + '</span></div>';
-                    });
-                    html += '</div>';
+                break;
+            case 'command':
+                if (message.command && ENTITY_COMMANDS.has(message.command) && message.entity) {
+                    await vscode.commands.executeCommand(`laravelApiGenerator.${message.command}`, { entityName: message.entity });
                 }
-
-                card.innerHTML = html;
-                document.getElementById('canvasInner').appendChild(card);
-
-                // Drag
-                let isDragging = false;
-                let startX, startY, origX, origY;
-
-                card.addEventListener('mousedown', (e) => {
-                    isDragging = true;
-                    card.classList.add('dragging');
-                    startX = e.clientX;
-                    startY = e.clientY;
-                    origX = parseInt(card.style.left);
-                    origY = parseInt(card.style.top);
-                    e.preventDefault();
-                    e.stopPropagation();
-                });
-
-                document.addEventListener('mousemove', (e) => {
-                    if (!isDragging) return;
-                    const dx = (e.clientX - startX) / scale;
-                    const dy = (e.clientY - startY) / scale;
-                    const newX = origX + dx;
-                    const newY = origY + dy;
-                    card.style.left = newX + 'px';
-                    card.style.top = newY + 'px';
-                    positions[entity.name] = { x: newX, y: newY };
-                    scheduleDraw();
-                });
-
-                document.addEventListener('mouseup', () => {
-                    if (isDragging) {
-                        isDragging = false;
-                        card.classList.remove('dragging');
-                    }
-                });
-
-                // Highlight connected edges on hover
-                card.addEventListener('mouseenter', () => highlightEdges(entity.name));
-                card.addEventListener('mouseleave', () => highlightEdges(null));
-            });
-
-            const SVG_NS = 'http://www.w3.org/2000/svg';
-
-            // The initial grid guesses card sizes; once rendered, measure the
-            // real ones and space rows/columns so tall cards never collide.
-            function relayout() {
-                const rowH = [], colW = [];
-                entities.forEach((e, i) => {
-                    const el = document.querySelector('[data-entity="' + e.name + '"]');
-                    if (!el) return;
-                    const row = Math.floor(i / cols), col = i % cols;
-                    rowH[row] = Math.max(rowH[row] || 0, el.offsetHeight);
-                    colW[col] = Math.max(colW[col] || 0, el.offsetWidth);
-                });
-                const rowY = [], colX = [];
-                let cursor = 20;
-                rowH.forEach((h, r) => { rowY[r] = cursor; cursor += h + gapY; });
-                cursor = 40;
-                colW.forEach((w, c) => { colX[c] = cursor; cursor += w + gapX; });
-                entities.forEach((e, i) => {
-                    const el = document.querySelector('[data-entity="' + e.name + '"]');
-                    if (!el) return;
-                    const row = Math.floor(i / cols), col = i % cols;
-                    el.style.left = colX[col] + 'px';
-                    el.style.top = rowY[row] + 'px';
-                    positions[e.name] = { x: colX[col], y: rowY[row] };
-                });
-            }
-
-            function relLabel(type) {
-                return type === 'belongsTo' ? 'N:1' :
-                       type === 'hasMany' ? '1:N' :
-                       type === 'hasOne' ? '1:1' : 'N:N';
-            }
-
-            // One edge per entity pair: when both sides declare the relation
-            // (Post hasMany Comment + Comment belongsTo Post), keep the
-            // owning side so the arrow points from "1" to "N".
-            function buildEdges() {
-                const seen = new Map();
-                const edges = [];
-                entities.forEach(entity => {
-                    entity.relationships.forEach(rel => {
-                        if (!positions[rel.target]) return;
-                        const key = entity.name < rel.target
-                            ? entity.name + '|' + rel.target
-                            : rel.target + '|' + entity.name;
-                        const existing = seen.get(key);
-                        if (existing) {
-                            if (existing.rel.type === 'belongsTo' && rel.type !== 'belongsTo') {
-                                existing.from = entity.name;
-                                existing.to = rel.target;
-                                existing.rel = rel;
-                            }
-                            return;
-                        }
-                        const edge = { from: entity.name, to: rel.target, rel };
-                        seen.set(key, edge);
-                        edges.push(edge);
-                    });
-                });
-                return edges;
-            }
-
-            function rectOf(name) {
-                const el = document.querySelector('[data-entity="' + name + '"]');
-                if (!el) return null;
-                const p = positions[name];
-                return { x: p.x, y: p.y, w: el.offsetWidth, h: el.offsetHeight };
-            }
-
-            // Pick facing edges based on where the cards are relative to each
-            // other, so links leave from the natural side instead of always
-            // right -> left.
-            function anchorsFor(a, b) {
-                const acx = a.x + a.w / 2, acy = a.y + a.h / 2;
-                const bcx = b.x + b.w / 2, bcy = b.y + b.h / 2;
-                const dx = bcx - acx, dy = bcy - acy;
-                if (Math.abs(dx) >= Math.abs(dy)) {
-                    const s = dx >= 0 ? 1 : -1;
-                    return {
-                        x1: s > 0 ? a.x + a.w : a.x, y1: acy,
-                        x2: s > 0 ? b.x : b.x + b.w, y2: bcy,
-                        horizontal: true, s
-                    };
-                }
-                const s = dy >= 0 ? 1 : -1;
-                return {
-                    x1: acx, y1: s > 0 ? a.y + a.h : a.y,
-                    x2: bcx, y2: s > 0 ? b.y : b.y + b.h,
-                    horizontal: false, s
-                };
-            }
-
-            function drawLines() {
-                const svg = document.getElementById('linesLayer');
-                svg.innerHTML = '<defs>' +
-                    '<marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" ' +
-                    'markerWidth="7" markerHeight="7" orient="auto-start-reverse">' +
-                    '<path class="arrow-head" d="M0,0 L10,5 L0,10 z"/></marker></defs>';
-
-                buildEdges().forEach(edge => {
-                    const a = rectOf(edge.from);
-                    const b = rectOf(edge.to);
-                    if (!a || !b) return;
-
-                    let d, midX, midY;
-                    if (edge.from === edge.to) {
-                        // Self-referential relation: small loop on the right edge
-                        const sx = a.x + a.w, sy1 = a.y + a.h * 0.3, sy2 = a.y + a.h * 0.7;
-                        d = 'M ' + sx + ' ' + sy1 +
-                            ' C ' + (sx + 70) + ' ' + sy1 + ', ' + (sx + 70) + ' ' + sy2 +
-                            ', ' + sx + ' ' + sy2;
-                        midX = sx + 52;
-                        midY = (sy1 + sy2) / 2;
-                    } else {
-                        const { x1, y1, x2, y2, horizontal, s } = anchorsFor(a, b);
-                        const dist = Math.hypot(x2 - x1, y2 - y1);
-                        const bend = Math.min(Math.max(dist * 0.4, 40), 150);
-                        const c1x = horizontal ? x1 + s * bend : x1;
-                        const c1y = horizontal ? y1 : y1 + s * bend;
-                        const c2x = horizontal ? x2 - s * bend : x2;
-                        const c2y = horizontal ? y2 : y2 - s * bend;
-                        d = 'M ' + x1 + ' ' + y1 +
-                            ' C ' + c1x + ' ' + c1y + ', ' + c2x + ' ' + c2y +
-                            ', ' + x2 + ' ' + y2;
-                        // Midpoint of the cubic Bezier at t = 0.5
-                        midX = (x1 + 3 * c1x + 3 * c2x + x2) / 8;
-                        midY = (y1 + 3 * c1y + 3 * c2y + y2) / 8;
-                    }
-
-                    const path = document.createElementNS(SVG_NS, 'path');
-                    path.setAttribute('d', d);
-                    path.setAttribute('class', 'edge');
-                    path.setAttribute('marker-end', 'url(#arrow)');
-                    path.setAttribute('data-from', edge.from);
-                    path.setAttribute('data-to', edge.to);
-                    svg.appendChild(path);
-
-                    const g = document.createElementNS(SVG_NS, 'g');
-                    g.setAttribute('class', 'edge-label');
-                    svg.appendChild(g);
-                    const text = document.createElementNS(SVG_NS, 'text');
-                    text.setAttribute('x', midX);
-                    text.setAttribute('y', midY);
-                    text.setAttribute('text-anchor', 'middle');
-                    text.setAttribute('dominant-baseline', 'middle');
-                    text.textContent = relLabel(edge.rel.type);
-                    g.appendChild(text);
-                    const bb = text.getBBox();
-                    const pill = document.createElementNS(SVG_NS, 'rect');
-                    pill.setAttribute('x', bb.x - 6);
-                    pill.setAttribute('y', bb.y - 3);
-                    pill.setAttribute('width', bb.width + 12);
-                    pill.setAttribute('height', bb.height + 6);
-                    pill.setAttribute('rx', 8);
-                    g.insertBefore(pill, text);
-                });
-            }
-
-            function highlightEdges(name) {
-                document.querySelectorAll('svg.lines path.edge').forEach(p => {
-                    p.classList.toggle('hl', !!name &&
-                        (p.getAttribute('data-from') === name || p.getAttribute('data-to') === name));
-                });
-            }
-
-            let rafId = null;
-            function scheduleDraw() {
-                if (rafId !== null) return;
-                rafId = requestAnimationFrame(() => {
-                    rafId = null;
-                    drawLines();
-                });
-            }
-
-            // A hidden or restoring webview reports zero size; wait for real
-            // dimensions so layout and fit use real card measurements.
-            function initView() { relayout(); drawLines(); fitAll(); }
-            setTimeout(() => {
-                if (canvasEl.clientWidth === 0) {
-                    const ro = new ResizeObserver(() => {
-                        if (canvasEl.clientWidth === 0) return;
-                        ro.disconnect();
-                        initView();
-                    });
-                    ro.observe(canvasEl);
-                } else {
-                    initView();
-                }
-            }, 100);
+                break;
+            case 'newApi':
+                await vscode.commands.executeCommand('laravelApiGenerator.generate');
+                break;
+            case 'export':
+                await this.export(message.format, message.content);
+                break;
         }
-    </script>
-</body>
-</html>`;
+    }
+
+    private async export(format: 'svg' | 'mermaid' | undefined, content: string | undefined): Promise<void> {
+        const svg = format === 'svg';
+        if (svg && !content) {
+            return;
+        }
+        const target = await vscode.window.showSaveDialog({
+            title: t('diagram.exportTitle'),
+            defaultUri: vscode.Uri.file(path.join(this.root, svg ? 'entity-diagram.svg' : 'entity-diagram.mmd')),
+            filters: svg ? { SVG: ['svg'] } : { Mermaid: ['mmd', 'mermaid'] },
+        });
+        if (!target) {
+            return;
+        }
+        fs.writeFileSync(target.fsPath, svg ? (content as string) : toMermaid(diagramData(this.root)), 'utf-8');
+        const open = t('diagram.openExport');
+        const choice = await vscode.window.showInformationMessage(t('diagram.exported', path.basename(target.fsPath)), open);
+        if (choice === open) {
+            await vscode.commands.executeCommand('vscode.open', target);
+        }
+    }
+
+    private dispose(): void {
+        this.disposed = true;
+        if (DiagramPanel.current === this) {
+            DiagramPanel.current = undefined;
+        }
+        while (this.disposables.length > 0) {
+            this.disposables.pop()?.dispose();
+        }
     }
 }

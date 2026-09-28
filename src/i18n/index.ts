@@ -44,12 +44,34 @@ export function t(key: string, ...args: Array<string | number>): string {
     return interpolate(value, args);
 }
 
+/** Counted strings live under `key_one` and `key_other`; French treats 0 as singular. */
+export function tn(key: string, count: number, ...args: Array<string | number>): string {
+    const one = currentKey === 'fr' ? count <= 1 : count === 1;
+    return t(`${key}_${one ? 'one' : 'other'}`, count, ...args);
+}
+
 export function getLocale(): 'en' | 'fr' {
     return currentKey;
 }
 
-export function getLocaleData(): LocaleData {
-    return currentLocale;
+/** The strings a webview needs, English filling any gap of the active locale. */
+export function webviewStrings(...sections: Array<keyof LocaleData>): Partial<LocaleData> {
+    const strings: Partial<LocaleData> = {};
+    for (const section of sections) {
+        (strings as Record<string, unknown>)[section] = merge(en[section], currentLocale[section]);
+    }
+    return strings;
+}
+
+function merge(base: unknown, override: unknown): unknown {
+    if (typeof base !== 'object' || base === null || typeof override !== 'object' || override === null) {
+        return override ?? base;
+    }
+    const result: Record<string, unknown> = { ...(base as Record<string, unknown>) };
+    for (const [key, value] of Object.entries(override as Record<string, unknown>)) {
+        result[key] = merge((base as Record<string, unknown>)[key], value);
+    }
+    return result;
 }
 
 function lookup(obj: unknown, dottedKey: string): string | undefined {

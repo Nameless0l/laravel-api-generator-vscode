@@ -2,6 +2,26 @@
 
 All notable changes to the Laravel API Generator VS Code extension will be documented in this file.
 
+## [1.1.0] - 2026-09-28
+
+A redesigned interface. Pairs with `nameless/laravel-api-generator` 4.0 and still works with 3.9 or later. Needs VS Code 1.82 or later.
+
+### Added
+- **A new sidebar home.** The project with its Laravel and PHP versions and the package state, with the Composer command that fixes it when needed; a **New API** button; the sources to generate from (a description, the database, a schema file, a Mermaid diagram, an OpenAPI spec); the project tools (entity diagram, migrations and tests, snippets, documentation).
+- **One review screen for every source.** A description, a schema file, a Mermaid diagram, an OpenAPI spec and database tables open the package's dry run in a panel: each entity with its fields, relations and files, what will be created, updated or kept, the shared files, the options, then **Generate**. Kept files can be overwritten on purpose and their diffs opened.
+- **Describe with Copilot in a panel.** Pick the chat model, include the existing entities or not, start from an example, read the proposed entities as cards that follow your edits of the YAML draft, then review the plan.
+- **An API ready screen.** The files written, the routes registered, and the next steps run in place: migrations, tests (with Stop), seeding (confirmed by a second click), the Scramble docs and the stubs. **Project Actions** opens the same steps at any time.
+- **Nullable, unique and default** on each field of the builder (package 3.9+).
+- **Files edited by hand are flagged** in the entity tree, with a count on the entity (package 3.11+).
+
+### Changed
+- **The builder** previews the real files next to the form, with a diff for the modified ones. Its examples and imports (a database table, a class_data.json file, an OpenAPI spec) moved to two menus, and **Only some files** replaces the file checklist.
+- **The entity diagram** reads the column types and foreign keys from the migrations, and gains a search (Ctrl+F), a minimap, an export to SVG or Mermaid, and an inspector with the fields, relations and files of the selected entity.
+- The entities view keeps **New API**, **Diagram** and **Refresh** in its title bar; the sources and project tools moved to its `...` menu.
+
+### Fixed
+- The Copilot panel no longer waits forever when the model sends back nothing: it says so and suggests checking the Copilot sign-in. Provider errors are shown as plain text, with their own fix as a button (for example setting an API key).
+
 ## [1.0.0] - 2026-09-27
 
 Pairs with `nameless/laravel-api-generator` 4.0 and still works with 3.9 or later.

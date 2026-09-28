@@ -2,8 +2,8 @@ import * as vscode from 'vscode';
 import { execFile, spawn, ChildProcess } from 'child_process';
 import * as fs from 'fs';
 import * as http from 'http';
-import { ArtisanResult, EntityConfig, GenerationDocument } from '../types';
-import { generateArgs, schemaGenerationArgs, sourceArgs, SourceOptions } from './artisanArgs';
+import { ArtisanResult, EntityConfig, FlowOptions, GenerationDocument, GenerationSource } from '../types';
+import { flowArgs, generateArgs, schemaGenerationArgs, sourceArgs, SourceOptions } from './artisanArgs';
 import { lastProtocolDocument } from './generationOutput';
 import { PREVIEW_MIN_VERSION, readInstalledVersion, versionSupport } from './packageState';
 import { PhpCommand, projectRelative, resolvePhpCommand } from './phpCommand';
@@ -38,39 +38,20 @@ export class ArtisanRunner {
         return this.run(sourceArgs(flags, options), 120000);
     }
 
-    async generateFromDatabase(options: SourceOptions & {
-        tables?: string[];
-        withMigrations?: boolean;
-    }): Promise<ArtisanResult> {
-        const flags = ['--from-database'];
-        if (options.tables && options.tables.length > 0) {
-            flags.push(`--tables=${options.tables.join(',')}`);
+    async runSource(source: GenerationSource, options: FlowOptions, dryRun: boolean): Promise<{ result: ArtisanResult; document: GenerationDocument | null }> {
+        const { args, stdin } = flowArgs(source, options, dryRun, (file) => projectRelative(this.workspaceRoot, file));
+        let input: string | undefined;
+        if (stdin === 'text' && source.kind === 'describe') {
+            input = source.text;
+        } else if (stdin === 'file' && 'path' in source) {
+            input = fs.readFileSync(source.path, 'utf-8');
         }
-        if (options.withMigrations) {
-            flags.push('--with-migrations');
-        }
-        return this.run(sourceArgs([...flags, ...this.jsonFlag()], options), 180000);
+        const result = await this.run(args, 180000, input);
+        return { result, document: lastProtocolDocument(result.output) };
     }
 
-    async generateFromSchema(schemaPath: string, options?: SourceOptions): Promise<ArtisanResult> {
-        return this.run(sourceArgs([`--schema=${projectRelative(this.workspaceRoot, schemaPath)}`, ...this.jsonFlag()], options), 180000);
-    }
-
-    async generateFromMermaid(diagramPath: string, options?: SourceOptions): Promise<ArtisanResult> {
-        return this.run(sourceArgs([`--mermaid=${projectRelative(this.workspaceRoot, diagramPath)}`, ...this.jsonFlag()], options), 180000);
-    }
-
-    async generateFromSchemaText(schema: string, dryRun = false): Promise<ArtisanResult> {
-        return this.run(sourceArgs(['--schema=-', ...(dryRun ? ['--dry-run', '--json'] : this.jsonFlag())]), 180000, schema);
-    }
-
-    /** A spec outside the project goes through stdin, so PHP running in a container can read it too. */
-    async generateFromOpenApi(specPath: string, options?: SourceOptions, dryRun = false): Promise<ArtisanResult> {
-        const relative = projectRelative(this.workspaceRoot, specPath);
-        const inside = relative !== specPath;
-        const flags = [inside ? `--openapi=${relative}` : '--openapi=-', ...(dryRun ? ['--dry-run', '--json'] : this.jsonFlag())];
-
-        return this.run(sourceArgs(flags, options), 180000, inside ? undefined : fs.readFileSync(specPath, 'utf-8'));
+    async routeList(): Promise<ArtisanResult> {
+        return this.run(['artisan', 'route:list', '--json', '--path=api']);
     }
 
     async addFields(entityName: string, fields: string): Promise<ArtisanResult> {
@@ -91,7 +72,7 @@ export class ArtisanRunner {
     }
 
     async test(): Promise<ArtisanResult> {
-        return this.run(['artisan', 'test'], 60000);
+        return this.run(['artisan', 'test'], 600000);
     }
 
     async routes(): Promise<ArtisanResult> {
