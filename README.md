@@ -12,6 +12,10 @@ Generate complete REST APIs for Laravel without touching the terminal. Visual in
 
 ## Demo
 
+[![Laravel API Generator 4.0 in two minutes: the MCP server for AI agents, the generated code and the extension 1.1](https://img.youtube.com/vi/bRK9Y8jn7yY/maxresdefault.jpg)](https://youtu.be/bRK9Y8jn7yY)
+
+*Two minutes, recorded for real: the MCP server for AI agents, the generated code, then the extension 1.1.*
+
 ### Build an entity, the preview follows
 
 ![Pick an example, add a relation, and the live preview follows](docs/ext-builder.gif)
