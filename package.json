@@ -2,7 +2,7 @@
   "name": "laravel-api-generator",
   "displayName": "Laravel API Generator",
   "description": "Generate complete REST APIs for Laravel with a visual interface",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "publisher": "Nameless0l",
   "license": "MIT",
   "icon": "media/icon-marketplace.png",
@@ -18,7 +18,7 @@
     "url": "https://github.com/sponsors/Nameless0l"
   },
   "engines": {
-    "vscode": "^1.80.0"
+    "vscode": "^1.82.0"
   },
   "categories": [
     "Programming Languages",
@@ -124,6 +124,12 @@
         "title": "Add Fields to Entity...",
         "category": "Laravel API Generator",
         "icon": "$(diff-added)"
+      },
+      {
+        "command": "laravelApiGenerator.projectActions",
+        "title": "Project Actions",
+        "category": "Laravel API Generator",
+        "icon": "$(terminal)"
       }
     ],
     "snippets": [
@@ -205,7 +211,7 @@
           {
             "id": "firstApi",
             "title": "Generate your first API",
-            "description": "Describe an entity in the visual form and generate its 12 files in one click.\n[Open the Generator](command:laravelApiGenerator.generate)",
+            "description": "Describe an entity in the visual form, check the live preview and generate all its files in one click.\n[Open the Generator](command:laravelApiGenerator.generate)",
             "media": {
               "markdown": "media/walkthrough/first-api.md"
             },
@@ -267,44 +273,49 @@
           "group": "navigation@1"
         },
         {
-          "command": "laravelApiGenerator.generateFromDatabase",
-          "when": "view == laravelApiGenerator.entities",
-          "group": "1_sources@1"
-        },
-        {
-          "command": "laravelApiGenerator.generateFromSchema",
-          "when": "view == laravelApiGenerator.entities",
-          "group": "1_sources@2"
-        },
-        {
-          "command": "laravelApiGenerator.generateFromMermaid",
-          "when": "view == laravelApiGenerator.entities",
-          "group": "1_sources@3"
-        },
-        {
-          "command": "laravelApiGenerator.generateFromOpenApi",
-          "when": "view == laravelApiGenerator.entities",
-          "group": "1_sources@4"
-        },
-        {
-          "command": "laravelApiGenerator.describeApi",
-          "when": "view == laravelApiGenerator.entities",
-          "group": "1_sources@0"
-        },
-        {
           "command": "laravelApiGenerator.diagram",
           "when": "view == laravelApiGenerator.entities",
           "group": "navigation@2"
         },
         {
-          "command": "laravelApiGenerator.showSnippets",
+          "command": "laravelApiGenerator.refresh",
           "when": "view == laravelApiGenerator.entities",
           "group": "navigation@3"
         },
         {
-          "command": "laravelApiGenerator.refresh",
+          "command": "laravelApiGenerator.describeApi",
           "when": "view == laravelApiGenerator.entities",
-          "group": "navigation@4"
+          "group": "1_sources@1"
+        },
+        {
+          "command": "laravelApiGenerator.generateFromDatabase",
+          "when": "view == laravelApiGenerator.entities",
+          "group": "1_sources@2"
+        },
+        {
+          "command": "laravelApiGenerator.generateFromSchema",
+          "when": "view == laravelApiGenerator.entities",
+          "group": "1_sources@3"
+        },
+        {
+          "command": "laravelApiGenerator.generateFromMermaid",
+          "when": "view == laravelApiGenerator.entities",
+          "group": "1_sources@4"
+        },
+        {
+          "command": "laravelApiGenerator.generateFromOpenApi",
+          "when": "view == laravelApiGenerator.entities",
+          "group": "1_sources@5"
+        },
+        {
+          "command": "laravelApiGenerator.projectActions",
+          "when": "view == laravelApiGenerator.entities",
+          "group": "2_project@1"
+        },
+        {
+          "command": "laravelApiGenerator.showSnippets",
+          "when": "view == laravelApiGenerator.entities",
+          "group": "2_project@2"
         }
       ]
     },

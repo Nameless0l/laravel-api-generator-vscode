@@ -1,8 +1,9 @@
 import * as vscode from 'vscode';
 import * as crypto from 'crypto';
-import { getWebviewContent } from './getWebviewContent';
 import * as fs from 'fs';
 import * as path from 'path';
+import { getBuilderHtml } from './builderContent';
+import { ProjectActions, readyData } from './projectActions';
 import { ArtisanRunner } from '../services/artisanRunner';
 import { EntityScanner } from '../services/entityScanner';
 import { describeGeneration } from '../services/generationOutput';
@@ -24,60 +25,61 @@ import { StubRow, stubLine } from '../services/stubReport';
 import { LaravelDetector } from '../services/laravelDetector';
 import { parseOpenApi } from '../services/openApiImporter';
 import { analyzeError, analyzeProtocolErrors, presentSuggestion } from '../services/errorAnalyzer';
-import { ArtisanResult, EntityConfig, PlannedFile, ProtocolMessage } from '../types';
-import { t, getLocaleData } from '../i18n';
+import { outputChannel } from '../services/outputLog';
+import { openPlanned, openPlannedDiff, openPlannedDiffs, rememberPlanned } from '../services/plannedContent';
+import { ArtisanResult, EntityConfig, FIELD_TYPES, GenerationDocument, ProtocolMessage } from '../types';
+import { confirmSanctum, ensureEnvReady, STUBS_PATH } from './projectActions';
+import { t, getLocale, webviewStrings } from '../i18n';
+import { iconSet } from './ui/icons';
 
-const PLAN_SCHEME = 'laravel-api-plan';
+interface BuilderMessage {
+    type: string;
+    payload?: EntityConfig;
+    action?: string;
+    name?: string;
+    path?: string;
+    paths?: string[];
+    source?: 'database' | 'json' | 'openapi';
+    id?: 'migrate' | 'test' | 'seed' | 'docs' | 'stubs';
+}
 
 export class GeneratorPanel {
     public static currentPanel: GeneratorPanel | undefined;
     private readonly panel: vscode.WebviewPanel;
     private readonly artisan: ArtisanRunner;
     private readonly scanner: EntityScanner;
+    private readonly actions: ProjectActions;
     private disposables: vscode.Disposable[] = [];
     private onDidGenerate: (() => void) | undefined;
     private readonly bridge: GeneratorBridge;
-    private readonly output: vscode.OutputChannel;
-    private readonly planChanged = new vscode.EventEmitter<vscode.Uri>();
     private packageState: PackageState;
-    private plannedContents = new Map<string, string>();
     private handshakeOk = false;
     private pendingCommand: string | undefined;
 
     private constructor(
         panel: vscode.WebviewPanel,
+        private readonly extensionUri: vscode.Uri,
         private workspaceRoot: string
     ) {
         this.panel = panel;
         this.artisan = new ArtisanRunner(workspaceRoot);
         this.scanner = new EntityScanner(workspaceRoot);
-        this.output = vscode.window.createOutputChannel('Laravel API Generator');
         this.packageState = detectPackageState(workspaceRoot, LaravelDetector.isPackageInstalled(workspaceRoot));
         this.bridge = new GeneratorBridge({
             root: workspaceRoot,
             php: () => this.artisan.phpCommand(),
             clientVersion: String(vscode.extensions.getExtension('Nameless0l.laravel-api-generator')?.packageJSON?.version ?? 'unknown'),
-            onJunk: (line) => this.output.appendLine(line),
+            onJunk: (line) => outputChannel().appendLine(line),
         });
+        this.actions = new ProjectActions(workspaceRoot, (message) => void this.panel.webview.postMessage(message), () => this.onDidGenerate?.());
 
-        const nonce = crypto.randomBytes(16).toString('hex');
-        this.panel.webview.html = getWebviewContent(this.panel.webview, nonce, getLocaleData());
+        this.panel.iconPath = vscode.Uri.joinPath(extensionUri, 'media', 'icon-dark.png');
+        this.panel.webview.html = this.html();
 
-        this.panel.webview.onDidReceiveMessage(
-            (message) => this.handleMessage(message),
-            null,
-            this.disposables
-        );
-
+        this.panel.webview.onDidReceiveMessage((message: BuilderMessage) => this.handleMessage(message), null, this.disposables);
         this.panel.onDidDispose(() => this.dispose(), null, this.disposables);
 
         this.disposables.push(
-            this.output,
-            this.planChanged,
-            vscode.workspace.registerTextDocumentContentProvider(PLAN_SCHEME, {
-                onDidChange: this.planChanged.event,
-                provideTextDocumentContent: (uri) => this.plannedContents.get(uri.path.replace(/^\//, '')) ?? '',
-            }),
             ...this.watchRestartTriggers(),
             vscode.workspace.onDidChangeConfiguration((event) => {
                 if (event.affectsConfiguration('laravelApiGenerator.phpCommand') || event.affectsConfiguration('laravelApiGenerator.phpPath')) {
@@ -88,42 +90,52 @@ export class GeneratorPanel {
         void this.announceCapabilities();
     }
 
-    static show(workspaceRoot: string, onDidGenerate?: () => void): void {
+    static show(extensionUri: vscode.Uri, workspaceRoot: string, onDidGenerate?: () => void): void {
         if (GeneratorPanel.currentPanel) {
             GeneratorPanel.currentPanel.panel.reveal(vscode.ViewColumn.One);
             GeneratorPanel.currentPanel.onDidGenerate = onDidGenerate;
             return;
         }
 
-        const panel = vscode.window.createWebviewPanel(
-            'laravelApiGenerator',
-            'Laravel API Generator',
-            vscode.ViewColumn.One,
-            {
-                enableScripts: true,
-                retainContextWhenHidden: true,
-            }
-        );
+        const panel = vscode.window.createWebviewPanel('laravelApiGenerator', t('builder.tabTitle'), vscode.ViewColumn.One, {
+            enableScripts: true,
+            retainContextWhenHidden: true,
+            localResourceRoots: [vscode.Uri.joinPath(extensionUri, 'media')],
+        });
 
-        GeneratorPanel.currentPanel = new GeneratorPanel(panel, workspaceRoot);
+        GeneratorPanel.currentPanel = new GeneratorPanel(panel, extensionUri, workspaceRoot);
         GeneratorPanel.currentPanel.onDidGenerate = onDidGenerate;
     }
 
-    private async handleMessage(message: { type: string; payload?: EntityConfig; action?: string; name?: string; path?: string }): Promise<void> {
+    private html(): string {
+        const webview = this.panel.webview;
+        const asset = (file: string) => webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, 'media', 'webview', file)).toString();
+        return getBuilderHtml({
+            cspSource: webview.cspSource,
+            nonce: crypto.randomBytes(16).toString('hex'),
+            lang: getLocale(),
+            title: t('builder.tabTitle'),
+            styles: [asset('kit.css'), asset('ready.css'), asset('builder.css')],
+            scripts: [asset('common.js'), asset('ready.js'), asset('builder.js')],
+            boot: {
+                locale: getLocale(),
+                strings: webviewStrings('builder', 'ready'),
+                icons: iconSet(),
+                fieldTypes: [...FIELD_TYPES],
+                models: this.listModelNames(),
+                modifiers: this.packageState.kind === 'installed' && this.packageState.preview !== 'tooOld',
+            },
+        });
+    }
+
+    private async handleMessage(message: BuilderMessage): Promise<void> {
+        if (await this.actions.handle(message)) {
+            return;
+        }
         switch (message.type) {
             case 'generate':
                 if (message.payload) {
                     await this.handleGenerate(message.payload);
-                }
-                break;
-            case 'preview':
-                if (message.payload) {
-                    await this.handlePreview(message.payload);
-                }
-                break;
-            case 'action':
-                if (message.action) {
-                    await this.handleAction(message.action);
                 }
                 break;
             case 'requestPreviewCode':
@@ -133,67 +145,63 @@ export class GeneratorPanel {
                 break;
             case 'openDiff':
                 if (message.path) {
-                    await this.openDiff(message.path);
+                    await openPlannedDiff(this.workspaceRoot, message.path);
+                }
+                break;
+            case 'openDiffs':
+                await openPlannedDiffs(this.workspaceRoot, message.paths ?? []);
+                break;
+            case 'openPlanned':
+                if (message.path) {
+                    await openPlanned(message.path);
                 }
                 break;
             case 'previewAction':
                 await this.handlePreviewAction(message.action);
                 break;
-            case 'importJson':
-                await this.handleImportJson();
+            case 'import':
+                if (message.source === 'database') {
+                    await this.handleImportFromDb();
+                } else if (message.source === 'json') {
+                    await this.handleImportJson();
+                } else if (message.source === 'openapi') {
+                    await this.handleImportOpenApi();
+                }
                 break;
-            case 'importOpenApi':
-                await this.handleImportOpenApi();
+            case 'generateJson':
+                await this.handleGenerateJson();
+                break;
+            case 'menu':
+                await this.handleMenu(message.action);
                 break;
             case 'checkEntityExists':
                 if (message.name) {
                     const modelPath = path.join(this.workspaceRoot, 'app', 'Models', `${message.name}.php`);
-                    this.panel.webview.postMessage({
-                        type: 'entityExistsResult',
-                        exists: fs.existsSync(modelPath),
-                    });
+                    void this.panel.webview.postMessage({ type: 'entityExistsResult', name: message.name, exists: fs.existsSync(modelPath) });
                 }
                 break;
             case 'requestModels':
-                this.panel.webview.postMessage({
-                    type: 'modelsList',
-                    models: this.listModelNames(),
-                });
+                void this.panel.webview.postMessage({ type: 'modelsList', models: this.listModelNames() });
                 break;
             case 'cancelOperation':
                 this.artisan.cancelAll();
-                this.panel.webview.postMessage({ type: 'clearAllLoading' });
+                void this.panel.webview.postMessage({ type: 'clearAllLoading' });
                 break;
         }
     }
 
-    /**
-     * route:list crashes with a ReflectionException when a route file still
-     * references a deleted controller. Offer the package's clean-routes
-     * command, then retry.
-     */
-    private async offerRouteCleanup(failed: { success: boolean; output: string; errors: string[] }): Promise<{ success: boolean; output: string; errors: string[] }> {
-        const cleanLabel = t('routes.cleanOrphans');
-        const choice = await vscode.window.showWarningMessage(
-            t('routes.orphanDetected'),
-            cleanLabel,
-            t('common.cancel')
-        );
-        if (choice !== cleanLabel) {
-            return failed;
+    private async handleMenu(action: string | undefined): Promise<void> {
+        if (action === 'projectActions') {
+            await vscode.commands.executeCommand('laravelApiGenerator.projectActions');
+        } else if (action === 'snippets') {
+            await vscode.commands.executeCommand('laravelApiGenerator.showSnippets');
+        } else if (action === 'customizeStubs') {
+            await this.customizeStubs();
         }
+    }
 
-        const cleanup = await this.artisan.cleanRoutes();
-        if (!cleanup.success) {
-            return cleanup;
-        }
-
-        vscode.window.showInformationMessage(t('routes.cleaned'));
-        if (this.onDidGenerate) {
-            this.onDidGenerate();
-        }
-
-        return this.artisan.routes();
+    private notice(tone: 'ok' | 'warn' | 'err', text: string, title = ''): void {
+        void this.panel.webview.postMessage({ type: 'notice', tone, title, text });
     }
 
     private listModelNames(): string[] {
@@ -210,17 +218,10 @@ export class GeneratorPanel {
     }
 
     private async handleGenerate(config: EntityConfig): Promise<void> {
-        const stubsDir = path.join(
-            this.workspaceRoot,
-            'stubs',
-            'vendor',
-            'laravel-api-generator'
-        );
-        if (fs.existsSync(stubsDir)) {
-            const cancelled = await this.checkCustomStubsValid();
-            if (cancelled) {
-                return;
-            }
+        const started = Date.now();
+        const stubsDir = path.join(this.workspaceRoot, ...STUBS_PATH.split('/'));
+        if (fs.existsSync(stubsDir) && (await this.checkCustomStubsValid())) {
+            return;
         }
 
         const check = await this.overwriteCheck(config);
@@ -236,7 +237,7 @@ export class GeneratorPanel {
                 keepLabel
             );
             if (choice === undefined) {
-                this.postCancelled();
+                this.postFailure(t('generate.cancelledOverwrite'));
                 return;
             }
             force = choice === overwriteLabel;
@@ -247,44 +248,19 @@ export class GeneratorPanel {
                 overwriteLabel
             );
             if (choice !== overwriteLabel) {
-                this.postCancelled();
+                this.postFailure(t('generate.cancelledOverwrite'));
                 return;
             }
         }
 
-        if (config.options.auth && !LaravelDetector.isSanctumInstalled(this.workspaceRoot)) {
-            const installLabel = t('package.installViaComposer');
-            const noAuthLabel = t('package.generateWithoutAuth');
-            const action = await vscode.window.showWarningMessage(
-                t('package.sanctumMissing'),
-                installLabel,
-                noAuthLabel
-            );
-            if (action === installLabel) {
-                const terminal = vscode.window.createTerminal({
-                    name: 'Laravel API Generator',
-                    cwd: this.workspaceRoot,
-                });
-                terminal.sendText('composer require laravel/sanctum');
-                terminal.show();
-                this.panel.webview.postMessage({
-                    type: 'generationResult',
-                    success: false,
-                    output: t('package.sanctumInstallStarted'),
-                    errors: [],
-                });
+        if (config.options.auth) {
+            const sanctum = await confirmSanctum(this.workspaceRoot);
+            if (sanctum === 'installing' || sanctum === 'cancel') {
+                this.postFailure(sanctum === 'installing' ? t('package.sanctumInstallStarted') : t('generate.cancelledOverwrite'));
                 return;
             }
-            if (action === noAuthLabel) {
+            if (sanctum === 'withoutAuth') {
                 config = { ...config, options: { ...config.options, auth: false } };
-            } else {
-                this.panel.webview.postMessage({
-                    type: 'generationResult',
-                    success: false,
-                    output: t('generate.cancelledOverwrite'),
-                    errors: [],
-                });
-                return;
             }
         }
 
@@ -292,7 +268,7 @@ export class GeneratorPanel {
             void LaravelDetector.promptQueryBuilderInstallIfMissing(this.workspaceRoot);
         }
 
-        let result: ArtisanResult & { protocolErrors?: ProtocolMessage[] };
+        let result: ArtisanResult & { protocolErrors?: ProtocolMessage[]; document?: GenerationDocument };
         if (this.usesSchemaGeneration()) {
             result = await this.generateThroughSchema(config, force);
         } else if (config.relationships && config.relationships.length > 0) {
@@ -301,26 +277,35 @@ export class GeneratorPanel {
             result = await this.artisan.generate(config);
         }
 
-        this.panel.webview.postMessage({
-            type: 'generationResult',
-            success: result.success,
-            output: result.output,
-            errors: result.errors,
-        });
-
-        if (result.success) {
-            await this.openGeneratedFiles(config.name);
-            if (this.onDidGenerate) {
-                this.onDidGenerate();
-            }
-        } else {
-            const suggestion = result.protocolErrors
-                ? analyzeProtocolErrors(result.protocolErrors)
-                : analyzeError('generate', result.output || result.errors.join('\n'));
+        if (!result.success) {
+            this.postFailure(result.errors.join('\n') || result.output);
+            const suggestion = result.protocolErrors ? analyzeProtocolErrors(result.protocolErrors) : analyzeError('generate', result.output || result.errors.join('\n'));
             if (suggestion) {
                 void presentSuggestion(this.workspaceRoot, suggestion);
             }
+            return;
         }
+
+        const files = result.document
+            ? result.document.files
+            : this.scanner
+                  .getEntityFiles(config.name)
+                  .filter((file) => file.exists)
+                  .map((file) => ({ path: file.path, kind: file.kind ?? file.type, entity: config.name, action: 'create' }));
+        const data = readyData(this.workspaceRoot, {
+            entities: [config.name],
+            files,
+            durationMs: Date.now() - started,
+            queryBuilder: config.options.queryBuilder,
+            newEntity: true,
+        });
+        await this.panel.webview.postMessage({ type: 'showReady', data });
+        this.onDidGenerate?.();
+        void this.actions.refreshRoutes(data.routes.length > 0 ? [config.name] : []);
+    }
+
+    private postFailure(output: string): void {
+        void this.panel.webview.postMessage({ type: 'generationResult', success: false, output, errors: [] });
     }
 
     private usesSchemaGeneration(): boolean {
@@ -343,25 +328,22 @@ export class GeneratorPanel {
             overwritten: this.scanner
                 .getEntityFiles(config.name)
                 .filter((f) => f.exists)
-                .map((f) => path.relative(this.workspaceRoot, f.path)),
+                .map((f) => path.relative(this.workspaceRoot, path.join(this.workspaceRoot, f.path)).replace(/\\/g, '/')),
         };
     }
 
     private fileList(files: string[]): string {
-        const list = files.slice(0, 5).map((file) => `  • ${file}`).join('\n');
+        const list = files
+            .slice(0, 5)
+            .map((file) => `  • ${file}`)
+            .join('\n');
         return files.length > 5 ? list + t('generate.andMore', files.length - 5) : list;
     }
 
-    private postCancelled(): void {
-        this.panel.webview.postMessage({
-            type: 'generationResult',
-            success: false,
-            output: t('generate.cancelledOverwrite'),
-            errors: [],
-        });
-    }
-
-    private async generateThroughSchema(config: EntityConfig, force: boolean): Promise<ArtisanResult & { protocolErrors?: ProtocolMessage[] }> {
+    private async generateThroughSchema(
+        config: EntityConfig,
+        force: boolean
+    ): Promise<ArtisanResult & { protocolErrors?: ProtocolMessage[]; document?: GenerationDocument }> {
         const { result, document } = await this.artisan.generateFromConfig(config, force);
         if (!document) {
             return result;
@@ -374,18 +356,14 @@ export class GeneratorPanel {
             success: true,
             output: describeGeneration(document, { created: t('generate.created'), updated: t('generate.updated') }),
             errors: [],
+            document,
         };
     }
 
     /**
-     * When the user adds relationships in the UI, route the generation through
-     * the package's JSON pipeline by writing a synthetic class_data.json.
+     * Packages older than 3.9 take relationships through a synthetic class_data.json.
      */
-    private async generateWithRelationships(config: EntityConfig): Promise<{
-        success: boolean;
-        output: string;
-        errors: string[];
-    }> {
+    private async generateWithRelationships(config: EntityConfig): Promise<ArtisanResult> {
         const relationships = config.relationships ?? [];
 
         const buckets: Record<string, Array<{ comodel: string; role: string }>> = {
@@ -421,8 +399,7 @@ export class GeneratorPanel {
             },
         ];
 
-        const destPath = path.join(this.workspaceRoot, 'class_data.json');
-        fs.writeFileSync(destPath, JSON.stringify(classData, null, 2), 'utf-8');
+        fs.writeFileSync(path.join(this.workspaceRoot, 'class_data.json'), JSON.stringify(classData, null, 2), 'utf-8');
 
         return this.artisan.generateFromJson(config.onlyTypes, {
             queryBuilder: config.options.queryBuilder,
@@ -432,9 +409,8 @@ export class GeneratorPanel {
     }
 
     /**
-     * Run api-generator:validate-stubs and warn the user if any customized
-     * stub is missing required placeholders. Returns true when the user
-     * decides to abort the generation.
+     * Runs api-generator:validate-stubs and warns when a customized stub misses
+     * required placeholders. True when the user aborts the generation.
      */
     private async checkCustomStubsValid(): Promise<boolean> {
         const result = await this.artisan.validateStubs();
@@ -460,351 +436,79 @@ export class GeneratorPanel {
         }
 
         const lines = [...payload.results.filter((r) => r.status === 'invalid').map((r) => stubLine(r)), ...obsolete].join('\n');
-
         const openLabel = t('generate.openStubsFolder');
         const anywayLabel = t('generate.generateAnyway');
-        const action = await vscode.window.showWarningMessage(
-            t('generate.stubsInvalidTitle', lines),
-            { modal: true },
-            openLabel,
-            anywayLabel
-        );
+        const action = await vscode.window.showWarningMessage(t('generate.stubsInvalidTitle', lines), { modal: true }, openLabel, anywayLabel);
 
         if (action === openLabel) {
-            await vscode.commands.executeCommand(
-                'revealInExplorer',
-                vscode.Uri.file(
-                    path.join(this.workspaceRoot, 'stubs', 'vendor', 'laravel-api-generator')
-                )
-            );
-            this.panel.webview.postMessage({
-                type: 'generationResult',
-                success: false,
-                output: t('generate.fixStubsCancelled'),
-                errors: [],
-            });
+            await vscode.commands.executeCommand('revealInExplorer', vscode.Uri.file(path.join(this.workspaceRoot, ...STUBS_PATH.split('/'))));
+            this.postFailure(t('generate.fixStubsCancelled'));
             return true;
         }
-
         if (action === anywayLabel) {
             return false;
         }
-
-        // undefined = user pressed the modal Cancel / Esc
-        this.panel.webview.postMessage({
-            type: 'generationResult',
-            success: false,
-            output: t('generate.stubsCancelled'),
-            errors: [],
-        });
+        this.postFailure(t('generate.stubsCancelled'));
         return true;
     }
 
-    private async openGeneratedFiles(entityName: string): Promise<void> {
-        const candidates = [
-            path.join(this.workspaceRoot, 'app', 'Models', `${entityName}.php`),
-            path.join(this.workspaceRoot, 'app', 'Http', 'Controllers', `${entityName}Controller.php`),
-        ];
+    private async customizeStubs(): Promise<void> {
+        const stubsDir = path.join(this.workspaceRoot, ...STUBS_PATH.split('/'));
+        const alreadyPublished = fs.existsSync(stubsDir);
 
-        for (const filePath of candidates) {
-            if (!fs.existsSync(filePath)) {
-                continue;
+        if (alreadyPublished) {
+            const openLabel = t('stubs.openFolder');
+            const resetLabel = t('stubs.resetToDefaults');
+            const choice = await vscode.window.showInformationMessage(t('stubs.alreadyPublished'), openLabel, resetLabel, t('common.cancel'));
+            if (choice === openLabel) {
+                await vscode.commands.executeCommand('revealInExplorer', vscode.Uri.file(stubsDir));
+                return;
+            }
+            if (choice !== resetLabel) {
+                return;
+            }
+            const resetActionLabel = t('stubs.reset');
+            const confirm = await vscode.window.showWarningMessage(t('stubs.resetConfirm'), { modal: true }, resetActionLabel);
+            if (confirm !== resetActionLabel) {
+                return;
             }
             try {
-                const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(filePath));
-                await vscode.window.showTextDocument(doc, { preview: false });
-            } catch {
-                // Silently skip if open fails
-            }
-        }
-    }
-
-    private async ensureEnvReady(): Promise<boolean> {
-        const envPath = path.join(this.workspaceRoot, '.env');
-        if (fs.existsSync(envPath)) {
-            return true;
-        }
-
-        const examplePath = path.join(this.workspaceRoot, '.env.example');
-        const hasExample = fs.existsSync(examplePath);
-        const copyLabel = t('env.copyFromExample');
-        const cancelLabel = t('common.cancel');
-
-        const choice = await vscode.window.showWarningMessage(
-            t('env.missing'),
-            ...(hasExample ? [copyLabel, cancelLabel] : [cancelLabel])
-        );
-
-        if (choice === copyLabel && hasExample) {
-            try {
-                fs.copyFileSync(examplePath, envPath);
-                vscode.window.showInformationMessage(t('env.createdFromExample'));
-                return true;
+                fs.rmSync(stubsDir, { recursive: true, force: true });
             } catch (e: unknown) {
-                const msg = e instanceof Error ? e.message : 'Unknown error';
-                vscode.window.showErrorMessage(t('env.copyFailed', msg));
-                return false;
+                this.notice('err', t('stubs.deleteFailed', e instanceof Error ? e.message : String(e)));
+                return;
             }
         }
-        return false;
-    }
 
-    private async handleAction(action: string): Promise<void> {
-        let result;
-        switch (action) {
-            case 'migrate':
-                if (!(await this.ensureEnvReady())) {
-                    this.panel.webview.postMessage({
-                        type: 'actionResult',
-                        success: false,
-                        output: t('env.migrateCancelled'),
-                    });
-                    return;
-                }
-                result = await this.artisan.migrate();
-                break;
-            case 'seed': {
-                if (!(await this.ensureEnvReady())) {
-                    this.panel.webview.postMessage({
-                        type: 'actionResult',
-                        success: false,
-                        output: t('env.seedCancelled'),
-                    });
-                    return;
-                }
-                const confirm = await vscode.window.showWarningMessage(
-                    'This will drop all tables and re-run all migrations + seeders. All existing data will be lost.',
-                    { modal: true },
-                    'Continue'
-                );
-                if (confirm !== 'Continue') {
-                    this.panel.webview.postMessage({
-                        type: 'actionResult',
-                        success: true,
-                        output: 'Seed cancelled.',
-                    });
-                    return;
-                }
-                result = await this.artisan.seed();
-                break;
-            }
-            case 'test':
-                result = await this.artisan.test();
-                break;
-            case 'routes':
-                result = await this.artisan.routes();
-                if (!result.success && /does not exist/i.test(result.output)) {
-                    result = await this.offerRouteCleanup(result);
-                }
-                break;
-            case 'generateJson':
-                result = await this.artisan.generateFromJson();
-                this.panel.webview.postMessage({
-                    type: 'jsonGenerateResult',
-                    success: result.success,
-                    output: result.output || result.errors.join('\n'),
-                });
-                if (result.success && this.onDidGenerate) {
-                    this.onDidGenerate();
-                }
-                return;
-            case 'importFromDb': {
-                await this.handleImportFromDb();
-                return;
-            }
-            case 'showSnippets': {
-                await vscode.commands.executeCommand('laravelApiGenerator.showSnippets');
-                this.panel.webview.postMessage({ type: 'clearLoading', id: 'btnShowSnippets' });
-                return;
-            }
-            case 'publishStubs': {
-                const stubsDir = path.join(
-                    this.workspaceRoot,
-                    'stubs',
-                    'vendor',
-                    'laravel-api-generator'
-                );
-                const alreadyPublished = fs.existsSync(stubsDir);
-
-                if (alreadyPublished) {
-                    const openLabel = t('stubs.openFolder');
-                    const resetLabel = t('stubs.resetToDefaults');
-                    const cancelLabel = t('common.cancel');
-                    const choice = await vscode.window.showInformationMessage(
-                        t('stubs.alreadyPublished'),
-                        openLabel,
-                        resetLabel,
-                        cancelLabel
-                    );
-                    if (choice === openLabel) {
-                        await vscode.commands.executeCommand(
-                            'revealInExplorer',
-                            vscode.Uri.file(stubsDir)
-                        );
-                        this.panel.webview.postMessage({
-                            type: 'actionResult',
-                            success: true,
-                            output: t('stubs.openedFolder'),
-                        });
-                        return;
-                    }
-                    if (choice === resetLabel) {
-                        const resetActionLabel = t('stubs.reset');
-                        const confirm = await vscode.window.showWarningMessage(
-                            t('stubs.resetConfirm'),
-                            { modal: true },
-                            resetActionLabel
-                        );
-                        if (confirm !== resetActionLabel) {
-                            this.panel.webview.postMessage({
-                                type: 'actionResult',
-                                success: true,
-                                output: t('stubs.resetCancelled'),
-                            });
-                            return;
-                        }
-                        try {
-                            fs.rmSync(stubsDir, { recursive: true, force: true });
-                        } catch (e: unknown) {
-                            const msg = e instanceof Error ? e.message : 'Unknown error';
-                            this.panel.webview.postMessage({
-                                type: 'actionResult',
-                                success: false,
-                                output: t('stubs.deleteFailed', msg),
-                            });
-                            return;
-                        }
-                    } else {
-                        this.panel.webview.postMessage({
-                            type: 'actionResult',
-                            success: true,
-                            output: t('stubs.cancelled'),
-                        });
-                        return;
-                    }
-                }
-
-                result = await this.artisan.publishStubs();
-                if (result.success) {
-                    await vscode.commands.executeCommand(
-                        'revealInExplorer',
-                        vscode.Uri.file(stubsDir)
-                    );
-                }
-                this.panel.webview.postMessage({
-                    type: 'actionResult',
-                    success: result.success,
-                    output: result.success
-                        ? alreadyPublished
-                            ? t('stubs.resetDone')
-                            : t('stubs.publishedDone')
-                        : result.errors.join('\n'),
-                });
-                return;
-            }
-            case 'docs': {
-                if (!LaravelDetector.isScrambleInstalled(this.workspaceRoot)) {
-                    const installLabel = t('package.installViaComposer');
-                    const action = await vscode.window.showWarningMessage(
-                        t('package.scrambleMissing'),
-                        installLabel,
-                        t('common.cancel')
-                    );
-                    if (action === installLabel) {
-                        const terminal = vscode.window.createTerminal({
-                            name: 'Laravel API Generator',
-                            cwd: this.workspaceRoot,
-                        });
-                        terminal.sendText('composer require dedoc/scramble');
-                        terminal.show();
-                    }
-                    this.panel.webview.postMessage({
-                        type: 'actionResult',
-                        success: false,
-                        output: t('package.scrambleNotInstalled'),
-                    });
-                    return;
-                }
-                const serve = await this.artisan.startServe();
-                if (serve.success && serve.port) {
-                    vscode.env.openExternal(vscode.Uri.parse(`http://127.0.0.1:${serve.port}/docs/api`));
-                    this.panel.webview.postMessage({
-                        type: 'actionResult',
-                        success: true,
-                        output: `Server running on port ${serve.port}. Opening API docs...`,
-                    });
-                } else {
-                    this.panel.webview.postMessage({
-                        type: 'actionResult',
-                        success: false,
-                        output: serve.error || 'Could not start or find Laravel server.',
-                    });
-                }
-                return;
-            }
-            default:
-                return;
-        }
-
-        const combined = result.output || result.errors.join('\n');
-        this.panel.webview.postMessage({
-            type: 'actionResult',
-            success: result.success,
-            output: combined,
-        });
-
-        // On failure, surface an actionable suggestion if we recognise the error
+        const result = await this.artisan.publishStubs();
         if (!result.success) {
-            const suggestion = analyzeError(action, combined);
-            if (suggestion) {
-                void presentSuggestion(this.workspaceRoot, suggestion);
-            }
+            this.notice('err', result.errors.join('\n') || result.output);
+            return;
         }
+        await vscode.commands.executeCommand('revealInExplorer', vscode.Uri.file(stubsDir));
+        this.notice('ok', alreadyPublished ? t('stubs.resetDone') : t('stubs.publishedDone'));
     }
 
-    private async handlePreview(config: EntityConfig): Promise<void> {
-        let files: string[];
-        const outcome = this.previewBlocker() ? undefined : await this.bridge.planOnce(schemaFromConfig(config), flagsFromConfig(config));
-
-        if (outcome?.state === 'ready') {
-            files = outcome.plan.files.map((file) => `${this.actionLabel(file)} ${file.path}`);
-        } else {
-            files = this.scanner
-                .getEntityFiles(config.name)
-                .map((f) => `${f.exists ? '⚠ EXISTS' : '  NEW  '} ${f.path}`);
+    private async handleGenerateJson(): Promise<void> {
+        const result = await this.artisan.generateFromJson();
+        void this.panel.webview.postMessage({ type: 'jsonGenerateResult', success: result.success, output: result.output || result.errors.join('\n') });
+        if (result.success) {
+            this.onDidGenerate?.();
         }
-
-        this.panel.webview.postMessage({ type: 'previewResult', files });
-    }
-
-    private actionLabel(file: PlannedFile): string {
-        const labels = getLocaleData().ui;
-        if (file.action === 'create') {
-            return labels.badgeCreate;
-        }
-        return file.action === 'update' ? labels.badgeUpdate : labels.badgeUnchanged;
     }
 
     private async handleImportFromDb(): Promise<void> {
-        const finishLoading = (output: string, success: boolean): void => {
-            this.panel.webview.postMessage({
-                type: 'actionResult',
-                success,
-                output,
-            });
-        };
-
-        if (!(await this.ensureEnvReady())) {
-            finishLoading(t('env.dbImportCancelled'), false);
+        if (!(await ensureEnvReady(this.workspaceRoot))) {
+            this.notice('warn', t('env.dbImportCancelled'));
             return;
         }
 
-        const tablesResult = await this.artisan.introspectTables();
+        const tablesResult = await vscode.window.withProgress(
+            { location: vscode.ProgressLocation.Notification, title: t('sources.readingDatabase'), cancellable: false },
+            () => this.artisan.introspectTables()
+        );
         if (!tablesResult.success) {
-            finishLoading(
-                t('db.couldNotListTables', tablesResult.output || tablesResult.errors.join('\n')),
-                false
-            );
+            this.notice('err', t('db.couldNotListTables', tablesResult.output || tablesResult.errors.join('\n')));
             return;
         }
 
@@ -812,69 +516,45 @@ export class GeneratorPanel {
         try {
             tables = JSON.parse(this.extractJson(tablesResult.output));
         } catch (e: unknown) {
-            const msg = e instanceof Error ? e.message : 'Unknown error';
-            finishLoading(t('db.couldNotParse', msg, tablesResult.output), false);
+            this.notice('err', t('db.couldNotParse', e instanceof Error ? e.message : String(e), tablesResult.output));
             return;
         }
 
         if (tables.length === 0) {
-            finishLoading(t('db.noTables'), false);
+            this.notice('warn', t('db.noTables'));
             return;
         }
 
-        // Stop the button spinner now: we're handing control to the QuickPick UI
-        this.panel.webview.postMessage({ type: 'clearLoading', id: 'btnImportFromDb' });
-
         const tablePick = await vscode.window.showQuickPick(
-            tables.map((tbl) => ({
-                label: tbl.name,
-                description: `${tbl.columns} column(s)`,
-                tableName: tbl.name,
-            })),
-            {
-                placeHolder: t('db.pickTablePlaceholder'),
-                title: t('db.pickTableTitle'),
-            }
+            tables.map((tbl) => ({ label: tbl.name, description: t('sources.columnsCount', tbl.columns), tableName: tbl.name })),
+            { placeHolder: t('db.pickTablePlaceholder'), title: t('db.pickTableTitle') }
         );
-
         if (!tablePick) {
-            finishLoading(t('db.importCancelled'), true);
             return;
         }
 
         const detailResult = await vscode.window.withProgress(
-            {
-                location: vscode.ProgressLocation.Notification,
-                title: t('db.readingSchema', tablePick.tableName),
-                cancellable: false,
-            },
+            { location: vscode.ProgressLocation.Notification, title: t('db.readingSchema', tablePick.tableName), cancellable: false },
             () => this.artisan.introspectTable(tablePick.tableName)
         );
-
         if (!detailResult.success) {
-            finishLoading(t('db.couldNotDescribe', detailResult.output), false);
+            this.notice('err', t('db.couldNotDescribe', detailResult.output));
             return;
         }
 
-        let detail: {
-            table: string;
-            columns: Array<{ name: string; type: string; nullable: boolean }>;
-            soft_deletes: boolean;
-        };
+        let detail: { table: string; columns: Array<{ name: string; type: string; nullable: boolean }>; soft_deletes: boolean };
         try {
             detail = JSON.parse(this.extractJson(detailResult.output));
         } catch (e: unknown) {
-            const msg = e instanceof Error ? e.message : 'Unknown error';
-            finishLoading(t('db.couldNotParseDescription', msg, detailResult.output), false);
+            this.notice('err', t('db.couldNotParseDescription', e instanceof Error ? e.message : String(e), detailResult.output));
             return;
         }
 
-        const entityName = this.tableToEntityName(detail.table);
-        this.panel.webview.postMessage({
+        void this.panel.webview.postMessage({
             type: 'dbImportResult',
             entity: {
-                name: entityName,
-                fields: detail.columns.map((c) => ({ name: c.name, type: c.type })),
+                name: this.tableToEntityName(detail.table),
+                fields: detail.columns.map((c) => ({ name: c.name, type: c.type, nullable: c.nullable })),
                 softDeletes: detail.soft_deletes,
             },
         });
@@ -886,20 +566,15 @@ export class GeneratorPanel {
     private extractJson(raw: string): string {
         const start = raw.indexOf('[');
         const startObj = raw.indexOf('{');
-        const first =
-            start === -1 ? startObj : startObj === -1 ? start : Math.min(start, startObj);
-        if (first === -1) {
-            return raw.trim();
-        }
-        return raw.slice(first).trim();
+        const first = start === -1 ? startObj : startObj === -1 ? start : Math.min(start, startObj);
+        return first === -1 ? raw.trim() : raw.slice(first).trim();
     }
 
     /**
      * users -> User, blog_posts -> BlogPost, categories -> Category
      */
     private tableToEntityName(table: string): string {
-        const singular = this.singularize(table);
-        return singular
+        return this.singularize(table)
             .split('_')
             .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
             .join('');
@@ -926,9 +601,8 @@ export class GeneratorPanel {
             canSelectFiles: true,
             canSelectMany: false,
             filters: packageReadsSpecs ? { 'OpenAPI / Swagger': ['yaml', 'yml', 'json'] } : { 'OpenAPI / Swagger JSON': ['json'] },
-            title: packageReadsSpecs ? t('sources.openApiTitle') : 'Select an OpenAPI / Swagger JSON spec',
+            title: t('sources.openApiTitle'),
         });
-
         if (!fileUri || fileUri.length === 0) {
             return;
         }
@@ -939,49 +613,27 @@ export class GeneratorPanel {
         }
 
         try {
-            const raw = fs.readFileSync(fileUri[0].fsPath, 'utf-8');
-            const result = parseOpenApi(raw);
-
+            const result = parseOpenApi(fs.readFileSync(fileUri[0].fsPath, 'utf-8'));
             if (result.entities.length === 0) {
-                this.panel.webview.postMessage({
-                    type: 'actionResult',
-                    success: false,
-                    output: 'No usable schemas were found in the OpenAPI document.',
-                });
+                this.notice('warn', 'No usable schemas were found in the OpenAPI document.');
                 return;
             }
 
-            // Reuse the JSON pipeline: write a class_data.json the package can consume
-            const destPath = path.join(this.workspaceRoot, 'class_data.json');
-            fs.writeFileSync(destPath, JSON.stringify(result.entities, null, 2), 'utf-8');
-
-            const entities = result.entities.map((ent) => ({
-                name: ent.name,
-                fields: ent.attributes.map((a) => `${a.name}: ${a._type}`),
-                relations: [
-                    ...ent.manyToOneRelationships.map((r) => `belongsTo: ${r.comodel}`),
-                    ...ent.oneToManyRelationships.map((r) => `hasMany: ${r.comodel}`),
-                ],
-            }));
-
-            this.panel.webview.postMessage({
+            fs.writeFileSync(path.join(this.workspaceRoot, 'class_data.json'), JSON.stringify(result.entities, null, 2), 'utf-8');
+            void this.panel.webview.postMessage({
                 type: 'jsonLoaded',
                 fileName: `${path.basename(fileUri[0].fsPath)} (OpenAPI)`,
-                entities,
+                entities: result.entities.map((ent) => ({
+                    name: ent.name,
+                    fields: ent.attributes.map((a) => `${a.name}: ${a._type}`),
+                    relations: [...ent.manyToOneRelationships.map((r) => `belongsTo: ${r.comodel}`), ...ent.oneToManyRelationships.map((r) => `hasMany: ${r.comodel}`)],
+                })),
             });
-
             if (result.skipped.length > 0) {
-                vscode.window.showInformationMessage(
-                    `OpenAPI imported. Skipped ${result.skipped.length} schema(s): ${result.skipped.join(', ')}`
-                );
+                vscode.window.showInformationMessage(`OpenAPI imported. Skipped ${result.skipped.length} schema(s): ${result.skipped.join(', ')}`);
             }
         } catch (e: unknown) {
-            const msg = e instanceof Error ? e.message : 'Unknown error';
-            this.panel.webview.postMessage({
-                type: 'actionResult',
-                success: false,
-                output: `Invalid OpenAPI JSON: ${msg}`,
-            });
+            this.notice('err', `Invalid OpenAPI JSON: ${e instanceof Error ? e.message : String(e)}`);
         }
     }
 
@@ -989,35 +641,19 @@ export class GeneratorPanel {
         const fileUri = await vscode.window.showOpenDialog({
             canSelectFiles: true,
             canSelectMany: false,
-            filters: { 'JSON': ['json'] },
+            filters: { JSON: ['json'] },
             title: 'Select class_data.json file',
         });
-
-        if (!fileUri || fileUri.length === 0) { return; }
+        if (!fileUri || fileUri.length === 0) {
+            return;
+        }
 
         try {
-            const content = fs.readFileSync(fileUri[0].fsPath, 'utf-8');
-            // Validate JSON
-            const parsed = JSON.parse(content);
-
-            // Copy to project root as class_data.json
-            const destPath = path.join(this.workspaceRoot, 'class_data.json');
-            fs.writeFileSync(destPath, JSON.stringify(parsed, null, 2), 'utf-8');
-
-            // Send entities back to webview for preview
-            const entities = this.extractEntitiesFromJson(parsed);
-            this.panel.webview.postMessage({
-                type: 'jsonLoaded',
-                fileName: path.basename(fileUri[0].fsPath),
-                entities,
-            });
+            const parsed = JSON.parse(fs.readFileSync(fileUri[0].fsPath, 'utf-8'));
+            fs.writeFileSync(path.join(this.workspaceRoot, 'class_data.json'), JSON.stringify(parsed, null, 2), 'utf-8');
+            void this.panel.webview.postMessage({ type: 'jsonLoaded', fileName: path.basename(fileUri[0].fsPath), entities: this.extractEntitiesFromJson(parsed) });
         } catch (e: unknown) {
-            const msg = e instanceof Error ? e.message : 'Unknown error';
-            this.panel.webview.postMessage({
-                type: 'actionResult',
-                success: false,
-                output: `Invalid JSON file: ${msg}`,
-            });
+            this.notice('err', `Invalid JSON file: ${e instanceof Error ? e.message : String(e)}`);
         }
     }
 
@@ -1045,20 +681,15 @@ export class GeneratorPanel {
             const relations: string[] = [];
             for (const relKey of ['oneToOneRelationships', 'oneToManyRelationships', 'manyToOneRelationships', 'manyToManyRelationships']) {
                 const rels = cls[relKey] as Array<Record<string, string>> | undefined;
-                if (rels) {
-                    for (const r of rels) {
-                        relations.push(`${relKey.replace('Relationships', '')}: ${r.comodel || r.relatedModel}`);
-                    }
+                for (const r of rels ?? []) {
+                    relations.push(`${relKey.replace('Relationships', '')}: ${r.comodel || r.relatedModel}`);
                 }
             }
-            // UML compositions & aggregations
             for (const relKey of ['compositions', 'aggregations']) {
                 const rels = cls[relKey] as Array<Record<string, string>> | undefined;
-                if (rels) {
-                    for (const r of rels) {
-                        if (r._type || r.comodel) {
-                            relations.push(`${relKey}: ${r._type || r.comodel}`);
-                        }
+                for (const r of rels ?? []) {
+                    if (r._type || r.comodel) {
+                        relations.push(`${relKey}: ${r._type || r.comodel}`);
                     }
                 }
             }
@@ -1082,16 +713,13 @@ export class GeneratorPanel {
         }
 
         if (outcome.state === 'ready') {
-            this.plannedContents = new Map(outcome.plan.files.map((file) => [file.path, file.content ?? '']));
-            for (const file of outcome.plan.files) {
-                this.planChanged.fire(vscode.Uri.from({ scheme: PLAN_SCHEME, path: '/' + file.path }));
-            }
-            this.panel.webview.postMessage({ type: 'previewCodeResult', state: 'ready', files: outcome.plan.files, warnings: outcome.plan.warnings });
+            rememberPlanned(outcome.plan.files);
+            void this.panel.webview.postMessage({ type: 'previewCodeResult', state: 'ready', files: outcome.plan.files, warnings: outcome.plan.warnings });
             return;
         }
 
         if (outcome.state === 'invalid') {
-            this.panel.webview.postMessage({ type: 'previewCodeResult', state: 'invalid', message: outcome.error.message, hint: outcome.error.hint });
+            void this.panel.webview.postMessage({ type: 'previewCodeResult', state: 'invalid', message: outcome.error.message, hint: outcome.error.hint });
             return;
         }
 
@@ -1100,9 +728,7 @@ export class GeneratorPanel {
 
     private previewBlocker(): { message: string; command?: string } | undefined {
         if (this.packageState.kind === 'notDeclared') {
-            const message = usesLegacyLine(this.workspaceRoot)
-                ? t('package.missingLegacyLaravel', readLaravelMajor(this.workspaceRoot) ?? '')
-                : t('package.missing');
+            const message = usesLegacyLine(this.workspaceRoot) ? t('package.missingLegacyLaravel', readLaravelMajor(this.workspaceRoot) ?? '') : t('package.missing');
             return { message, command: requirePackageCommand(this.workspaceRoot) };
         }
         if (this.packageState.kind === 'notInstalled') {
@@ -1121,7 +747,7 @@ export class GeneratorPanel {
         if (outcome.reason === 'phpNotFound') {
             const hasSail = fs.existsSync(path.join(this.workspaceRoot, 'vendor', 'bin', 'sail'));
             this.pendingCommand = undefined;
-            this.panel.webview.postMessage({
+            void this.panel.webview.postMessage({
                 type: 'previewCodeResult',
                 state: 'unavailable',
                 message: hasSail ? t('preview.phpNotFoundSail') : t('preview.phpNotFound'),
@@ -1130,21 +756,19 @@ export class GeneratorPanel {
             return;
         }
 
-        const message = outcome.reason === 'protocolMismatch'
-            ? t('preview.extensionTooOld')
-            : outcome.reason === 'timeout'
-                ? t('preview.timeout')
-                : t('preview.bootFailed', outcome.detail);
+        const message =
+            outcome.reason === 'protocolMismatch' ? t('preview.extensionTooOld') : outcome.reason === 'timeout' ? t('preview.timeout') : t('preview.bootFailed', outcome.detail);
         this.postUnavailable(message);
     }
 
     private postUnavailable(message: string, command?: string): void {
         this.pendingCommand = command;
-        this.panel.webview.postMessage({ type: 'previewCodeResult', state: 'unavailable', message, command });
+        void this.panel.webview.postMessage({ type: 'previewCodeResult', state: 'unavailable', message, command });
     }
 
     private async announceCapabilities(): Promise<void> {
         if (this.previewBlocker()) {
+            void this.panel.webview.postMessage({ type: 'capabilities', modifiers: false });
             return;
         }
         const handshake = await this.bridge.capabilities();
@@ -1152,17 +776,16 @@ export class GeneratorPanel {
             return;
         }
         this.handshakeOk = true;
-        this.panel.webview.postMessage({
+        void this.panel.webview.postMessage({
             type: 'capabilities',
             fieldTypes: handshake.capabilities.fieldTypes,
             jsonApi: handshake.capabilities.options.json_api,
+            modifiers: this.usesSchemaGeneration(),
         });
     }
 
     private watchRestartTriggers(): vscode.Disposable[] {
-        const watcher = vscode.workspace.createFileSystemWatcher(
-            new vscode.RelativePattern(this.workspaceRoot, '{vendor/composer/installed.json,.env,config/**/*.php}')
-        );
+        const watcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(this.workspaceRoot, '{vendor/composer/installed.json,.env,config/**/*.php}'));
         const restart = () => this.restartPreview();
         return [watcher, watcher.onDidChange(restart), watcher.onDidCreate(restart), watcher.onDidDelete(restart)];
     }
@@ -1172,13 +795,7 @@ export class GeneratorPanel {
         this.handshakeOk = false;
         this.bridge.restart();
         void this.announceCapabilities();
-        this.panel.webview.postMessage({ type: 'refreshPreview' });
-    }
-
-    private async openDiff(relativePath: string): Promise<void> {
-        const current = vscode.Uri.file(path.join(this.workspaceRoot, ...relativePath.split('/')));
-        const planned = vscode.Uri.from({ scheme: PLAN_SCHEME, path: '/' + relativePath });
-        await vscode.commands.executeCommand('vscode.diff', current, planned, t('preview.diffTitle', relativePath));
+        void this.panel.webview.postMessage({ type: 'refreshPreview' });
     }
 
     private async handlePreviewAction(action: string | undefined): Promise<void> {
@@ -1189,22 +806,17 @@ export class GeneratorPanel {
             return;
         }
         if (action === 'useSail') {
-            await vscode.workspace
-                .getConfiguration('laravelApiGenerator')
-                .update('phpCommand', ['./vendor/bin/sail', 'php'], vscode.ConfigurationTarget.Workspace);
+            await vscode.workspace.getConfiguration('laravelApiGenerator').update('phpCommand', ['./vendor/bin/sail', 'php'], vscode.ConfigurationTarget.Workspace);
         }
     }
 
     private dispose(): void {
         GeneratorPanel.currentPanel = undefined;
-        this.artisan.stopServe();
+        this.actions.dispose();
         this.bridge.dispose();
         this.panel.dispose();
         while (this.disposables.length) {
-            const d = this.disposables.pop();
-            if (d) {
-                d.dispose();
-            }
+            this.disposables.pop()?.dispose();
         }
     }
 }

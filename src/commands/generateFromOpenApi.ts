@@ -1,19 +1,19 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { LaravelDetector } from '../services/laravelDetector';
-import { ArtisanRunner } from '../services/artisanRunner';
 import { OPENAPI_MIN_VERSION, readInstalledVersion, versionSupport } from '../services/packageState';
-import { confirmPlannedGeneration, offerPackageUpdate, pickGenerationOptions, presentGenerationResult } from './generationShared';
+import { FlowPanel } from '../webview/flowPanel';
+import { offerPackageUpdate } from './generationShared';
 import { t } from '../i18n';
 
 const SPEC_EXTENSIONS = ['.yaml', '.yml', '.json'];
 
 /**
  * Generate complete APIs from the schemas of an OpenAPI 3 or Swagger 2 spec
- * (package `make:fullapi --openapi=`, >= 3.13), after a dry run that shows
- * what the package understood and which schemas it left aside.
+ * (package `make:fullapi --openapi=`, >= 3.13), after reviewing the dry run
+ * and the schemas it left aside.
  */
-export function registerGenerateFromOpenApiCommand(onDidGenerate: () => void): vscode.Disposable {
+export function registerGenerateFromOpenApiCommand(extensionUri: vscode.Uri, onDidGenerate: () => void): vscode.Disposable {
     return vscode.commands.registerCommand('laravelApiGenerator.generateFromOpenApi', async (spec?: vscode.Uri) => {
         const check = await LaravelDetector.validateOrPromptInstall();
         if (!check.valid || !check.root) {
@@ -32,32 +32,7 @@ export function registerGenerateFromOpenApiCommand(onDidGenerate: () => void): v
             return;
         }
 
-        const options = await pickGenerationOptions(false);
-        if (options === undefined) {
-            return;
-        }
-
-        const sourceOptions = { queryBuilder: options.queryBuilder, pest: options.pest, jsonApi: options.jsonApi };
-        const artisan = new ArtisanRunner(root);
-        const preview = await vscode.window.withProgress(
-            { location: vscode.ProgressLocation.Notification, title: t('sources.readingSpec'), cancellable: false },
-            () => artisan.generateFromOpenApi(specPath, sourceOptions, true)
-        );
-
-        if (!(await confirmPlannedGeneration(preview, path.basename(specPath), root))) {
-            return;
-        }
-
-        if (options.queryBuilder) {
-            void LaravelDetector.promptQueryBuilderInstallIfMissing(root);
-        }
-
-        const result = await vscode.window.withProgress(
-            { location: vscode.ProgressLocation.Notification, title: t('sources.generating'), cancellable: false },
-            () => artisan.generateFromOpenApi(specPath, sourceOptions)
-        );
-
-        await presentGenerationResult(result, root, onDidGenerate);
+        FlowPanel.plan(extensionUri, root, { kind: 'openapi', path: specPath }, onDidGenerate);
     });
 }
 

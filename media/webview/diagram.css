@@ -1,0 +1,648 @@
+html,
+body {
+    height: 100%;
+    overflow: hidden;
+}
+
+body {
+    --dot: color-mix(in srgb, var(--fg) 13%, transparent);
+    --float: color-mix(in srgb, var(--bg) 88%, transparent);
+}
+
+.app {
+    position: relative;
+    height: 100%;
+}
+
+.small {
+    font-size: 12px;
+}
+
+.accent {
+    color: var(--accent-text);
+}
+
+.push {
+    margin-left: auto;
+}
+
+.violet {
+    color: var(--violet);
+}
+
+.red {
+    color: var(--red);
+}
+
+.ellipsis {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
+
+.probe {
+    position: fixed;
+    top: -9999px;
+    left: -9999px;
+}
+
+.canvas {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    background-color: var(--bg);
+    background-image: radial-gradient(var(--dot) 1.3px, transparent 1.3px);
+    background-size: 24px 24px;
+    cursor: grab;
+}
+
+.canvas.panning {
+    cursor: grabbing;
+}
+
+.world {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform-origin: 0 0;
+    will-change: transform;
+}
+
+.edges {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 1px;
+    height: 1px;
+    overflow: visible;
+    pointer-events: none;
+}
+
+.edge {
+    fill: none;
+    stroke: var(--muted);
+    stroke-opacity: 0.55;
+    stroke-width: 1.5px;
+    stroke-linecap: round;
+}
+
+.edge.on {
+    stroke: var(--accent);
+    stroke-opacity: 1;
+    stroke-width: 1.8px;
+}
+
+.end {
+    fill: var(--muted);
+    fill-opacity: 0.8;
+}
+
+.end.on {
+    fill: var(--accent);
+    fill-opacity: 1;
+}
+
+.labels {
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+}
+
+.edge-label {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: flex;
+    align-items: center;
+    height: 22px;
+    padding: 0 8px;
+    border: 1px solid var(--hair);
+    border-radius: 999px;
+    background: var(--bg);
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.edge-label.on {
+    border-color: var(--tint-b);
+    color: var(--accent-text);
+}
+
+.node {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 232px;
+    overflow: hidden;
+    border: 1px solid var(--hair);
+    border-radius: 13px;
+    background: var(--surface);
+    box-shadow: 0 1px 2px color-mix(in srgb, var(--shadow-c) 45%, transparent), 0 8px 22px color-mix(in srgb, var(--shadow-c) 40%, transparent);
+    cursor: grab;
+    user-select: none;
+    transition: opacity 0.15s ease, border-color 0.15s ease;
+}
+
+.node:hover {
+    border-color: var(--tint-b);
+}
+
+.node.grabbing {
+    cursor: grabbing;
+}
+
+.node.selected {
+    border: 1.5px solid var(--accent);
+    box-shadow: 0 0 0 4px var(--tint), 0 14px 34px color-mix(in srgb, var(--shadow-c) 75%, transparent);
+}
+
+.node.selected .nh {
+    background: var(--tint);
+}
+
+.node.selected .nh .ini {
+    background: var(--accent);
+    color: var(--accent-fg);
+}
+
+.node.dim {
+    opacity: 0.3;
+}
+
+.nh {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    height: 42px;
+    padding: 0 12px;
+    border-bottom: 1px solid var(--hair);
+}
+
+.nh b {
+    min-width: 0;
+    overflow: hidden;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--strong);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.nmeta {
+    flex: none;
+    margin-left: auto;
+    font-size: 11.5px;
+    color: var(--muted);
+}
+
+.ini {
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 7px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.ini.big {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    font-size: 14px;
+}
+
+.e-acc {
+    background: var(--tint);
+    color: var(--accent-text);
+}
+
+.e-vio {
+    background: var(--v-tint);
+    color: var(--violet);
+}
+
+.e-gre {
+    background: var(--g-tint);
+    color: var(--green);
+}
+
+.e-amb {
+    background: var(--a-tint);
+    color: var(--amber);
+}
+
+.e-red {
+    background: var(--r-tint);
+    color: var(--red);
+}
+
+.nf {
+    padding: 4px 0 6px;
+}
+
+.nr {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    height: 26px;
+    padding: 0 12px;
+    font-size: 12px;
+}
+
+.nr.linked {
+    background: var(--tint);
+}
+
+.nr.hit {
+    background: var(--a-tint);
+}
+
+.cname {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--strong);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ty {
+    flex: none;
+    max-width: 55%;
+    margin-left: auto;
+    overflow: hidden;
+    color: var(--muted);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ico-slot {
+    width: 12px;
+    flex: none;
+}
+
+.key-ico {
+    color: var(--amber);
+}
+
+.link-ico {
+    color: var(--accent-text);
+}
+
+.float {
+    position: absolute;
+    z-index: 10;
+    border: 1px solid var(--hair);
+    border-radius: 12px;
+    background: var(--float);
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(8px);
+}
+
+.title-chip {
+    top: 18px;
+    left: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 44px;
+    padding: 0 14px 0 12px;
+}
+
+.title-text {
+    font-weight: 600;
+}
+
+.search {
+    top: 18px;
+    left: 50%;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 340px;
+    height: 44px;
+    padding: 0 8px 0 12px;
+    transform: translateX(-50%);
+}
+
+.search:focus-within {
+    border-color: var(--accent);
+}
+
+.search-input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    outline: none;
+    background: transparent;
+    color: var(--strong);
+    font: inherit;
+}
+
+.search-input::placeholder {
+    color: var(--vscode-input-placeholderForeground, var(--muted));
+}
+
+.minimap {
+    bottom: 20px;
+    left: 20px;
+    width: 188px;
+    height: 124px;
+    padding: 10px;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.mini-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+.mini-node {
+    position: absolute;
+    border-radius: 3px;
+}
+
+.mini-node.on {
+    background: var(--accent);
+}
+
+.mini-view {
+    position: absolute;
+    border: 1.5px solid var(--tint-b);
+    border-radius: 5px;
+}
+
+.zoombar {
+    bottom: 20px;
+    left: 224px;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    height: 44px;
+    padding: 0 6px;
+    border-radius: 999px;
+}
+
+.icon-btn.round {
+    width: 30px;
+    height: 30px;
+    border-radius: 999px;
+}
+
+.zoom-pct {
+    min-width: 58px;
+    height: 30px;
+    padding: 0 8px;
+    border-radius: 999px;
+    font-size: 12px;
+}
+
+.pill {
+    height: 30px;
+    padding: 0 10px;
+    border-radius: 999px;
+    font-size: 12.5px;
+}
+
+.inspector {
+    top: 16px;
+    right: 16px;
+    bottom: 16px;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    width: 344px;
+    overflow: hidden;
+    border-radius: 16px;
+}
+
+.i-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 12px 12px 16px;
+}
+
+.i-title {
+    flex: 1;
+    min-width: 0;
+}
+
+.i-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--strong);
+}
+
+.i-tabs {
+    padding: 0 16px 12px;
+}
+
+.seg {
+    display: flex;
+    gap: 2px;
+    padding: 3px;
+    border-radius: 9px;
+    background: var(--surface-2);
+}
+
+.seg button {
+    flex: 1;
+    height: 26px;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--muted);
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.seg button:hover {
+    color: var(--fg);
+}
+
+.seg button.on {
+    background: var(--bg);
+    color: var(--strong);
+    box-shadow: 0 1px 2px color-mix(in srgb, var(--shadow-c) 60%, transparent);
+}
+
+.i-body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 1px;
+    min-height: 0;
+    padding: 0 8px 8px;
+    overflow: auto;
+}
+
+.irow {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: 8px;
+    min-height: 30px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: 12.5px;
+    text-align: left;
+}
+
+.irow:hover {
+    background: var(--hover);
+}
+
+.link-row {
+    cursor: pointer;
+}
+
+.link-row:disabled {
+    cursor: default;
+}
+
+.irow .dot {
+    width: 8px;
+    height: 8px;
+}
+
+.pill-tag {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    height: 18px;
+    padding: 0 6px;
+    border-radius: 5px;
+    background: var(--surface-2);
+    color: var(--muted);
+    font-size: 10.5px;
+}
+
+.pill-tag.on {
+    background: var(--tint);
+    color: var(--accent-text);
+}
+
+.card-sep.wide {
+    height: 1px;
+    flex: none;
+    margin: 10px 8px;
+    background: var(--hair);
+}
+
+.pad-label {
+    padding: 0 10px 6px;
+}
+
+.i-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 12px 16px 16px;
+    border-top: 1px solid var(--hair);
+}
+
+.i-pair {
+    display: flex;
+    gap: 6px;
+}
+
+.i-pair .btn {
+    flex: 1;
+    min-width: 0;
+}
+
+.empty {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 20px;
+    text-align: center;
+}
+
+.empty-mark {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    margin-bottom: 4px;
+    border-radius: 16px;
+    background: var(--tint);
+    color: var(--accent-text);
+}
+
+.empty-mark .ico {
+    width: 26px;
+    height: 26px;
+}
+
+.empty-title {
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.empty .btn {
+    margin-top: 8px;
+}
+
+@media (max-width: 1260px) {
+    .inspecting .pill-text {
+        display: none;
+    }
+
+    .inspecting .pill {
+        padding: 0 8px;
+    }
+}
+
+@media (max-width: 1000px) {
+    .search {
+        top: 72px;
+        left: 20px;
+        width: min(340px, calc(100% - 40px));
+        transform: none;
+    }
+
+    .inspector {
+        top: 124px;
+        width: min(344px, calc(100% - 32px));
+    }
+}
+
+@media (max-width: 720px) {
+    .minimap {
+        display: none;
+    }
+
+    .zoombar {
+        left: 20px;
+    }
+}

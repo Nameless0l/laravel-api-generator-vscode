@@ -1,7 +1,7 @@
 import * as path from 'path';
 import * as fs from 'fs';
 import { GeneratedEntity, EntityFile, EntityRelation } from '../types';
-import { ManifestEntry, readManifest } from './manifest';
+import { editedFiles, ManifestEntry, readManifest } from './manifest';
 import { enumClasses, fillableColumns } from './modelSource';
 
 const ENTITY_KINDS = new Set(['Model', 'Controller', 'Service', 'DTO', 'Request', 'Resource', 'Policy', 'Enum', 'Factory', 'Seeder', 'FeatureTest', 'UnitTest', 'Migration']);
@@ -33,7 +33,9 @@ export class EntityScanner {
             if (!files.some((file) => file.exists)) {
                 return [];
             }
-            return [{ name, files, ...this.parseModel(files) }];
+            const recorded = (manifest ?? []).filter((entry) => entry.entity === name);
+            const edited = [...editedFiles(this.workspaceRoot, recorded)].sort();
+            return [{ name, files, ...this.parseModel(files), edited, tracked: recorded.length > 0 }];
         });
     }
 

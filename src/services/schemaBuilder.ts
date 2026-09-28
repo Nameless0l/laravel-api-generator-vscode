@@ -14,6 +14,15 @@ export function schemaFromConfig(config: EntityConfig): ApiSchema {
         if (field.primary) {
             entry.primary = true;
         }
+        if (field.nullable) {
+            entry.nullable = true;
+        }
+        if (field.unique && !field.primary) {
+            entry.unique = true;
+        }
+        if (field.default !== undefined && field.default !== '') {
+            entry.default = field.default;
+        }
         fields[name] = entry;
     }
 

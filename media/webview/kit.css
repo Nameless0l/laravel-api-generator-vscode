@@ -1,0 +1,846 @@
+body {
+    --contrast: #ffffff;
+    --bg: var(--vscode-editor-background);
+    --fg: var(--vscode-foreground);
+    --strong: color-mix(in srgb, var(--fg) 70%, var(--contrast));
+    --muted: var(--vscode-descriptionForeground);
+    --faint: color-mix(in srgb, var(--muted) 72%, var(--bg));
+    --accent: var(--vscode-button-background);
+    --accent-fg: var(--vscode-button-foreground);
+    --accent-hover: var(--vscode-button-hoverBackground, var(--accent));
+    --accent-text: color-mix(in srgb, var(--accent) 55%, #ffffff);
+    --input: var(--vscode-input-background);
+    --input-fg: var(--vscode-input-foreground, var(--strong));
+    --input-b: var(--vscode-input-border, var(--hair));
+    --hover: var(--vscode-list-hoverBackground);
+    --focus: var(--vscode-focusBorder, var(--accent));
+    --green: var(--vscode-gitDecoration-addedResourceForeground, #81b88b);
+    --amber: var(--vscode-gitDecoration-modifiedResourceForeground, #e2c08d);
+    --red: var(--vscode-errorForeground, #f48771);
+    --violet: var(--vscode-charts-purple, #b180d7);
+    --cls: var(--vscode-symbolIcon-classForeground, #ee9d28);
+    --field: var(--vscode-symbolIcon-fieldForeground, #75beff);
+    --shadow-c: var(--vscode-widget-shadow, rgba(0, 0, 0, 0.36));
+    --surface: color-mix(in srgb, var(--fg) 4%, var(--bg));
+    --surface-2: color-mix(in srgb, var(--fg) 8%, var(--bg));
+    --surface-3: color-mix(in srgb, var(--fg) 13%, var(--bg));
+    --hair: color-mix(in srgb, var(--fg) 13%, transparent);
+    --tint: color-mix(in srgb, var(--accent) 14%, transparent);
+    --tint-2: color-mix(in srgb, var(--accent) 24%, transparent);
+    --tint-b: color-mix(in srgb, var(--accent) 38%, transparent);
+    --g-tint: color-mix(in srgb, var(--green) 15%, transparent);
+    --a-tint: color-mix(in srgb, var(--amber) 16%, transparent);
+    --v-tint: color-mix(in srgb, var(--violet) 16%, transparent);
+    --r-tint: color-mix(in srgb, var(--red) 14%, transparent);
+    --shadow: 0 1px 2px color-mix(in srgb, var(--shadow-c) 55%, transparent), 0 14px 36px color-mix(in srgb, var(--shadow-c) 70%, transparent);
+    --mono: var(--vscode-editor-font-family, Consolas, 'Courier New', monospace);
+    --kws: #569cd6;
+    --kwc: #c586c0;
+    --ty: #4ec9b0;
+    --fn: #dcdcaa;
+    --var: #9cdcfe;
+    --str: #ce9178;
+    --cm: #6a9955;
+    --num: #b5cea8;
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--vscode-font-family);
+    font-size: var(--vscode-font-size, 13px);
+    line-height: 1.4;
+    -webkit-font-smoothing: antialiased;
+}
+
+body.vscode-light,
+body.vscode-high-contrast-light {
+    --contrast: #000000;
+    --accent-text: color-mix(in srgb, var(--accent) 85%, #000000);
+    --kws: #0000ff;
+    --kwc: #af00db;
+    --ty: #267f99;
+    --fn: #795e26;
+    --var: #001080;
+    --str: #a31515;
+    --cm: #008000;
+    --num: #098658;
+}
+
+body.vscode-high-contrast,
+body.vscode-high-contrast-light {
+    --hair: var(--vscode-contrastBorder, var(--fg));
+}
+
+* {
+    box-sizing: border-box;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.spacer {
+    flex: 1;
+}
+
+.ico {
+    width: 16px;
+    height: 16px;
+    flex: none;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.ico.fill,
+.ico .fill-dot {
+    fill: currentColor;
+    stroke: none;
+}
+
+.ico.sm {
+    width: 14px;
+    height: 14px;
+}
+
+.ico.xs {
+    width: 12px;
+    height: 12px;
+}
+
+.mono {
+    font-family: var(--mono);
+}
+
+.label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+}
+
+.muted {
+    color: var(--muted);
+}
+
+.strong {
+    color: var(--strong);
+}
+
+.h1 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--strong);
+}
+
+.h2 {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--strong);
+}
+
+.count {
+    display: inline-flex;
+    align-items: center;
+    height: 18px;
+    padding: 0 7px;
+    border-radius: 999px;
+    background: var(--surface-2);
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 32px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: 8px;
+    font: inherit;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    text-decoration: none;
+    transition: background 0.15s ease, filter 0.15s ease, opacity 0.15s ease;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.btn-primary {
+    background: var(--accent);
+    color: var(--accent-fg);
+}
+
+.btn-primary:not(:disabled):hover {
+    background: var(--accent-hover);
+}
+
+.btn-tonal {
+    background: var(--tint);
+    color: var(--accent-text);
+}
+
+.btn-tonal:not(:disabled):hover {
+    background: var(--tint-2);
+}
+
+.btn-soft {
+    background: var(--surface-2);
+    color: var(--fg);
+}
+
+.btn-soft:not(:disabled):hover {
+    background: var(--surface-3);
+}
+
+.btn-ghost {
+    background: transparent;
+    color: var(--fg);
+}
+
+.btn-ghost:not(:disabled):hover {
+    background: var(--hover);
+}
+
+.btn-danger {
+    background: transparent;
+    color: var(--red);
+}
+
+.btn-danger:not(:disabled):hover {
+    background: var(--r-tint);
+}
+
+.btn-danger-solid {
+    background: var(--red);
+    color: var(--bg);
+}
+
+.btn-lg {
+    height: 38px;
+    padding: 0 18px;
+    border-radius: 10px;
+    font-weight: 600;
+}
+
+.btn-block {
+    width: 100%;
+}
+
+.btn-sm {
+    height: 28px;
+    padding: 0 10px;
+    font-size: 12px;
+}
+
+.icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    flex: none;
+    padding: 0;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+}
+
+.icon-btn:hover {
+    background: var(--hover);
+    color: var(--strong);
+}
+
+.icon-btn.solid {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: var(--surface-2);
+    color: var(--fg);
+}
+
+.icon-btn.solid:hover {
+    background: var(--surface-3);
+}
+
+.icon-btn.on {
+    background: var(--tint);
+    color: var(--accent-text);
+}
+
+.kbd {
+    display: inline-flex;
+    align-items: center;
+    height: 18px;
+    padding: 0 6px;
+    border-radius: 5px;
+    background: color-mix(in srgb, currentColor 18%, transparent);
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 28px;
+    padding: 0 12px 0 10px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--surface-2);
+    color: var(--fg);
+    font: inherit;
+    font-size: 12px;
+    white-space: nowrap;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.chip:hover {
+    background: var(--surface-3);
+}
+
+.chip.static {
+    cursor: default;
+}
+
+.chip.static:hover {
+    background: var(--surface-2);
+}
+
+.chip-on,
+.chip-on:hover {
+    background: var(--tint);
+    color: var(--accent-text);
+}
+
+.chip-on:hover {
+    background: var(--tint-2);
+}
+
+.chip:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.chip .ico {
+    width: 14px;
+    height: 14px;
+}
+
+.chip .off-ico {
+    color: var(--muted);
+}
+
+.mod {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 24px;
+    padding: 0 9px;
+    border: 1px dashed var(--hair);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--muted);
+    font: inherit;
+    font-size: 11.5px;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.mod:hover {
+    border-color: var(--muted);
+    color: var(--fg);
+}
+
+.mod-on,
+.mod-on:hover {
+    border: 1px solid transparent;
+    background: var(--tint);
+    color: var(--accent-text);
+}
+
+.mod-on:hover {
+    background: var(--tint-2);
+}
+
+.mod:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+.badge {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 5px;
+    height: 20px;
+    padding: 0 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.badge::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+}
+
+.badge.plain::before {
+    display: none;
+}
+
+.b-new {
+    background: var(--g-tint);
+    color: var(--green);
+}
+
+.b-mod {
+    background: var(--a-tint);
+    color: var(--amber);
+}
+
+.b-kept {
+    background: var(--v-tint);
+    color: var(--violet);
+}
+
+.b-same {
+    background: var(--surface-2);
+    color: var(--muted);
+}
+
+.b-err {
+    background: var(--r-tint);
+    color: var(--red);
+}
+
+.dot {
+    width: 7px;
+    height: 7px;
+    flex: none;
+    border-radius: 50%;
+    background: var(--muted);
+}
+
+.dot.is-new {
+    background: var(--green);
+}
+
+.dot.is-mod {
+    background: var(--amber);
+}
+
+.dot.is-kept {
+    background: var(--violet);
+}
+
+.dot.is-err {
+    background: var(--red);
+}
+
+.verb {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 60px;
+    height: 22px;
+    border-radius: 6px;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+}
+
+.v-get {
+    background: var(--g-tint);
+    color: var(--green);
+}
+
+.v-post {
+    background: var(--tint);
+    color: var(--accent-text);
+}
+
+.v-put {
+    background: var(--a-tint);
+    color: var(--amber);
+}
+
+.v-del {
+    background: var(--r-tint);
+    color: var(--red);
+}
+
+.input {
+    height: 32px;
+    min-width: 0;
+    padding: 0 10px;
+    border: 1px solid var(--input-b);
+    border-radius: 8px;
+    outline: none;
+    background: var(--input);
+    color: var(--input-fg);
+    font: inherit;
+}
+
+.input::placeholder,
+textarea::placeholder {
+    color: var(--vscode-input-placeholderForeground, var(--muted));
+}
+
+.input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--tint);
+}
+
+.input.invalid,
+.input.invalid:focus {
+    border-color: var(--red);
+    box-shadow: 0 0 0 3px var(--r-tint);
+}
+
+.select-wrap {
+    position: relative;
+    display: inline-flex;
+    flex: none;
+}
+
+.select-wrap .ico {
+    position: absolute;
+    top: 50%;
+    right: 8px;
+    width: 13px;
+    height: 13px;
+    color: var(--muted);
+    transform: translateY(-50%);
+    pointer-events: none;
+}
+
+.select {
+    height: 30px;
+    padding: 0 28px 0 10px;
+    border: 1px solid var(--hair);
+    border-radius: 8px;
+    outline: none;
+    background: var(--input);
+    color: var(--fg);
+    font: inherit;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+}
+
+.select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--tint);
+}
+
+.select option {
+    background: var(--vscode-dropdown-background, var(--input));
+    color: var(--vscode-dropdown-foreground, var(--fg));
+}
+
+.sw {
+    position: relative;
+    width: 30px;
+    height: 18px;
+    flex: none;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    background: var(--surface-3);
+    cursor: pointer;
+}
+
+.sw::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--muted);
+    transition: left 0.15s ease;
+}
+
+.sw-on {
+    background: var(--accent);
+}
+
+.sw-on::after {
+    left: 15px;
+    background: var(--accent-fg);
+}
+
+.card {
+    border: 1px solid var(--hair);
+    border-radius: 12px;
+    background: var(--surface);
+}
+
+.tile {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+    min-width: 0;
+    padding: 12px;
+    border: 1px solid var(--hair);
+    border-radius: 12px;
+    background: var(--surface);
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.tile:hover {
+    border-color: var(--tint-b);
+    background: var(--surface-2);
+}
+
+.tile-ico {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    margin-bottom: 5px;
+    border-radius: 8px;
+    background: var(--tint);
+    color: var(--accent-text);
+}
+
+.tile-title {
+    font-weight: 600;
+    color: var(--strong);
+}
+
+.tile-desc {
+    max-width: 100%;
+    overflow: hidden;
+    font-size: 11.5px;
+    color: var(--muted);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.msg {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 38px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    font-size: 12.5px;
+}
+
+.msg > .ico {
+    align-self: flex-start;
+    margin-top: 2px;
+}
+
+.msg-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.msg-ok {
+    background: var(--g-tint);
+    color: var(--green);
+    font-weight: 500;
+}
+
+.msg-warn {
+    background: var(--a-tint);
+}
+
+.msg-warn > .ico {
+    color: var(--amber);
+}
+
+.msg-kept {
+    background: var(--v-tint);
+}
+
+.msg-kept > .ico {
+    color: var(--violet);
+}
+
+.msg-err {
+    background: var(--r-tint);
+}
+
+.msg-err > .ico {
+    color: var(--red);
+}
+
+.msg-info {
+    border: 1px dashed var(--hair);
+    background: var(--surface);
+    color: var(--muted);
+}
+
+.msg pre {
+    max-height: 180px;
+    margin: 6px 0 0;
+    overflow: auto;
+    font-family: var(--mono);
+    font-size: 12px;
+    white-space: pre-wrap;
+}
+
+.spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    flex: none;
+    border: 2px solid color-mix(in srgb, currentColor 30%, transparent);
+    border-top-color: currentColor;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.progress {
+    position: relative;
+    height: 4px;
+    overflow: hidden;
+    border-radius: 99px;
+    background: var(--surface-3);
+}
+
+.progress::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -40%;
+    width: 40%;
+    height: 100%;
+    border-radius: 99px;
+    background: var(--accent);
+    animation: slide 1.2s ease-in-out infinite;
+}
+
+@keyframes slide {
+    to {
+        left: 100%;
+    }
+}
+
+.menu {
+    position: fixed;
+    z-index: 50;
+    min-width: 220px;
+    padding: 5px;
+    border: 1px solid var(--vscode-menu-border, var(--hair));
+    border-radius: 10px;
+    background: var(--vscode-menu-background, var(--bg));
+    color: var(--vscode-menu-foreground, var(--fg));
+    box-shadow: var(--shadow);
+}
+
+.menu button {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    height: 30px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.menu button:hover,
+.menu button:focus-visible {
+    outline: none;
+    background: var(--vscode-menu-selectionBackground, var(--tint));
+    color: var(--vscode-menu-selectionForeground, inherit);
+}
+
+.menu .sep {
+    height: 1px;
+    margin: 4px 6px;
+    background: var(--hair);
+}
+
+.sep-v {
+    width: 1px;
+    height: 20px;
+    flex: none;
+    margin: 0 4px;
+    background: var(--hair);
+}
+
+button:focus-visible,
+a:focus-visible,
+[tabindex]:focus-visible {
+    outline: 1px solid var(--focus);
+    outline-offset: 2px;
+}
+
+.k { color: var(--kws); }
+.c { color: var(--kwc); }
+.t { color: var(--ty); }
+.f { color: var(--fn); }
+.v { color: var(--var); }
+.s { color: var(--str); }
+.m { color: var(--cm); }
+.n { color: var(--num); }
+
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    border: 3px solid transparent;
+    border-radius: 99px;
+    background: var(--vscode-scrollbarSlider-background, var(--surface-3)) padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--vscode-scrollbarSlider-hoverBackground, var(--surface-3)) padding-box;
+}
+
+::-webkit-scrollbar-corner {
+    background: transparent;
+}

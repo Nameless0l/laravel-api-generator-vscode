@@ -1,57 +1,36 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { LaravelDetector } from '../services/laravelDetector';
-import { ArtisanRunner } from '../services/artisanRunner';
-import { pickGenerationOptions, presentGenerationResult } from './generationShared';
+import { FlowPanel } from '../webview/flowPanel';
 import { t } from '../i18n';
 
 const MERMAID_EXTENSIONS = ['.mmd', '.mermaid'];
 
 /**
  * Generate complete APIs from a Mermaid erDiagram / classDiagram file
- * (package `make:fullapi --mermaid=`, >= 3.5).
+ * (package `make:fullapi --mermaid=`), after reviewing the dry run.
  */
-export function registerGenerateFromMermaidCommand(onDidGenerate: () => void): vscode.Disposable {
-    return vscode.commands.registerCommand('laravelApiGenerator.generateFromMermaid', async () => {
+export function registerGenerateFromMermaidCommand(extensionUri: vscode.Uri, onDidGenerate: () => void): vscode.Disposable {
+    return vscode.commands.registerCommand('laravelApiGenerator.generateFromMermaid', async (diagram?: vscode.Uri) => {
         const check = await LaravelDetector.validateOrPromptInstall();
         if (!check.valid || !check.root) {
             return;
         }
         const root = check.root;
 
-        const diagramPath = await resolveDiagramPath(root);
+        const diagramPath = diagram?.fsPath ?? (await resolveDiagramPath(root));
         if (!diagramPath) {
             return;
         }
 
-        const options = await pickGenerationOptions(false);
-        if (options === undefined) {
-            return;
-        }
-
-        if (options.queryBuilder) {
-            void LaravelDetector.promptQueryBuilderInstallIfMissing(root);
-        }
-
-        const artisan = new ArtisanRunner(root);
-        const result = await vscode.window.withProgress(
-            {
-                location: vscode.ProgressLocation.Notification,
-                title: t('sources.generating'),
-                cancellable: false,
-            },
-            () => artisan.generateFromMermaid(diagramPath, { queryBuilder: options.queryBuilder, pest: options.pest, jsonApi: options.jsonApi })
-        );
-
-        await presentGenerationResult(result, root, onDidGenerate);
+        FlowPanel.plan(extensionUri, root, { kind: 'mermaid', path: diagramPath }, onDidGenerate);
     });
 }
 
 async function resolveDiagramPath(root: string): Promise<string | undefined> {
     const active = vscode.window.activeTextEditor?.document;
     const activePath = active && !active.isUntitled ? active.uri.fsPath : undefined;
-    const activeIsMermaid =
-        activePath !== undefined && MERMAID_EXTENSIONS.includes(path.extname(activePath).toLowerCase());
+    const activeIsMermaid = activePath !== undefined && MERMAID_EXTENSIONS.includes(path.extname(activePath).toLowerCase());
 
     if (activeIsMermaid && activePath) {
         const useCurrent = t('sources.useCurrentFile', path.basename(activePath));
