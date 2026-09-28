@@ -12,23 +12,27 @@ Generate complete REST APIs for Laravel without touching the terminal. Visual in
 
 ## Demo
 
-### Single Entity Generation
+### Build an entity, the preview follows
 
-![Single entity generation](docs/demo-single-entity.gif)
+![Pick an example, add a relation, and the live preview follows](docs/ext-builder.gif)
 
-*Create an entity, preview the code in real time, and generate every file in one click.*
+*The files on the right come from the package installed in your project, rendered as you edit the form.*
 
-### JSON Bulk Import
+### One click, then the next steps in place
 
-![JSON bulk import](docs/demo-json-import.gif)
+![Generate the API, then run the migrations and the tests](docs/ext-generate.gif)
 
-*Import a class_data.json to generate multiple entities and their relationships at once.*
+*The API ready screen runs the migrations, the tests, the seeding and the API docs, each with its result.*
 
-### Quick Actions & API Docs
+### Review before anything is written
 
-![Quick actions](docs/demo-quick-actions.gif)
+![The review of an OpenAPI spec, then the generation of both entities](docs/ext-review.gif)
 
-*Run migrations, seed the database, execute tests, and open Swagger docs -- all from VS Code.*
+*A description, the database, a schema file, a Mermaid diagram or an OpenAPI spec: every source opens the package's dry run first.*
+
+### The entity diagram
+
+![Select an entity, then browse its fields, relations and files](docs/ext-diagram.gif)
 
 ---
 
@@ -97,6 +101,8 @@ Prefer to review one table before generating?
 
 Start from a sentence: *a library that lends books to members, a loan has a due date*.
 
+![The Describe your API panel](docs/ext-describe.png)
+
 - Open **A description** in the sidebar, or run **Describe an API with Copilot**, and write your API or start from an example
 - Pick the chat model (GitHub Copilot first, VS Code 1.90+); it drafts an `api-schema.yaml` that relates to the entities your project already has
 - The proposed entities show up as cards; click one to adjust it in the YAML draft, the cards follow your edits
@@ -143,6 +149,8 @@ Modified your migration and want fresh tests without retyping the schema?
 
 The activity bar view opens on a **home panel**: the project with its Laravel and PHP versions and the package state (with the Composer command that fixes it when needed), a **New API** button, the sources to generate from (a description, the database, a schema file, a Mermaid diagram, an OpenAPI spec) and the project tools (entity diagram, migrations and tests, snippets, documentation). Right below, the entity tree tracks everything the generator created:
 
+![The sidebar home above the entity tree](docs/ext-sidebar.png)
+
 - Each entity expands into three groups: **Files**, **Fields**, **Relations**
 - **Files** list what the package recorded in `.api-generator/manifest.json` (Store and Update requests, enums and `--add-fields` migrations included), with a green check / red slash each and a click to open
 - **Fields** are read from the model's `$fillable`, or its `#[Fillable]` attribute on Laravel 13
@@ -167,7 +175,7 @@ After a generation, the panel shows the files written and the routes registered,
 
 | Step | What it runs |
 |------|--------------|
-| **Run the migrations** | `php artisan migrate` (creates `.env` from `.env.example` if missing) |
+| **Run the migrations** | `php artisan migrate`, after offering to create `.env` from `.env.example` when it is missing |
 | **Run the tests** | `php artisan test`, with a Stop button |
 | **Fill the database** | `php artisan migrate:fresh --seed`, after a second click to confirm |
 | **Open the API documentation** | Finds or starts the dev server, then opens the Scramble docs; offers to install Scramble when missing |
