@@ -2,6 +2,13 @@
 
 All notable changes to the Laravel API Generator VS Code extension will be documented in this file.
 
+## [1.1.2] - 2026-09-29
+
+Pairs with `nameless/laravel-api-generator` 4.0 and still works with 3.9 or later.
+
+### Changed
+- The README opens on the 4.0 launch video, and its badges no longer show "retired badge": the version badge now reads Open VSX, since the badge services stopped reading the Marketplace.
+
 ## [1.1.1] - 2026-09-28
 
 Pairs with `nameless/laravel-api-generator` 4.0 and still works with 3.9 or later.

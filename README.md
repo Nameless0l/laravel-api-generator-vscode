@@ -1,7 +1,7 @@
 # Laravel API Generator - VS Code Extension
 
-[![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/Nameless0l.laravel-api-generator?label=Marketplace&color=blue)](https://marketplace.visualstudio.com/items?itemName=Nameless0l.laravel-api-generator)
-[![Installs](https://img.shields.io/visual-studio-marketplace/i/Nameless0l.laravel-api-generator)](https://marketplace.visualstudio.com/items?itemName=Nameless0l.laravel-api-generator)
+[![VS Code Marketplace](https://img.shields.io/badge/VS%20Code%20Marketplace-install-007ACC)](https://marketplace.visualstudio.com/items?itemName=Nameless0l.laravel-api-generator)
+[![Open VSX](https://img.shields.io/open-vsx/v/Nameless0l/laravel-api-generator?label=Open%20VSX)](https://open-vsx.org/extension/Nameless0l/laravel-api-generator)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 Generate complete REST APIs for Laravel without touching the terminal. Visual interface for the [nameless/laravel-api-generator](https://packagist.org/packages/nameless/laravel-api-generator) package.
