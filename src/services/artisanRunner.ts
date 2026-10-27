@@ -6,8 +6,12 @@ import { ArtisanResult, EntityConfig, FlowOptions, GenerationDocument, Generatio
 import { flowArgs, generateArgs, schemaGenerationArgs, sourceArgs, SourceOptions } from './artisanArgs';
 import { lastProtocolDocument } from './generationOutput';
 import { PREVIEW_MIN_VERSION, readInstalledVersion, versionSupport } from './packageState';
-import { PhpCommand, projectRelative, resolvePhpCommand } from './phpCommand';
+import { PhpCommand, processLaunch, projectRelative, resolvePhpCommand, stopProcess } from './phpCommand';
+import { rebuiltSchema } from './entityRebuild';
 import { schemaFromConfig } from './schemaBuilder';
+
+/** A dry run carries every file it would write, about 20 KB per entity: Node's 1 MB default stops near 50 entities. */
+const OUTPUT_LIMIT = 256 * 1024 * 1024;
 
 export class ArtisanRunner {
     private workspaceRoot: string;
@@ -43,6 +47,8 @@ export class ArtisanRunner {
         let input: string | undefined;
         if (stdin === 'text' && source.kind === 'describe') {
             input = source.text;
+        } else if (stdin === 'text' && source.kind === 'regenerate' && source.rebuilt) {
+            input = JSON.stringify(rebuiltSchema(source.entity, source.rebuilt, options));
         } else if (stdin === 'file' && 'path' in source) {
             input = fs.readFileSync(source.path, 'utf-8');
         }
@@ -92,7 +98,7 @@ export class ArtisanRunner {
     cancelAll(): void {
         for (const proc of this.activeProcesses) {
             if (!proc.killed) {
-                proc.kill();
+                stopProcess(proc);
             }
         }
         this.activeProcesses.clear();
@@ -121,29 +127,6 @@ export class ArtisanRunner {
      */
     async validateStubs(): Promise<ArtisanResult> {
         return this.run(['artisan', 'api-generator:validate-stubs', '--json']);
-    }
-
-    /**
-     * Regenerate one or more artifacts of an existing entity.
-     * Requires the entity's migration to exist so we can rebuild the field list.
-     */
-    async regenerate(
-        entityName: string,
-        types: string[],
-        fields: string,
-        softDeletes: boolean
-    ): Promise<ArtisanResult> {
-        const args = [
-            'artisan',
-            'make:fullapi',
-            entityName,
-            `--fields=${fields}`,
-            `--only=${types.join(',')}`,
-        ];
-        if (softDeletes) {
-            args.push('--soft-deletes');
-        }
-        return this.run(args);
     }
 
     /**
@@ -197,11 +180,14 @@ export class ArtisanRunner {
 
         // Start php artisan serve
         const php = this.phpCommand();
+        const launch = processLaunch(php.command, [...php.args, 'artisan', 'serve'], this.workspaceRoot);
         return new Promise((resolve) => {
-            const proc = spawn(php.command, [...php.args, 'artisan', 'serve'], {
+            const proc = spawn(launch.command, launch.args, {
                 cwd: this.workspaceRoot,
                 env: { ...process.env },
                 stdio: ['ignore', 'pipe', 'pipe'],
+                windowsHide: true,
+                windowsVerbatimArguments: launch.windowsVerbatimArguments,
             });
 
             this.serveProcess = proc;
@@ -252,7 +238,7 @@ export class ArtisanRunner {
      */
     stopServe(): void {
         if (this.serveProcess && !this.serveProcess.killed) {
-            this.serveProcess.kill();
+            stopProcess(this.serveProcess);
             this.serveProcess = undefined;
             this.servePort = undefined;
         }
@@ -260,15 +246,19 @@ export class ArtisanRunner {
 
     private run(args: string[], timeout: number = 30000, input?: string): Promise<ArtisanResult> {
         const php = this.phpCommand();
+        const launch = processLaunch(php.command, [...php.args, ...args], this.workspaceRoot);
 
         return new Promise((resolve) => {
             const child = execFile(
-                php.command,
-                [...php.args, ...args],
+                launch.command,
+                launch.args,
                 {
                     cwd: this.workspaceRoot,
                     timeout,
                     env: { ...process.env, FORCE_COLOR: '0' },
+                    maxBuffer: OUTPUT_LIMIT,
+                    windowsHide: true,
+                    windowsVerbatimArguments: launch.windowsVerbatimArguments,
                 },
                 (error, stdout, stderr) => {
                     this.activeProcesses.delete(child);

@@ -3,7 +3,7 @@ import * as assert from 'node:assert/strict';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { contentHash, editedFiles, MANIFEST_PATH, readManifest } from '../services/manifest';
+import { contentHash, editedFiles, MANIFEST_PATH, readManifest, recordedEntities } from '../services/manifest';
 
 test('the hash ignores line endings, like the package', () => {
     assert.equal(contentHash('<?php\r\nclass Post {}\r\n'), contentHash('<?php\nclass Post {}\n'));
@@ -34,4 +34,15 @@ test('files edited since the generation are the ones whose hash moved', () => {
     assert.ok(entries);
     assert.equal(entries.length, 4);
     assert.deepEqual([...editedFiles(root, entries)], ['app/Models/Post.php']);
+});
+
+test('entities recorded with their definition regenerate without their fields', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'lag-manifest-'));
+    fs.mkdirSync(path.join(root, path.dirname(MANIFEST_PATH)), { recursive: true });
+    fs.writeFileSync(path.join(root, MANIFEST_PATH), JSON.stringify({ version: 1, files: {}, entities: { Post: { fields: [{ name: 'title', type: 'string' }] } } }));
+
+    assert.deepEqual([...recordedEntities(root)], ['Post']);
+    fs.writeFileSync(path.join(root, MANIFEST_PATH), JSON.stringify({ version: 1, files: {} }));
+    assert.equal(recordedEntities(root).size, 0);
+    assert.equal(recordedEntities(path.join(root, 'missing')).size, 0);
 });

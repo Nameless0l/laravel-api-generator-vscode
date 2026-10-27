@@ -28,6 +28,10 @@ export class StatusBarManager {
             return;
         }
         const count = this.scanner.scan().length;
+        if (count === 0) {
+            this.item.hide();
+            return;
+        }
         this.item.text = `$(symbol-class) ${t('statusbar.entities', count)}`;
         this.item.tooltip = t('statusbar.tooltip');
         this.item.show();

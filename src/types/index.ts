@@ -163,7 +163,9 @@ export type GenerationSource =
     | { kind: 'describe'; text: string }
     | { kind: 'mermaid'; path: string }
     | { kind: 'openapi'; path: string }
-    | { kind: 'database'; tables: string[] };
+    | { kind: 'database'; tables: string[] }
+    /** Files of a generated entity, from the definition the package recorded (4.1+) or, when rebuilt, from its existing files. */
+    | { kind: 'regenerate'; entity: string; only: string[]; rebuilt?: ApiSchemaEntity };
 
 export interface FlowOptions {
     queryBuilder: boolean;

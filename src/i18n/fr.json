@@ -19,6 +19,12 @@
     "sanctumInstallStarted": "Installation de Sanctum lancée. Relancez la génération une fois terminée.",
     "queryBuilderMissing": "L'option QueryBuilder nécessite spatie/laravel-query-builder qui n'est pas installé dans ce projet. Les endpoints de liste générés échoueront tant qu'il ne sera pas installé."
   },
+  "detector": {
+    "noWorkspace": "Aucun dossier n'est ouvert.",
+    "notLaravel": "Ce dossier n'est pas un projet Laravel : aucun fichier artisan n'a été trouvé.",
+    "packageMissing": "nameless/laravel-api-generator n'est pas installé. Lancez : {0}",
+    "undetected": "Le projet Laravel n'a pas pu être détecté."
+  },
   "env": {
     "missing": "Fichier .env introuvable dans ce projet. Les commandes de base de données échoueront sans lui.",
     "copyFromExample": "Copier depuis .env.example",
@@ -57,14 +63,9 @@
   },
   "regenerate": {
     "promptName": "Nom de l'entité à régénérer",
-    "noMigration": "Aucune migration trouvée pour \"{0}\". Impossible de régénérer sans le schéma.",
-    "noFields": "Migration pour \"{0}\" trouvée mais aucun champ n'a pu être analysé.",
+    "noDefinition": "Aucune définition trouvée pour \"{0}\" : le manifeste ne l'enregistre pas et aucune migration ne crée sa table. Générez-la d'abord à nouveau depuis sa source.",
     "pickPlaceholder": "Sélectionnez les fichiers à régénérer pour \"{0}\"",
-    "pickTitle": "Régénérer des fichiers",
-    "confirm": "Régénérer {0} fichier(s) pour \"{1}\" ? Les fichiers existants seront écrasés.",
-    "regenerateAction": "Régénérer",
-    "success": "{0} fichier(s) régénéré(s) pour \"{1}\".",
-    "failed": "Échec de la régénération : {0}"
+    "pickTitle": "Régénérer des fichiers"
   },
   "db": {
     "couldNotListTables": "Impossible de lister les tables :\n{0}",
@@ -101,6 +102,7 @@
     "noModel": "Aucun modèle de chat disponible. Connectez-vous à GitHub Copilot, ou installez un autre fournisseur de modèles.",
     "failed": "Le modèle n'a pas pu rédiger le schéma :\n{0}",
     "empty": "Le modèle n'a rien renvoyé. Vérifiez que vous êtes connecté à GitHub Copilot, ou choisissez un autre modèle.",
+    "justification": "Rédige le fichier api-schema.yaml qui décrit votre API.",
     "exists": "api-schema.yaml existe déjà à la racine du projet. Le remplacer ?",
     "replace": "Remplacer"
   },
@@ -148,7 +150,17 @@
     "diagram": "Diagramme des entités",
     "projectActions": "Migrations, tests, seeders",
     "snippets": "Snippets",
-    "docs": "Documentation"
+    "docs": "Documentation",
+    "agents": "Agents",
+    "agentsReadyCopilot": "Le mode agent de Copilot peut planifier et générer des API dans ce projet.",
+    "agentsReadyCursor": "L'agent de Cursor peut planifier et générer des API dans ce projet.",
+    "agentsReadyOther": "Le serveur MCP est prêt : ajoutez php artisan api-generator:mcp à votre agent.",
+    "agentsMissingMcp": "Installez laravel/mcp pour que Copilot, Cursor et Claude Code puissent générer des API dans ce projet.",
+    "agentsTooOld": "Les agents demandent le package {0} ou plus récent.",
+    "agentsDisabled": "Le serveur MCP est désactivé dans les réglages.",
+    "installMcp": "Installer",
+    "copyClaude": "Copier la commande pour Claude Code",
+    "copiedClaude": "Commande copiée. Lancez-la dans un terminal à la racine du projet, puis démarrez Claude Code depuis ce dossier."
   },
   "tree": {
     "empty": "Aucune entité générée pour l'instant",
@@ -413,6 +425,9 @@
     "srcOpenapi": "Spec OpenAPI",
     "srcDatabase": "Base de données",
     "srcDescribe": "Description Copilot",
+    "srcRecorded": "Définition enregistrée",
+    "srcRebuilt": "Relue dans ses fichiers",
+    "rebuiltNote": "Le package n'a pas enregistré la définition de cette entité (générée avant la 4.1) : elle a été relue dans ses migrations, son modèle et ses enums. Vérifiez chaque changement avant de générer.",
     "tables_one": "{0} table",
     "tables_other": "{0} tables",
     "schemasRead_one": "{0} schéma lu",

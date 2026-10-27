@@ -1,8 +1,8 @@
 {
   "name": "laravel-api-generator",
   "displayName": "Laravel API Generator",
-  "description": "Generate complete REST APIs for Laravel with a visual interface",
-  "version": "1.1.2",
+  "description": "Generate complete Laravel REST APIs from a visual builder, your database, a schema or a description, or let Copilot, Cursor and Claude Code generate them through MCP",
+  "version": "1.2.0",
   "publisher": "Nameless0l",
   "license": "MIT",
   "icon": "media/icon-marketplace.png",
@@ -21,7 +21,8 @@
     "vscode": "^1.82.0"
   },
   "categories": [
-    "Programming Languages",
+    "AI",
+    "Chat",
     "Snippets",
     "Other"
   ],
@@ -38,7 +39,10 @@
     "backend",
     "ai",
     "copilot",
-    "agent skills"
+    "agent skills",
+    "mcp",
+    "cursor",
+    "claude code"
   ],
   "activationEvents": [
     "workspaceContains:artisan",
@@ -164,7 +168,7 @@
         "command": "laravelApiGenerator.goToRelated",
         "key": "ctrl+alt+r",
         "mac": "cmd+alt+r",
-        "when": "editorTextFocus"
+        "when": "editorTextFocus && editorLangId == php && laravelApiGenerator.laravelProject"
       }
     ],
     "viewsContainers": {
@@ -182,12 +186,14 @@
           "id": "laravelApiGenerator.home",
           "type": "webview",
           "name": "Generate",
-          "initialSize": 1
+          "initialSize": 1,
+          "when": "laravelApiGenerator.laravelProject"
         },
         {
           "id": "laravelApiGenerator.entities",
           "name": "Generated Entities",
-          "initialSize": 1
+          "initialSize": 1,
+          "when": "laravelApiGenerator.laravelProject"
         }
       ]
     },
@@ -201,12 +207,12 @@
       {
         "id": "laravelApiGenerator.gettingStarted",
         "title": "Get Started with Laravel API Generator",
-        "description": "Generate complete REST APIs for Laravel from a form, your database, a schema file or a Mermaid diagram.",
+        "description": "Generate complete REST APIs for Laravel from a form, your database, a schema file, a Mermaid diagram, an OpenAPI spec or a description, or let your coding agent do it.",
         "steps": [
           {
             "id": "installPackage",
             "title": "Install the Composer package",
-            "description": "The extension drives the nameless/laravel-api-generator package (v3.5+).\n[Open a Terminal](command:workbench.action.terminal.new)",
+            "description": "The extension drives the nameless/laravel-api-generator package: 4.x on Laravel 12 and 13, 3.15 on Laravel 10 and 11.\n[Open a Terminal](command:workbench.action.terminal.new)",
             "media": {
               "markdown": "media/walkthrough/install.md"
             }
@@ -224,8 +230,8 @@
           },
           {
             "id": "fromDatabase",
-            "title": "Import an existing database",
-            "description": "Point the generator at your schema and get APIs for every table, relationships included.\n[Generate from Database](command:laravelApiGenerator.generateFromDatabase)",
+            "title": "Import what you already have",
+            "description": "Start from your database, a schema file, a Mermaid diagram, an OpenAPI spec or a description, and review every file before it is written.\n[Generate from Database](command:laravelApiGenerator.generateFromDatabase)",
             "media": {
               "markdown": "media/walkthrough/from-database.md"
             },
@@ -247,11 +253,80 @@
             "completionEvents": [
               "onView:laravelApiGenerator.entities"
             ]
+          },
+          {
+            "id": "agents",
+            "title": "Let your agent generate",
+            "description": "Copilot, Cursor and Claude Code can plan and generate APIs through the package's MCP server.\n[Show the Agents block](command:laravelApiGenerator.home.focus)",
+            "media": {
+              "markdown": "media/walkthrough/agents.md"
+            },
+            "completionEvents": [
+              "onView:laravelApiGenerator.home"
+            ]
           }
         ]
       }
     ],
     "menus": {
+      "commandPalette": [
+        {
+          "command": "laravelApiGenerator.generate",
+          "when": "laravelApiGenerator.laravelProject"
+        },
+        {
+          "command": "laravelApiGenerator.delete",
+          "when": "laravelApiGenerator.laravelProject"
+        },
+        {
+          "command": "laravelApiGenerator.regenerateFile",
+          "when": "laravelApiGenerator.laravelProject"
+        },
+        {
+          "command": "laravelApiGenerator.refresh",
+          "when": "laravelApiGenerator.laravelProject"
+        },
+        {
+          "command": "laravelApiGenerator.goToRelated",
+          "when": "laravelApiGenerator.laravelProject"
+        },
+        {
+          "command": "laravelApiGenerator.diagram",
+          "when": "laravelApiGenerator.laravelProject"
+        },
+        {
+          "command": "laravelApiGenerator.showSnippets",
+          "when": "laravelApiGenerator.laravelProject"
+        },
+        {
+          "command": "laravelApiGenerator.generateFromDatabase",
+          "when": "laravelApiGenerator.laravelProject"
+        },
+        {
+          "command": "laravelApiGenerator.generateFromSchema",
+          "when": "laravelApiGenerator.laravelProject"
+        },
+        {
+          "command": "laravelApiGenerator.generateFromMermaid",
+          "when": "laravelApiGenerator.laravelProject"
+        },
+        {
+          "command": "laravelApiGenerator.generateFromOpenApi",
+          "when": "laravelApiGenerator.laravelProject"
+        },
+        {
+          "command": "laravelApiGenerator.describeApi",
+          "when": "laravelApiGenerator.laravelProject && laravelApiGenerator.canDescribe"
+        },
+        {
+          "command": "laravelApiGenerator.addFields",
+          "when": "laravelApiGenerator.laravelProject"
+        },
+        {
+          "command": "laravelApiGenerator.projectActions",
+          "when": "laravelApiGenerator.laravelProject"
+        }
+      ],
       "view/item/context": [
         {
           "command": "laravelApiGenerator.regenerateFile",
@@ -287,7 +362,7 @@
         },
         {
           "command": "laravelApiGenerator.describeApi",
-          "when": "view == laravelApiGenerator.entities",
+          "when": "view == laravelApiGenerator.entities && laravelApiGenerator.canDescribe",
           "group": "1_sources@1"
         },
         {
@@ -347,7 +422,7 @@
         "laravelApiGenerator.mcp.enabled": {
           "type": "boolean",
           "default": true,
-          "markdownDescription": "Offer the package's MCP server to Copilot's agent mode when the project has `laravel/mcp`. It runs `php artisan api-generator:mcp` with the PHP command above."
+          "markdownDescription": "Offer the package's MCP server to Copilot's agent mode and to Cursor when the project has `laravel/mcp`. It runs `php artisan api-generator:mcp` with the PHP command above."
         },
         "laravelApiGenerator.locale": {
           "type": "string",

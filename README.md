@@ -60,8 +60,8 @@ Create API entities through a form instead of CLI flags:
 - **File preview** -- see what files will be generated before running
 - **Sail and Docker** -- point `laravelApiGenerator.phpCommand` at `["./vendor/bin/sail", "php"]` or `["docker", "compose", "exec", "-T", "app", "php"]` and every action runs inside the container
 - **Real-time code preview** -- rendered by the package installed in your project, so it is exactly the code that will be written: every generated file, routes and seeder included, your published stubs, badges for new, modified and unchanged files, and a diff for modified ones
-- **Copilot skill** -- in Laravel projects, GitHub Copilot (VS Code 1.109+) gets the package's `laravel-api-generator` skill, so it generates APIs with `make:fullapi` instead of writing the files by hand
-- **MCP server for agents** -- with package 3.12 or later and `laravel/mcp` in the project, Copilot's agent mode (VS Code 1.101+) lists a Laravel API Generator server: the agent lists your entities, previews a generation, then generates the API or adds fields itself, and never overwrites a file you edited. It runs with your PHP command, Sail and Docker included
+- **Agent skill** -- in Laravel projects, GitHub Copilot (VS Code 1.109+) and Cursor get the package's `laravel-api-generator` skill, so they generate APIs with `make:fullapi` instead of writing the files by hand
+- **MCP server for agents** -- with package 3.12 or later and `laravel/mcp` in the project, Copilot's agent mode (VS Code 1.101+) lists a Laravel API Generator server, and Cursor gets the same server with no `mcp.json` to write: the agent lists your entities, previews a generation, then generates the API or adds fields itself, and never overwrites a file you edited. It runs with your PHP command, Sail and Docker included. The sidebar's **Agents** block installs `laravel/mcp` when it is missing, and copies the command that adds the server to Claude Code
 - **Schema file autocompletion** -- `api-schema.yaml`, `.yml` and `.json` are checked against the package's JSON Schema: completion for keys and types, typos flagged before you generate (YAML needs the Red Hat YAML extension)
 - **Your edits are safe** -- with package 3.11 or later, regenerating keeps the files you edited by hand; a modal names them and lets you overwrite them or keep your changes (older packages: a modal lists every file that will be overwritten)
 - **Auto-open generated files** -- after a successful generation, the new Model and Controller open in the editor
@@ -108,7 +108,7 @@ Start from a sentence: *a library that lends books to members, a loan has a due 
 ![The Describe your API panel](docs/ext-describe.png)
 
 - Open **A description** in the sidebar, or run **Describe an API with Copilot**, and write your API or start from an example
-- Pick the chat model (GitHub Copilot first, VS Code 1.90+); it drafts an `api-schema.yaml` that relates to the entities your project already has
+- Pick the chat model (GitHub Copilot first, VS Code 1.90+); it drafts an `api-schema.yaml` that relates to the entities your project already has. The model list follows Copilot as it loads. In Cursor and the other forks without chat models, the entry stays hidden: their agent reaches the same generator through MCP
 - The proposed entities show up as cards; click one to adjust it in the YAML draft, the cards follow your edits
 - **Review the plan** runs the package's dry run: entities, files to create or update, options, then **Generate**. **Save as api-schema.yaml** keeps the draft as the source of your API
 - When the model cannot answer, the panel says why and offers the provider's own fix, such as setting its API key
@@ -142,12 +142,13 @@ Day-30 problem solved: evolve a generated API without wiping your manual changes
 
 ### Regenerate Single File(s)
 
-Modified your migration and want fresh tests without retyping the schema?
+Want a fresh resource or fresh tests without retyping the schema?
 
-- Right-click an entity in the sidebar tree -> **Regenerate File(s)...**
-- The extension parses the existing migration to recover the field list and Soft Deletes flag
+- Hover an entity in the sidebar tree and click **Regenerate File(s)**, or use **Regenerate** in the diagram inspector
 - Multi-select the artifacts to rebuild (Model, Controller, Service, DTO, Requests, Resource, Factory, Seeder, Policy, Feature Test, Unit Test)
-- Underlying call is `make:fullapi --only=Type,Type` so the migration, the API route and seeder registration are left untouched
+- The review screen shows the diff of every file before anything is written, and keeps the files you edited by hand unless you choose to overwrite them
+- With package 4.1 or later, the entity comes back from the definition the package recorded when it generated it: relations, enum values, foreign keys, unique and nullable columns and options included. An entity generated before 4.1 is read back from its migrations, its model and its enums
+- The underlying call is `make:fullapi --only=Type,Type`, so the migration, the API route and the seeder registration are left untouched
 
 ### Sidebar Entity Explorer
 
@@ -226,7 +227,7 @@ It is a **dev dependency with zero lock-in**: nothing from the generator ships t
 
 ### 2. Install the extension
 
-Search **"Laravel API Generator"** in VS Code Extensions (`Ctrl+Shift+X`), or install from [Marketplace](https://marketplace.visualstudio.com/items?itemName=Nameless0l.laravel-api-generator).
+Search **"Laravel API Generator"** in VS Code Extensions (`Ctrl+Shift+X`), or install from [Marketplace](https://marketplace.visualstudio.com/items?itemName=Nameless0l.laravel-api-generator). In Cursor and the other VS Code forks, install it from [Open VSX](https://open-vsx.org/extension/Nameless0l/laravel-api-generator).
 
 ### 3. Generate your first API
 
@@ -266,7 +267,7 @@ database/seeders/DatabaseSeeder.php             -- Seeder auto-registered
 ## Requirements
 
 - **VS Code** 1.82+
-- **PHP** 8.2+ on your PATH (or configure `laravelApiGenerator.phpPath`, or `laravelApiGenerator.phpCommand` for Sail and Docker)
+- **PHP** 8.2+ on your PATH, Herd's `php.bat` on Windows included (or configure `laravelApiGenerator.phpPath`, or `laravelApiGenerator.phpCommand` for Sail and Docker)
 - A **Laravel 10 to 13** project
 - The package: `composer require --dev nameless/laravel-api-generator`. Its 4.x line needs Laravel 12, so Laravel 10 and 11 projects use the 3.x line, which the extension installs for them.
 
@@ -278,7 +279,7 @@ database/seeders/DatabaseSeeder.php             -- Seeder auto-registered
 |---------|---------|-------------|
 | `laravelApiGenerator.phpPath` | `php` | Path to the PHP executable |
 | `laravelApiGenerator.phpCommand` | `[]` | Full command that runs PHP, one argument per item (Sail, Docker). Wins over `phpPath` when set. |
-| `laravelApiGenerator.mcp.enabled` | `true` | Offer the package's MCP server to Copilot's agent mode (needs `laravel/mcp` and package 3.12+) |
+| `laravelApiGenerator.mcp.enabled` | `true` | Offer the package's MCP server to Copilot's agent mode and to Cursor (needs `laravel/mcp` and package 3.12+) |
 | `laravelApiGenerator.locale` | `auto` | UI language: `auto` (follow VS Code), `en`, or `fr` |
 
 ---

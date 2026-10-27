@@ -13,6 +13,10 @@ const manifest = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'ut
         yamlValidation?: Array<{ fileMatch: string | string[]; url: string }>;
         mcpServerDefinitionProviders?: Array<{ id: string; label: string }>;
         configuration: { properties: Record<string, { default?: unknown }> };
+        commands: Array<{ command: string }>;
+        views: Record<string, Array<{ id: string; when?: string }>>;
+        menus: { commandPalette?: Array<{ command: string; when?: string }> };
+        keybindings: Array<{ command: string; when?: string }>;
     };
 };
 
@@ -58,4 +62,19 @@ test('the MCP server provider is declared under the id the code registers', () =
         [MCP_PROVIDER_ID]
     );
     assert.equal(manifest.contributes.configuration.properties['laravelApiGenerator.mcp.enabled']?.default, true);
+});
+
+test('outside a Laravel project the extension shows no view, command or shortcut', () => {
+    const laravel = 'laravelApiGenerator.laravelProject';
+    const palette = new Map((manifest.contributes.menus.commandPalette ?? []).map((entry) => [entry.command, entry.when ?? '']));
+
+    for (const { command } of manifest.contributes.commands) {
+        assert.ok(palette.get(command)?.includes(laravel), `${command} shows in every palette`);
+    }
+    for (const view of Object.values(manifest.contributes.views).flat()) {
+        assert.ok(view.when?.includes(laravel), `${view.id} shows in every workspace`);
+    }
+    for (const binding of manifest.contributes.keybindings) {
+        assert.ok(binding.when?.includes(laravel), `${binding.command} is bound in every editor`);
+    }
 });

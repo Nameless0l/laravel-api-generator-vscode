@@ -74,6 +74,15 @@ export function flowArgs(
     dryRun: boolean,
     relative: (file: string) => string
 ): { args: string[]; stdin?: 'text' | 'file' } {
+    if (source.kind === 'regenerate') {
+        const args = ['artisan', 'make:fullapi', source.rebuilt ? '--schema=-' : source.entity, `--only=${source.only.join(',')}`];
+        if (options.force) {
+            args.push('--force');
+        }
+        args.push(...(dryRun ? ['--dry-run', '--json'] : ['--json']));
+        return source.rebuilt ? { args, stdin: 'text' } : { args };
+    }
+
     let flags: string[];
     let stdin: 'text' | 'file' | undefined;
     if (source.kind === 'describe') {

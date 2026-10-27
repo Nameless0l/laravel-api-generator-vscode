@@ -139,17 +139,17 @@ export class LaravelDetector {
     static validate(): { valid: boolean; root?: string; message?: string; packageMissing?: boolean } {
         const root = this.getWorkspaceRoot();
         if (!root) {
-            return { valid: false, message: 'No workspace folder open.' };
+            return { valid: false, message: t('detector.noWorkspace') };
         }
         if (!this.isLaravelProject(root)) {
-            return { valid: false, message: 'This is not a Laravel project (no artisan file found).' };
+            return { valid: false, message: t('detector.notLaravel') };
         }
         if (!this.isPackageInstalled(root)) {
             return {
                 valid: false,
                 root,
                 packageMissing: true,
-                message: `nameless/laravel-api-generator is not installed. Run: ${requirePackageCommand(root)}`,
+                message: t('detector.packageMissing', requirePackageCommand(root)),
             };
         }
         return { valid: true, root };
@@ -177,7 +177,7 @@ export class LaravelDetector {
         }
 
         if (!check.valid) {
-            vscode.window.showErrorMessage(check.message || 'Cannot detect Laravel project.');
+            vscode.window.showErrorMessage(check.message || t('detector.undetected'));
             return { valid: false };
         }
 

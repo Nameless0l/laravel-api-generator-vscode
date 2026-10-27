@@ -1,11 +1,14 @@
 import * as vscode from 'vscode';
 import * as crypto from 'crypto';
 import { t, getLocale } from '../i18n';
+import { agentHost } from '../providers/mcpServerProvider';
+import { DescribeAvailability } from '../services/describeAvailability';
 import { LaravelDetector } from '../services/laravelDetector';
-import { detectPackageState, PREVIEW_MIN_VERSION, requirePackageCommand } from '../services/packageState';
-import { resolvePhpCommand } from '../services/phpCommand';
+import { claudeCodeCommand, mcpState } from '../services/mcpServer';
+import { detectPackageState, MCP_MIN_VERSION, PREVIEW_MIN_VERSION, requirePackageCommand, usesLegacyLine } from '../services/packageState';
+import { PhpCommand, resolvePhpCommand } from '../services/phpCommand';
 import { laravelVersion, phpVersion, projectName, schemaFile } from '../services/projectInfo';
-import { getSidebarHomeHtml, HomeFix, HomeProject, SidebarHomeStrings } from './sidebarHomeContent';
+import { getSidebarHomeHtml, HomeAgents, HomeFix, HomeProject, SidebarHomeStrings } from './sidebarHomeContent';
 
 const DOCS_BASE = 'https://nameless0l.github.io/laravel-api-generator/';
 
@@ -27,7 +30,10 @@ export class SidebarHomeViewProvider implements vscode.WebviewViewProvider {
     private view: vscode.WebviewView | undefined;
     private php: Promise<string | null> | undefined;
 
-    constructor(private readonly context: vscode.ExtensionContext) {}
+    constructor(
+        private readonly context: vscode.ExtensionContext,
+        private readonly describe: DescribeAvailability
+    ) {}
 
     resolveWebviewView(view: vscode.WebviewView): void {
         this.view = view;
@@ -50,10 +56,11 @@ export class SidebarHomeViewProvider implements vscode.WebviewViewProvider {
                 if (e.affectsConfiguration('laravelApiGenerator.phpCommand') || e.affectsConfiguration('laravelApiGenerator.phpPath')) {
                     this.php = undefined;
                     this.render();
-                } else if (e.affectsConfiguration('laravelApiGenerator.locale')) {
+                } else if (e.affectsConfiguration('laravelApiGenerator.locale') || e.affectsConfiguration('laravelApiGenerator.mcp')) {
                     this.render();
                 }
             }),
+            this.describe.onDidChange(() => this.render()),
             view.onDidChangeVisibility(() => {
                 if (view.visible) {
                     this.render();
@@ -104,6 +111,8 @@ export class SidebarHomeViewProvider implements vscode.WebviewViewProvider {
             lang: getLocale(),
             project: isLaravel && root ? this.project(root) : undefined,
             schemaFile: isLaravel && root ? schemaFile(root) : undefined,
+            canDescribe: this.describe.available,
+            agents: isLaravel && root ? this.agents(root) : undefined,
             strings: this.strings(),
         });
 
@@ -138,10 +147,36 @@ export class SidebarHomeViewProvider implements vscode.WebviewViewProvider {
         return project;
     }
 
+    private agents(root: string): HomeAgents | undefined {
+        if (usesLegacyLine(root)) {
+            return undefined;
+        }
+        const enabled = vscode.workspace.getConfiguration('laravelApiGenerator').get<boolean>('mcp.enabled', true);
+        switch (mcpState(root, enabled)) {
+            case 'noPackage':
+                return undefined;
+            case 'tooOld':
+                return { status: { tone: 'muted', text: t('home.agentsTooOld', MCP_MIN_VERSION), fix: { action: 'update', label: t('home.update') } }, claudeCommand: false };
+            case 'missingMcp':
+                return { status: { tone: 'muted', text: t('home.agentsMissingMcp'), fix: { action: 'installMcp', label: t('home.installMcp') } }, claudeCommand: false };
+            case 'disabled':
+                return { status: { tone: 'muted', text: t('home.agentsDisabled'), fix: { action: 'mcpSettings', label: t('home.settings') } }, claudeCommand: false };
+            case 'ready': {
+                const host = agentHost();
+                const text = host === 'cursor' ? t('home.agentsReadyCursor') : host === 'copilot' ? t('home.agentsReadyCopilot') : t('home.agentsReadyOther');
+                return { status: { tone: 'ok', text }, claudeCommand: true };
+            }
+        }
+    }
+
+    private phpCommand(): PhpCommand {
+        const config = vscode.workspace.getConfiguration('laravelApiGenerator');
+        return resolvePhpCommand(config.get<unknown>('phpCommand'), config.get<string>('phpPath', 'php'));
+    }
+
     private async announcePhp(root: string): Promise<void> {
         if (!this.php) {
-            const config = vscode.workspace.getConfiguration('laravelApiGenerator');
-            this.php = phpVersion(resolvePhpCommand(config.get<unknown>('phpCommand'), config.get<string>('phpPath', 'php')), root);
+            this.php = phpVersion(this.phpCommand(), root);
         }
         const version = await this.php;
         await this.view?.webview.postMessage(
@@ -151,19 +186,30 @@ export class SidebarHomeViewProvider implements vscode.WebviewViewProvider {
 
     private fix(action: HomeFix): void {
         const root = LaravelDetector.getWorkspaceRoot();
-        if (action === 'settings') {
-            void vscode.commands.executeCommand('workbench.action.openSettings', `@ext:${this.context.extension.id}`);
-            return;
+        switch (action) {
+            case 'settings':
+                void vscode.commands.executeCommand('workbench.action.openSettings', `@ext:${this.context.extension.id}`);
+                return;
+            case 'mcpSettings':
+                void vscode.commands.executeCommand('workbench.action.openSettings', 'laravelApiGenerator.mcp.enabled');
+                return;
+            case 'copyClaude':
+                void vscode.env.clipboard.writeText(claudeCodeCommand(this.phpCommand())).then(() => vscode.window.showInformationMessage(t('home.copiedClaude')));
+                return;
         }
         if (!root) {
             return;
         }
-        const command =
-            action === 'install'
-                ? requirePackageCommand(root)
-                : action === 'composerInstall'
-                  ? 'composer install'
-                  : 'composer update nameless/laravel-api-generator -W';
+        const commands: Partial<Record<HomeFix, string>> = {
+            install: requirePackageCommand(root),
+            composerInstall: 'composer install',
+            update: 'composer update nameless/laravel-api-generator -W',
+            installMcp: 'composer require --dev laravel/mcp',
+        };
+        const command = commands[action];
+        if (!command) {
+            return;
+        }
         const terminal = vscode.window.createTerminal({ name: 'Laravel API Generator', cwd: root });
         terminal.sendText(command);
         terminal.show();
@@ -186,6 +232,8 @@ export class SidebarHomeViewProvider implements vscode.WebviewViewProvider {
             projectActions: t('home.projectActions'),
             snippets: t('home.snippets'),
             docs: t('home.docs'),
+            agents: t('home.agents'),
+            copyClaude: t('home.copyClaude'),
         };
     }
 }

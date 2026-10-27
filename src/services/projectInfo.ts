@@ -1,7 +1,7 @@
 import { execFile } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
-import { PhpCommand } from './phpCommand';
+import { PhpCommand, processLaunch } from './phpCommand';
 import { readInstalledPackages } from './packageState';
 
 export const SCHEMA_FILES = ['api-schema.yaml', 'api-schema.yml', 'api-schema.json'];
@@ -28,7 +28,8 @@ export function projectName(root: string): string {
 export function phpVersion(php: PhpCommand, cwd: string, timeout = 8000): Promise<string | null> {
     return new Promise((resolve) => {
         try {
-            execFile(php.command, [...php.args, '-r', 'echo PHP_VERSION;'], { cwd, timeout }, (error, stdout) => {
+            const launch = processLaunch(php.command, [...php.args, '-r', 'echo PHP_VERSION;'], cwd);
+            execFile(launch.command, launch.args, { cwd, timeout, windowsHide: true, windowsVerbatimArguments: launch.windowsVerbatimArguments }, (error, stdout) => {
                 const match = /(\d+\.\d+)(?:\.\d+)?/.exec(String(stdout));
                 resolve(error || !match ? null : match[1]);
             });

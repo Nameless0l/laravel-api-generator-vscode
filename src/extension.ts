@@ -2,7 +2,8 @@ import * as vscode from 'vscode';
 import { initLocale } from './i18n';
 import { LaravelDetector } from './services/laravelDetector';
 import { EntityDecorations, EntityTreeProvider } from './providers/entityTreeProvider';
-import { registerMcpServerProvider } from './providers/mcpServerProvider';
+import { registerAgents } from './providers/mcpServerProvider';
+import { DescribeAvailability } from './services/describeAvailability';
 import { SidebarHomeViewProvider } from './webview/sidebarHomeView';
 import { DiagramPanel } from './webview/diagramPanel';
 import { StatusBarManager } from './services/statusBar';
@@ -25,8 +26,9 @@ import { registerProjectActionsCommand } from './commands/projectActions';
 export function activate(context: vscode.ExtensionContext): void {
     initLocale();
 
-    const home = new SidebarHomeViewProvider(context);
-    context.subscriptions.push(vscode.window.registerWebviewViewProvider(SidebarHomeViewProvider.viewId, home), registerPlannedContent());
+    const describe = new DescribeAvailability();
+    const home = new SidebarHomeViewProvider(context, describe);
+    context.subscriptions.push(describe, vscode.window.registerWebviewViewProvider(SidebarHomeViewProvider.viewId, home), registerPlannedContent());
 
     const root = LaravelDetector.getWorkspaceRoot();
     const isLaravel = !!root && LaravelDetector.isLaravelProject(root);
@@ -46,7 +48,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
         statusBar = new StatusBarManager(root);
         statusBar.refresh();
-        context.subscriptions.push({ dispose: () => statusBar?.dispose() }, ...registerMcpServerProvider(root));
+        context.subscriptions.push({ dispose: () => statusBar?.dispose() }, ...registerAgents(root, context.extensionPath));
     }
 
     const refresh = (): void => {
@@ -96,7 +98,7 @@ export function activate(context: vscode.ExtensionContext): void {
     context.subscriptions.push(
         registerGenerateCommand(extensionUri, refresh),
         registerDeleteCommand(refresh),
-        registerRegenerateFileCommand(refresh),
+        registerRegenerateFileCommand(extensionUri, refresh),
         registerGoToRelatedCommand(),
         registerDiagramCommand(extensionUri, context.workspaceState),
         registerShowSnippetsCommand(context.extensionPath),
