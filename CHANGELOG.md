@@ -2,6 +2,26 @@
 
 All notable changes to the Laravel API Generator VS Code extension will be documented in this file.
 
+## [1.2.0] - 2026-10-27
+
+Pairs with `nameless/laravel-api-generator` 4.1 and still works with 3.9 or later.
+
+### Fixed
+- **Regenerate File(s) no longer drops relations, enums and column modifiers.** It used to rebuild the fields from the migration as bare `name:type` pairs, so a regenerated model lost its `belongsTo`, its enum cast and its foreign key, then the command reported success. Regenerating now opens the review screen with the diff of every file, and nothing is written before **Generate**. With package 4.1, the entity comes back from the definition the package recorded; an entity generated before 4.1 is read back from its migrations, model, enums and generated files, and the screen says so. Files edited by hand show as kept instead of passing for regenerated.
+- The review screen no longer fails past about 50 entities (`stdout maxBuffer length exceeded`), which stopped large database or OpenAPI imports.
+- PHP exposed as a `.bat` or `.cmd` file, as Herd does on Windows, now runs: generation, live preview, PHP detection and the API docs server failed with `ENOENT` before. Stopping the docs server on Windows also stops the PHP server behind `artisan serve`.
+- The chat model list follows Copilot as it loads, instead of staying empty when the Describe panel opened first, and the request tells VS Code what the model is used for.
+
+### Added
+- **Agents** block in the sidebar: it says whether Copilot, Cursor and Claude Code can reach the package's MCP server, installs `laravel/mcp` when it is missing, points at the setting when the server is turned off, and copies the command that adds the server to Claude Code.
+- **Cursor support**: the extension registers the MCP server and the `laravel-api-generator` skill in Cursor, with no `mcp.json` to write. In Cursor and the other forks without chat models, **Describe an API** only shows once a model is available, instead of asking for a Copilot sign-in.
+- A walkthrough step for agents.
+
+### Changed
+- The views, commands and `Ctrl+Alt+R` only show in Laravel projects, the shortcut only in PHP files, and the status bar item only once the project has entities.
+- The walkthrough describes the current extension: package 4.x, the live preview, the five sources and the review screen.
+- Marketplace categories: AI and Chat replace Programming Languages.
+
 ## [1.1.2] - 2026-09-29
 
 Pairs with `nameless/laravel-api-generator` 4.0 and still works with 3.9 or later.

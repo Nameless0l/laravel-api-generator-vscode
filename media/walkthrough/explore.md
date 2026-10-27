@@ -1,16 +1,18 @@
 # Explore the sidebar
 
-The **Generated Entities** view lists every API in your project with
-the files the generator wrote:
+The **Generated Entities** view lists every API in your project with the
+files the generator wrote:
 
-- Click a file to open it, or use **Alt+click** on any generated file
-  and *Go to Related* to jump between Model ↔ Controller ↔ Service
-- Files you edited by hand are flagged, so a regeneration never surprises you
-- Right-click an entity to **regenerate a single file** or **delete**
-  the whole API cleanly (files + routes + registrations)
-- The **diagram button** renders your entities and their relationships
-  as an interactive graph
+- Click a file to open it. `Ctrl+Alt+R` (`Cmd+Alt+R` on macOS) jumps from
+  a generated file to its siblings: model, controller, service, tests
+- Files you edited by hand are flagged, and a regeneration keeps them
+  unless you choose to overwrite them
+- Hover an entity to **regenerate** some of its files or **delete** the
+  whole API (files, routes and registrations). Regenerating opens the
+  review screen first, with the diff of every file
+- Right-click an entity to **add fields** with an incremental migration
+- The **diagram** button draws your entities and their relationships
 
-The **status bar item** shows how many entities the project has, and
-**Project Actions** run migrations, tests, seeders and open the API docs
-without leaving the editor.
+Once the project has entities, the **status bar** counts them, and
+**Project Actions** run migrations, tests and seeders, and open the API
+docs without leaving the editor.
