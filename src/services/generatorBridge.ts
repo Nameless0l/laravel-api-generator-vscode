@@ -1,5 +1,5 @@
 import { ChildProcess, spawn } from 'child_process';
-import { PhpCommand } from './phpCommand';
+import { PhpCommand, processLaunch } from './phpCommand';
 import { ProtocolClient, ProtocolError, RequestTimeoutError, WorkerExitedError } from './protocolClient';
 import { ApiSchema, HandshakeResult, PlanFlags, PlanResult, ProtocolMessage, SUPPORTED_PROTOCOL } from '../types';
 
@@ -29,7 +29,14 @@ export class ProtocolMismatchError extends Error {
 const WORKER_ARGS = ['artisan', 'api-generator:serve', '--stdio'];
 
 function spawnWorker(command: string, args: string[], cwd: string): ChildProcess {
-    return spawn(command, args, { cwd, env: { ...process.env, FORCE_COLOR: '0' }, stdio: ['pipe', 'pipe', 'pipe'] });
+    const launch = processLaunch(command, args, cwd);
+    return spawn(launch.command, launch.args, {
+        cwd,
+        env: { ...process.env, FORCE_COLOR: '0' },
+        stdio: ['pipe', 'pipe', 'pipe'],
+        windowsHide: true,
+        windowsVerbatimArguments: launch.windowsVerbatimArguments,
+    });
 }
 
 export class GeneratorBridge {

@@ -57,3 +57,13 @@ test('webview pages keep their boot data inert', () => {
     assert.match(html, /<script nonce="abc" src="app.js"><\/script>/);
     assert.match(html, /<script nonce="abc" type="application\/json" id="boot">\{"a":1\}<\/script>/);
 });
+
+test('a regeneration names the entity, or sends its rebuilt definition through stdin', () => {
+    assert.deepEqual(flowArgs({ kind: 'regenerate', entity: 'Post', only: ['Model', 'Request'] }, DEFAULT_FLOW_OPTIONS, true, inside), {
+        args: ['artisan', 'make:fullapi', 'Post', '--only=Model,Request', '--dry-run', '--json'],
+    });
+    assert.deepEqual(flowArgs({ kind: 'regenerate', entity: 'Post', only: ['Model'], rebuilt: { fields: {} } }, { ...DEFAULT_FLOW_OPTIONS, force: true, pest: true }, false, inside), {
+        args: ['artisan', 'make:fullapi', '--schema=-', '--only=Model', '--force', '--json'],
+        stdin: 'text',
+    });
+});

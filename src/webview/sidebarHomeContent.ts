@@ -1,7 +1,7 @@
 import { icon } from './ui/icons';
 import { esc } from './ui/page';
 
-export type HomeFix = 'install' | 'composerInstall' | 'update' | 'settings';
+export type HomeFix = 'install' | 'composerInstall' | 'update' | 'settings' | 'installMcp' | 'mcpSettings' | 'copyClaude';
 
 export interface HomeStatus {
     tone: 'ok' | 'warn' | 'muted';
@@ -13,6 +13,11 @@ export interface HomeProject {
     name: string;
     versions: string;
     status: HomeStatus;
+}
+
+export interface HomeAgents {
+    status: HomeStatus;
+    claudeCommand: boolean;
 }
 
 export interface SidebarHomeStrings {
@@ -31,6 +36,8 @@ export interface SidebarHomeStrings {
     projectActions: string;
     snippets: string;
     docs: string;
+    agents: string;
+    copyClaude: string;
 }
 
 export interface SidebarHomeOptions {
@@ -48,6 +55,9 @@ export interface SidebarHomeOptions {
     project?: HomeProject;
     /** The schema file found at the project root, shown next to its entry. */
     schemaFile?: string;
+    canDescribe: boolean;
+    /** Undefined when the project has no package to offer agents. */
+    agents?: HomeAgents;
     strings: SidebarHomeStrings;
 }
 
@@ -69,13 +79,13 @@ export function getSidebarHomeHtml(o: SidebarHomeOptions): string {
 
     <nav class="list" aria-label="${esc(s.generateFrom)}">
         <div class="label list-title">${esc(s.generateFrom)}</div>
-        ${item('laravelApiGenerator.describeApi', 'sparkle', s.describe, s.describeDetail)}
+        ${o.canDescribe ? item('laravelApiGenerator.describeApi', 'sparkle', s.describe, s.describeDetail) : ''}
         ${item('laravelApiGenerator.generateFromDatabase', 'database', s.database)}
         ${item('laravelApiGenerator.generateFromSchema', 'fileCode', s.schema, o.schemaFile, true)}
         ${item('laravelApiGenerator.generateFromMermaid', 'mermaid', s.mermaid)}
         ${item('laravelApiGenerator.generateFromOpenApi', 'openapi', s.openapi)}
     </nav>
-
+    ${agents(o)}
     <nav class="list" aria-label="${esc(s.project)}">
         <div class="label list-title">${esc(s.project)}</div>
         ${item('laravelApiGenerator.diagram', 'hierarchy', s.diagram)}
@@ -155,6 +165,23 @@ function alert(status: HomeStatus): string {
     }
     const fix = status.fix ? `<button class="btn btn-soft" data-fix="${status.fix.action}">${esc(status.fix.label)}</button>` : '';
     return `<div class="alert alert-${status.tone}" role="status">${icon(status.tone === 'warn' ? 'warning' : 'info')}<span>${esc(status.text)}</span>${fix}</div>`;
+}
+
+function agents(o: SidebarHomeOptions): string {
+    if (!o.agents) {
+        return '';
+    }
+    const { status, claudeCommand } = o.agents;
+    const state = status.tone === 'ok' ? `<p class="agents-note">${icon('bolt')}<span>${esc(status.text)}</span></p>` : alert(status);
+    const claude = claudeCommand
+        ? `<button class="item" data-fix="copyClaude">${icon('terminal')}<span class="item-label">${esc(o.strings.copyClaude)}</span></button>`
+        : '';
+    return `<nav class="list" aria-label="${esc(o.strings.agents)}">
+        <div class="label list-title">${esc(o.strings.agents)}</div>
+        ${state}
+        ${claude}
+    </nav>
+`;
 }
 
 function footer(status: HomeStatus): string {

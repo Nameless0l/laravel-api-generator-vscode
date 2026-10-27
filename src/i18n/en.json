@@ -19,6 +19,12 @@
     "sanctumInstallStarted": "Sanctum installation started. Re-run generation once it completes.",
     "queryBuilderMissing": "The QueryBuilder option requires spatie/laravel-query-builder, which is not installed in this project. Generated list endpoints will fail until it is installed."
   },
+  "detector": {
+    "noWorkspace": "No folder is open.",
+    "notLaravel": "This folder is not a Laravel project: no artisan file was found.",
+    "packageMissing": "nameless/laravel-api-generator is not installed. Run: {0}",
+    "undetected": "The Laravel project could not be detected."
+  },
   "env": {
     "missing": ".env file not found in this project. Database commands will fail without it.",
     "copyFromExample": "Copy from .env.example",
@@ -57,14 +63,9 @@
   },
   "regenerate": {
     "promptName": "Entity name to regenerate",
-    "noMigration": "No migration found for \"{0}\". Cannot regenerate without the schema.",
-    "noFields": "Migration for \"{0}\" was found but no fields could be parsed.",
+    "noDefinition": "No definition found for \"{0}\": the manifest does not record it and no migration creates its table. Generate it again from its source first.",
     "pickPlaceholder": "Select files to regenerate for \"{0}\"",
-    "pickTitle": "Regenerate Files",
-    "confirm": "Regenerate {0} file(s) for \"{1}\"? Existing files will be overwritten.",
-    "regenerateAction": "Regenerate",
-    "success": "Regenerated {0} file(s) for \"{1}\".",
-    "failed": "Failed to regenerate: {0}"
+    "pickTitle": "Regenerate Files"
   },
   "db": {
     "couldNotListTables": "Could not list tables:\n{0}",
@@ -101,6 +102,7 @@
     "noModel": "No chat model is available. Sign in to GitHub Copilot, or install another model provider.",
     "failed": "The model could not draft the schema:\n{0}",
     "empty": "The model sent back nothing. Check that you are signed in to GitHub Copilot, or pick another model.",
+    "justification": "Drafts the api-schema.yaml file that describes your API.",
     "exists": "api-schema.yaml already exists at the project root. Replace it?",
     "replace": "Replace"
   },
@@ -148,7 +150,17 @@
     "diagram": "Entity diagram",
     "projectActions": "Migrations, tests, seeders",
     "snippets": "Snippets",
-    "docs": "Documentation"
+    "docs": "Documentation",
+    "agents": "Agents",
+    "agentsReadyCopilot": "Copilot's agent mode can plan and generate APIs in this project.",
+    "agentsReadyCursor": "Cursor's agent can plan and generate APIs in this project.",
+    "agentsReadyOther": "The MCP server is ready: add php artisan api-generator:mcp to your agent.",
+    "agentsMissingMcp": "Install laravel/mcp so Copilot, Cursor and Claude Code can generate APIs in this project.",
+    "agentsTooOld": "Agents need package {0} or later.",
+    "agentsDisabled": "The MCP server is turned off in the settings.",
+    "installMcp": "Install",
+    "copyClaude": "Copy the command for Claude Code",
+    "copiedClaude": "Command copied. Run it in a terminal at the project root, then start Claude Code there."
   },
   "tree": {
     "empty": "No entities generated yet",
@@ -413,6 +425,9 @@
     "srcOpenapi": "OpenAPI spec",
     "srcDatabase": "Database",
     "srcDescribe": "Copilot description",
+    "srcRecorded": "Recorded definition",
+    "srcRebuilt": "Read back from its files",
+    "rebuiltNote": "The package did not record this entity's definition (generated before 4.1), so it was read back from its migrations, model and enums. Check each change before you generate.",
     "tables_one": "{0} table",
     "tables_other": "{0} tables",
     "schemasRead_one": "{0} schema read",

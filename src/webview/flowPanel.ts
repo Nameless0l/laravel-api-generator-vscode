@@ -91,6 +91,10 @@ export class FlowPanel {
         this.actions = new ProjectActions(root, (message) => this.post(message), () => this.onDidGenerate?.());
         this.panel.iconPath = vscode.Uri.joinPath(extensionUri, 'media', 'icon-dark.png');
         this.panel.webview.html = this.html();
+        const lm = languageModels();
+        if (lm?.onDidChangeChatModels) {
+            this.disposables.push(lm.onDidChangeChatModels(() => void this.announceModels()));
+        }
         this.disposables.push(
             this.panel.webview.onDidReceiveMessage((message: FlowMessage) => void this.handle(message)),
             this.panel.onDidDispose(() => this.dispose()),
@@ -311,7 +315,7 @@ export class FlowPanel {
         let answer = '';
         try {
             const prompt = describePrompt(text, useContext ? this.existingEntities() : []);
-            const response = await model.sendRequest([vscode.LanguageModelChatMessage.User(prompt)], {}, request.token);
+            const response = await model.sendRequest([vscode.LanguageModelChatMessage.User(prompt)], { justification: t('describe.justification') }, request.token);
             for await (const part of response.text) {
                 answer += part;
             }
@@ -444,10 +448,17 @@ export class FlowPanel {
         }
 
         rememberPlanned(document.files);
-        this.post({ ...base, header: this.header(source, document), state: 'ready', view: planView(document) });
+        const view = planView(document);
+        if (source.kind === 'regenerate' && source.rebuilt) {
+            view.warnings.unshift(t('flow.rebuiltNote'));
+        }
+        this.post({ ...base, header: this.header(source, document), state: 'ready', view });
     }
 
     private optionsView(source: GenerationSource): { values: FlowOptions; available: Array<keyof FlowOptions> } {
+        if (source.kind === 'regenerate') {
+            return { values: this.options, available: source.rebuilt ? ['pest', 'queryBuilder', 'jsonApi'] : [] };
+        }
         return { values: this.options, available: [...OPTION_KEYS, ...(source.kind === 'database' ? (['withMigrations'] as const) : [])] };
     }
 
@@ -470,6 +481,8 @@ export class FlowPanel {
             }
             case 'database':
                 return { icon: 'database', chip: t('flow.srcDatabase'), mono: false, meta: tn('flow.tables', source.tables.length) };
+            case 'regenerate':
+                return { icon: 'refresh', chip: source.entity, mono: false, meta: source.rebuilt ? t('flow.srcRebuilt') : t('flow.srcRecorded') };
             case 'describe':
                 return { icon: 'sparkle', chip: t('flow.srcDescribe'), mono: false, meta: this.draft?.model ?? '' };
         }

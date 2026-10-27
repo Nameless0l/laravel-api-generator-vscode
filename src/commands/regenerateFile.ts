@@ -1,9 +1,10 @@
 import * as vscode from 'vscode';
 import { LaravelDetector } from '../services/laravelDetector';
-import { ArtisanRunner } from '../services/artisanRunner';
-import { MigrationIntrospector } from '../services/migrationIntrospector';
+import { rebuildEntity } from '../services/entityRebuild';
 import { EntityScanner } from '../services/entityScanner';
+import { recordedEntities } from '../services/manifest';
 import { EntityTreeItem } from '../providers/entityTreeProvider';
+import { FlowPanel } from '../webview/flowPanel';
 import { t } from '../i18n';
 
 interface RegenerableType {
@@ -26,93 +27,56 @@ const REGENERABLE_TYPES: RegenerableType[] = [
     { label: 'Unit Test', description: 'tests/Unit/{Name}ServiceTest.php', artisanType: 'UnitTest' },
 ];
 
-export function registerRegenerateFileCommand(onDidRegenerate: () => void): vscode.Disposable {
-    return vscode.commands.registerCommand(
-        'laravelApiGenerator.regenerateFile',
-        async (item?: EntityTreeItem) => {
-            const check = await LaravelDetector.validateOrPromptInstall();
-            if (!check.valid || !check.root) {
-                return;
-            }
-
-            let entityName = item?.entityName;
-            if (!entityName) {
-                entityName = await vscode.window.showInputBox({
-                    prompt: t('regenerate.promptName'),
-                    placeHolder: 'e.g. Article',
-                });
-            }
-            if (!entityName) {
-                return;
-            }
-
-            const introspector = new MigrationIntrospector(check.root);
-            const schema = introspector.introspect(entityName);
-
-            if (!schema) {
-                vscode.window.showErrorMessage(t('regenerate.noMigration', entityName));
-                return;
-            }
-
-            if (schema.fields.length === 0) {
-                vscode.window.showWarningMessage(t('regenerate.noFields', entityName));
-                return;
-            }
-
-            const files = new EntityScanner(check.root).getEntityFiles(entityName);
-            const picks = await vscode.window.showQuickPick(
-                REGENERABLE_TYPES.map((rt) => ({
-                    label: rt.label,
-                    description:
-                        files.filter((file) => file.kind === rt.artisanType).map((file) => file.path).join(', ') ||
-                        rt.description.split('{Name}').join(entityName!),
-                    artisanType: rt.artisanType,
-                })),
-                {
-                    canPickMany: true,
-                    placeHolder: t('regenerate.pickPlaceholder', entityName),
-                    title: t('regenerate.pickTitle'),
-                }
-            );
-
-            if (!picks || picks.length === 0) {
-                return;
-            }
-
-            const types = picks.map((p) => p.artisanType);
-            const fieldsString = schema.fields
-                .map((f) => `${f.name}:${f.type}`)
-                .join(',');
-
-            const regenerateLabel = t('regenerate.regenerateAction');
-            const confirm = await vscode.window.showWarningMessage(
-                t('regenerate.confirm', picks.length, entityName),
-                { modal: true },
-                regenerateLabel
-            );
-
-            if (confirm !== regenerateLabel) {
-                return;
-            }
-
-            const artisan = new ArtisanRunner(check.root);
-            const result = await artisan.regenerate(
-                entityName,
-                types,
-                fieldsString,
-                schema.softDeletes
-            );
-
-            if (result.success) {
-                vscode.window.showInformationMessage(
-                    t('regenerate.success', picks.length, entityName)
-                );
-                onDidRegenerate();
-            } else {
-                vscode.window.showErrorMessage(
-                    t('regenerate.failed', result.errors.join(', ') || result.output)
-                );
-            }
+export function registerRegenerateFileCommand(extensionUri: vscode.Uri, onDidRegenerate: () => void): vscode.Disposable {
+    return vscode.commands.registerCommand('laravelApiGenerator.regenerateFile', async (item?: EntityTreeItem) => {
+        const check = await LaravelDetector.validateOrPromptInstall();
+        if (!check.valid || !check.root) {
+            return;
         }
-    );
+        const root = check.root;
+
+        const entityName =
+            item?.entityName ??
+            (await vscode.window.showInputBox({
+                prompt: t('regenerate.promptName'),
+                placeHolder: 'e.g. Article',
+            }));
+        if (!entityName) {
+            return;
+        }
+
+        const recorded = recordedEntities(root).has(entityName);
+        const rebuilt = recorded ? undefined : rebuildEntity(root, entityName);
+        if (!recorded && !rebuilt) {
+            vscode.window.showErrorMessage(t('regenerate.noDefinition', entityName));
+            return;
+        }
+
+        const files = new EntityScanner(root).getEntityFiles(entityName);
+        const picks = await vscode.window.showQuickPick(
+            REGENERABLE_TYPES.map((rt) => ({
+                label: rt.label,
+                description:
+                    files.filter((file) => file.kind === rt.artisanType).map((file) => file.path).join(', ') ||
+                    rt.description.split('{Name}').join(entityName),
+                artisanType: rt.artisanType,
+            })),
+            {
+                canPickMany: true,
+                placeHolder: t('regenerate.pickPlaceholder', entityName),
+                title: t('regenerate.pickTitle'),
+            }
+        );
+        if (!picks || picks.length === 0) {
+            return;
+        }
+
+        FlowPanel.plan(
+            extensionUri,
+            root,
+            { kind: 'regenerate', entity: entityName, only: picks.map((pick) => pick.artisanType), rebuilt: rebuilt?.entity },
+            onDidRegenerate,
+            rebuilt?.options ?? {}
+        );
+    });
 }

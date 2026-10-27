@@ -3,14 +3,15 @@ import { spawnSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import Ajv from 'ajv';
-import { sourceArgs } from '../../services/artisanArgs';
+import { flowArgs, sourceArgs } from '../../services/artisanArgs';
 import { extractSchema } from '../../services/describePrompt';
+import { rebuildEntity, rebuiltSchema } from '../../services/entityRebuild';
 import { EntityScanner } from '../../services/entityScanner';
 import { GeneratorBridge } from '../../services/generatorBridge';
 import { lastProtocolDocument } from '../../services/generationOutput';
 import { mcpLaunch } from '../../services/mcpServer';
 import { flagsFromConfig, schemaFromConfig } from '../../services/schemaBuilder';
-import { EntityConfig } from '../../types';
+import { DEFAULT_FLOW_OPTIONS, EntityConfig, GenerationSource } from '../../types';
 
 const app = process.env.CONTRACT_APP ?? '';
 const php: string[] = process.env.CONTRACT_PHP_COMMAND ? JSON.parse(process.env.CONTRACT_PHP_COMMAND) : ['php'];
@@ -130,6 +131,24 @@ async function main(): Promise<void> {
     const types = scanned.files.filter((file) => file.exists).map((file) => file.type);
     for (const type of ['Model', 'Store Request', 'Update Request', 'Enum', 'Migration']) {
         assert.ok(types.includes(type), `${type} missing from ${types.join(', ')}`);
+    }
+
+    const rebuilt = rebuildEntity(app, 'Receipt');
+    assert.ok(rebuilt, 'Receipt cannot be rebuilt from its files');
+    const regenerations: GenerationSource[] = [
+        { kind: 'regenerate', entity: 'Receipt', only: ['Model', 'Request', 'Factory'] },
+        { kind: 'regenerate', entity: 'Receipt', only: ['Model', 'Request', 'Factory'], rebuilt: rebuilt.entity },
+    ];
+    for (const source of regenerations) {
+        const { args, stdin } = flowArgs(source, DEFAULT_FLOW_OPTIONS, true, (file) => file);
+        const input: string | undefined = stdin && source.kind === 'regenerate' && source.rebuilt ? JSON.stringify(rebuiltSchema('Receipt', source.rebuilt, rebuilt.options)) : undefined;
+        const regenerated = spawnSync(php[0], [...php.slice(1), ...args], { cwd: app, input, encoding: 'utf8' });
+        const regeneratedDocument = lastProtocolDocument(regenerated.stdout);
+        assert.ok(regeneratedDocument, regenerated.stdout + regenerated.stderr);
+        validate('planDocument', regeneratedDocument);
+        assert.deepEqual(regeneratedDocument.errors, []);
+        const changed = regeneratedDocument.files.filter((file) => file.action !== 'unchanged').map((file) => file.path);
+        assert.deepEqual(changed, [], `regenerating from the ${input ? 'rebuilt' : 'recorded'} definition would change files`);
     }
     spawnSync(php[0], [...php.slice(1), 'artisan', 'delete:fullapi', 'Receipt', '--force'], { cwd: app, encoding: 'utf8' });
     assert.equal(new EntityScanner(app).scan().some((entity) => entity.name === 'Receipt'), false);
