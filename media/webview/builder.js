@@ -1646,9 +1646,11 @@
     } else {
         renderAll();
         requestPreview();
+        checkExists();
         if (!state.name) {
             els.name.focus();
         }
     }
+    post({ type: 'loaded', name: boot.edit ? boot.edit.name : '' });
     post({ type: 'requestModels' });
 })();

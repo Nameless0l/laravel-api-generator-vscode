@@ -751,7 +751,7 @@
     function renderRemoval() {
         const view = st.removal;
         const edited = view.files.filter((file) => file.edited);
-        const confirm = h('button', { class: 'btn btn-danger-solid', disabled: view.running, onclick: () => post({ type: 'removal:confirm' }) });
+        const confirm = h('button', { class: 'btn btn-danger-solid', disabled: view.running, onclick: () => post({ type: 'removal:confirm', name: view.entity }) });
         confirm.append(view.running ? h('span', { class: 'spinner' }) : svg('trash'), view.running ? t('flow.removing') : t('flow.removeConfirm', view.entity));
 
         const main = h(

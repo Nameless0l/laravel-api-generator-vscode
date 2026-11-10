@@ -4,7 +4,7 @@ import * as assert from 'node:assert/strict';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { analyzeError, analyzeProtocolErrors, createSqliteFile } from '../services/errorAnalyzer';
+import { analyzeError, analyzeProtocolErrors, createSqliteFile, sqliteTarget } from '../services/errorAnalyzer';
 
 test('an unknown generator option points to an outdated package', () => {
     const suggestion = analyzeError('generate', 'The "--json-api" option does not exist.');
@@ -37,6 +37,21 @@ test('the SQLite file is created empty and an existing one is left as it is', ()
     fs.writeFileSync(file, 'rows');
     createSqliteFile(root);
     assert.equal(fs.readFileSync(file, 'utf8'), 'rows');
+});
+
+test('the SQLite file to create is the one the error names, when it is in the project', () => {
+    const root = path.join(path.sep, 'work', 'shop');
+    const missing = (file: string) => `Database file at path [${file}] does not exist. Ensure this is an absolute path to the database.`;
+    const fallback = path.join(root, 'database', 'database.sqlite');
+
+    assert.equal(sqliteTarget(root, 'database file does not exist'), fallback);
+    assert.equal(sqliteTarget(root, missing('/var/www/html/database/database.sqlite')), fallback);
+    assert.equal(sqliteTarget(root, missing(path.join(root, 'storage', 'app.sqlite'))), path.join(root, 'storage', 'app.sqlite'));
+    assert.equal(sqliteTarget(root, missing(path.join(path.sep, 'elsewhere', 'app.sqlite'))), null);
+
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'lag-sqlite-'));
+    const named = createSqliteFile(tmp, path.join(tmp, 'storage', 'app.sqlite'));
+    assert.equal(fs.statSync(named).size, 0);
 });
 
 test('successful output yields no suggestion', () => {

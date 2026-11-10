@@ -19,11 +19,13 @@ Pairs with `nameless/laravel-api-generator` 4.1 and still works with 3.9 or late
 ### Fixed
 - **A double click no longer confirms or cancels by accident.** The second click on **Fill the database** is ignored for a moment after the first, so a double click cannot run `migrate:fresh --seed`. While an API is generated, the main button is locked and a separate **Stop** button ends it. Ctrl+Enter held down, or pressed while a dialog is open, does nothing.
 - A stopped generation shows a neutral notice instead of the red failure banner.
+- **Stop** also ends a generation that still waits for an answer, such as the Sanctum question, instead of leaving the builder on "Generating...".
+- A deletion or a generation that finishes after its panel moved to another screen no longer closes or replaces that screen.
 - Importing a `class_data.json` file no longer writes it into the project before you agree: it opens the review screen, and nothing is written before **Generate**.
 - Cursor users no longer read "Copilot": the texts name Copilot only when a Copilot model answers, and say "your chat model" otherwise.
 - An empty entities view shows its welcome content, with **Install the package** or **New API**, instead of a single grey line.
-- **Show Full Output** opens the output channel.
-- The fix that creates the SQLite file works on every platform; it ran a `cmd.exe` command before.
+- **Show Full Output** opens the output channel, and a failed generation writes its output there.
+- The fix that creates the SQLite file works on every platform, where it ran a `cmd.exe` command before, and it creates the file the error names when that file belongs to the project.
 - In the diagram, the minimap tooltip says what the minimap does and the search hint reads Cmd+F on macOS.
 
 ### Changed

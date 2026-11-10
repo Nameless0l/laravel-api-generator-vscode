@@ -66,6 +66,10 @@ export class GeneratorPanel {
     private pendingClassData: { label: string; data: unknown } | undefined;
     private stopRequested = false;
     private generating = false;
+    private writing = false;
+    private run = 0;
+    private disposed = false;
+    private static writtenClassData = new Map<string, string>();
     private blocked = false;
 
     private constructor(
@@ -127,6 +131,9 @@ export class GeneratorPanel {
     }
 
     private setEdit(edit: EditableEntity | undefined): void {
+        if (this.disposed) {
+            return;
+        }
         this.edit = edit;
         this.panel.title = edit ? t('builder.editTabTitle', edit.name) : t('builder.tabTitle');
         void this.panel.webview.postMessage({ type: 'mode', edit: edit ?? null });
@@ -170,13 +177,18 @@ export class GeneratorPanel {
         switch (message.type) {
             case 'generate':
                 if (message.payload && !this.generating) {
+                    const run = ++this.run;
                     this.generating = true;
                     try {
-                        await this.handleGenerate(message.payload);
+                        await this.handleGenerate(message.payload, () => run !== this.run);
                     } catch (error) {
-                        this.postFailure(error instanceof Error ? error.message : String(error));
+                        if (run === this.run) {
+                            this.postFailure(error instanceof Error ? error.message : String(error));
+                        }
                     } finally {
-                        this.generating = false;
+                        if (run === this.run) {
+                            this.generating = false;
+                        }
                     }
                 }
                 break;
@@ -213,6 +225,12 @@ export class GeneratorPanel {
             case 'generateJson':
                 await this.handleGenerateJson();
                 break;
+            case 'loaded':
+                // A reloaded webview boots from the HTML written when the panel opened.
+                if ((this.edit?.name ?? '') !== (message.name ?? '')) {
+                    this.setEdit(this.edit);
+                }
+                break;
             case 'draft':
                 GeneratorPanel.drafts?.write('builder', this.workspaceRoot, message.state);
                 break;
@@ -236,10 +254,15 @@ export class GeneratorPanel {
             case 'cancelOperation':
                 this.stopRequested = true;
                 this.artisan.cancelAll();
-                // A generation in flight answers by itself once its process is gone.
                 if (!this.generating) {
                     void this.panel.webview.postMessage({ type: 'clearAllLoading' });
+                } else if (!this.writing) {
+                    // Still asking its questions: no process is there to answer, so the run ends here.
+                    this.run++;
+                    this.generating = false;
+                    this.postCancelled(t('generate.cancelled'));
                 }
+                // A generation that is writing answers by itself once its process is gone.
                 break;
         }
     }
@@ -284,7 +307,7 @@ export class GeneratorPanel {
         }
     }
 
-    private async handleGenerate(config: EntityConfig): Promise<void> {
+    private async handleGenerate(config: EntityConfig, abandoned: () => boolean): Promise<void> {
         const started = Date.now();
         this.stopRequested = false;
         if (this.packageState.kind !== 'installed') {
@@ -295,8 +318,14 @@ export class GeneratorPanel {
         if (fs.existsSync(stubsDir) && (await this.checkCustomStubsValid())) {
             return;
         }
+        if (abandoned()) {
+            return;
+        }
 
         const check = await this.overwriteCheck(config);
+        if (abandoned()) {
+            return;
+        }
         const overwriteLabel = t('generate.overwrite');
         let force = false;
 
@@ -327,6 +356,9 @@ export class GeneratorPanel {
 
         if (config.options.auth) {
             const sanctum = await confirmSanctum(this.workspaceRoot);
+            if (abandoned()) {
+                return;
+            }
             if (sanctum === 'installing' || sanctum === 'cancel') {
                 this.postCancelled(sanctum === 'installing' ? t('package.sanctumInstallStarted') : t('generate.cancelled'));
                 return;
@@ -340,18 +372,29 @@ export class GeneratorPanel {
             void LaravelDetector.promptQueryBuilderInstallIfMissing(this.workspaceRoot);
         }
 
-        if (this.stopRequested) {
-            this.postCancelled(t('generate.stopped'));
+        const legacyRelations = !this.usesSchemaGeneration() && (config.relationships?.length ?? 0) > 0;
+        if (legacyRelations && !(await this.confirmClassDataOverwrite(config.name))) {
+            if (!abandoned()) {
+                this.postCancelled(t('generate.cancelledOverwrite'));
+            }
+            return;
+        }
+        if (abandoned()) {
             return;
         }
 
         let result: ArtisanResult & { protocolErrors?: ProtocolMessage[]; document?: GenerationDocument };
-        if (this.usesSchemaGeneration()) {
-            result = await this.generateThroughSchema(config, force);
-        } else if (config.relationships && config.relationships.length > 0) {
-            result = await this.generateWithRelationships(config);
-        } else {
-            result = await this.artisan.generate(config);
+        this.writing = true;
+        try {
+            if (this.usesSchemaGeneration()) {
+                result = await this.generateThroughSchema(config, force);
+            } else if (legacyRelations) {
+                result = await this.generateWithRelationships(config);
+            } else {
+                result = await this.artisan.generate(config);
+            }
+        } finally {
+            this.writing = false;
         }
 
         if (!result.success) {
@@ -449,6 +492,17 @@ export class GeneratorPanel {
     /**
      * Packages older than 3.9 take relationships through a synthetic class_data.json.
      */
+    /** Packages without schema generation read relations from class_data.json, which may be a file of the project. */
+    private async confirmClassDataOverwrite(entity: string): Promise<boolean> {
+        const file = path.join(this.workspaceRoot, 'class_data.json');
+        if (!fs.existsSync(file) || fs.readFileSync(file, 'utf-8') === GeneratorPanel.writtenClassData.get(this.workspaceRoot)) {
+            return true;
+        }
+        const overwriteLabel = t('generate.overwrite');
+        const choice = await vscode.window.showWarningMessage(t('generate.classDataOverwrite', entity), { modal: true }, overwriteLabel);
+        return choice === overwriteLabel;
+    }
+
     private async generateWithRelationships(config: EntityConfig): Promise<ArtisanResult> {
         const relationships = config.relationships ?? [];
 
@@ -485,7 +539,9 @@ export class GeneratorPanel {
             },
         ];
 
-        fs.writeFileSync(path.join(this.workspaceRoot, 'class_data.json'), JSON.stringify(classData, null, 2), 'utf-8');
+        const content = JSON.stringify(classData, null, 2);
+        fs.writeFileSync(path.join(this.workspaceRoot, 'class_data.json'), content, 'utf-8');
+        GeneratorPanel.writtenClassData.set(this.workspaceRoot, content);
 
         return this.artisan.generateFromJson(config.onlyTypes, {
             queryBuilder: config.options.queryBuilder,
@@ -596,7 +652,7 @@ export class GeneratorPanel {
         }
 
         const writeLabel = t('builder.jsonWrite');
-        const choice = await vscode.window.showWarningMessage(t('builder.jsonWriteConfirm', classDataRows(pending.data).length), { modal: true }, writeLabel);
+        const choice = await vscode.window.showWarningMessage(tn('builder.jsonWriteConfirm', classDataRows(pending.data).length), { modal: true }, writeLabel);
         if (choice !== writeLabel) {
             void this.panel.webview.postMessage({ type: 'jsonGenerateResult', cancelled: true });
             return;
@@ -936,6 +992,7 @@ export class GeneratorPanel {
     }
 
     private dispose(): void {
+        this.disposed = true;
         GeneratorPanel.currentPanel = undefined;
         this.actions.dispose();
         this.bridge.dispose();

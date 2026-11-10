@@ -25,7 +25,7 @@ interface Pattern {
     contexts?: string[];
     /** RegExp matched against the artisan output. */
     match: RegExp;
-    build: () => ErrorSuggestion;
+    build: (output: string) => ErrorSuggestion;
 }
 
 const openFile = (relPath: string): ErrorAction => ({
@@ -55,21 +55,38 @@ const showOutput = (label = t('diagnosis.showOutput')): ErrorAction => ({
     run: () => outputChannel().show(true),
 });
 
-export function createSqliteFile(root: string): string {
-    const file = path.join(root, 'database', 'database.sqlite');
+/** The SQLite file Laravel asks for, or null when it lives outside the project. */
+export function sqliteTarget(root: string, output: string): string | null {
+    const fallback = path.join(root, 'database', 'database.sqlite');
+    const named = /Database file at path \[(.+?)\] does not exist/i.exec(output)?.[1];
+    // A container reports its own path for the default file.
+    if (!named || /(^|[\\/])database[\\/]database\.sqlite$/.test(named)) {
+        return fallback;
+    }
+    const inside = path.relative(root, path.resolve(root, named));
+    return inside !== '' && !inside.startsWith('..') && !path.isAbsolute(inside) ? path.join(root, inside) : null;
+}
+
+export function createSqliteFile(root: string, file = path.join(root, 'database', 'database.sqlite')): string {
     fs.mkdirSync(path.dirname(file), { recursive: true });
     fs.closeSync(fs.openSync(file, 'a'));
     return file;
 }
 
-const createSqlite = (): ErrorAction => ({
+const createSqlite = (output: string): ErrorAction => ({
     label: t('diagnosis.createSqlite'),
     run: (root) => {
+        const file = sqliteTarget(root, output);
+        if (file === null) {
+            vscode.window.showWarningMessage(t('diagnosis.sqliteElsewhere'));
+            return;
+        }
+        const shown = path.relative(root, file).split(path.sep).join('/');
         try {
-            createSqliteFile(root);
-            vscode.window.showInformationMessage(t('diagnosis.sqliteCreated'));
+            createSqliteFile(root, file);
+            vscode.window.showInformationMessage(t('diagnosis.sqliteCreated', shown));
         } catch (e: unknown) {
-            vscode.window.showErrorMessage(t('diagnosis.sqliteFailed', e instanceof Error ? e.message : String(e)));
+            vscode.window.showErrorMessage(t('diagnosis.sqliteFailed', shown, e instanceof Error ? e.message : String(e)));
         }
     },
 });
@@ -99,9 +116,9 @@ const PATTERNS: Pattern[] = [
     },
     {
         match: /Database file (.+) does not exist|database file does not exist/i,
-        build: () => ({
+        build: (output) => ({
             diagnosis: t('diagnosis.sqliteMissing'),
-            actions: [createSqlite(), openFile('.env')],
+            actions: [createSqlite(output), openFile('.env')],
         }),
     },
     {
@@ -240,7 +257,7 @@ export function analyzeError(action: string, output: string): ErrorSuggestion | 
             continue;
         }
         if (pattern.match.test(output)) {
-            return pattern.build();
+            return pattern.build(output);
         }
     }
     return null;

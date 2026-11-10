@@ -14,7 +14,7 @@ import { PREVIEW_MIN_VERSION, readInstalledVersion, versionSupport } from '../se
 import { openPlanned, openPlannedDiff, openPlannedDiffs, rememberPlanned } from '../services/plannedContent';
 import { planView } from '../services/planView';
 import { parseSchemaDraft } from '../services/schemaDraft';
-import { DEFAULT_FLOW_OPTIONS, FlowOptions, GenerationDocument, GenerationSource } from '../types';
+import { ArtisanResult, DEFAULT_FLOW_OPTIONS, FlowOptions, GenerationDocument, GenerationSource } from '../types';
 import { specLabel } from '../services/projectInfo';
 import { getLocale, t, tn, webviewStrings } from '../i18n';
 import { deleteWithProgress, isUnsupportedOption } from '../commands/generationShared';
@@ -226,7 +226,7 @@ export class FlowPanel {
                 this.rememberDescribe({ prompt: message.text ?? '', useContext: message.context !== false, model: message.model ?? null });
                 break;
             case 'removal:confirm':
-                await this.remove();
+                await this.remove(message.name);
                 break;
             case 'describe:stop':
                 this.request?.cancel();
@@ -332,23 +332,40 @@ export class FlowPanel {
         this.post({ type: 'removal', entity, files: plan.files, sharedEntries: plan.sharedEntries });
     }
 
-    private async remove(): Promise<void> {
+    private async remove(entity?: string): Promise<void> {
         const removal = this.removal;
-        if (!removal || this.generating) {
+        if (!removal || (entity !== undefined && entity !== removal.entity)) {
+            return;
+        }
+        if (this.generating) {
+            this.post({ type: 'notice', tone: 'warn', text: t('flow.busy') });
             return;
         }
         this.generating = true;
         this.post({ type: 'removal:running' });
-        const result = await deleteWithProgress(this.root, removal.entity);
-        this.generating = false;
+        let result: ArtisanResult;
+        try {
+            result = await deleteWithProgress(this.root, removal.entity);
+        } finally {
+            this.generating = false;
+        }
+        // The panel may show another screen by now: that one stays as it is.
+        const current = !this.disposed && this.removal === removal;
 
         if (!result.success) {
-            this.post({ type: 'removal:failed', message: failureExcerpt(result.output || result.errors.join('\n')) });
+            const excerpt = failureExcerpt(result.output || result.errors.join('\n'));
+            if (current) {
+                this.post({ type: 'removal:failed', message: excerpt });
+            } else {
+                vscode.window.showErrorMessage(t('delete.failed', removal.entity, excerpt));
+            }
             return;
         }
         this.onDidGenerate?.();
         vscode.window.showInformationMessage(t('delete.success', removal.entity));
-        this.panel.dispose();
+        if (current) {
+            this.panel.dispose();
+        }
     }
 
     private showActions(): void {
@@ -523,7 +540,16 @@ export class FlowPanel {
 
         this.post({ ...base, state: 'checking' });
         this.planner.cancelAll();
-        const { result, document } = await this.planner.runSource(source, this.options, true);
+        let outcome: { result: ArtisanResult; document: GenerationDocument | null };
+        try {
+            outcome = await this.planner.runSource(source, this.options, true);
+        } catch (error) {
+            if (run === this.planRun) {
+                this.post({ ...base, state: 'failed', message: error instanceof Error ? error.message : String(error) });
+            }
+            return;
+        }
+        const { result, document } = outcome;
         if (run !== this.planRun) {
             return;
         }
@@ -619,11 +645,19 @@ export class FlowPanel {
         this.generating = true;
         this.post({ type: 'plan:generating' });
         const started = Date.now();
-        const { result, document } = await this.writer.runSource(source, this.options, false);
-        this.generating = false;
+        let outcome: { result: ArtisanResult; document: GenerationDocument | null };
+        try {
+            outcome = await this.writer.runSource(source, this.options, false);
+        } catch (error) {
+            this.fail(source, { message: error instanceof Error ? error.message : String(error) });
+            return;
+        } finally {
+            this.generating = false;
+        }
+        const { result, document } = outcome;
 
         if (document && document.errors.length > 0) {
-            this.post({ type: 'plan:failed', message: document.errors.map((error) => (error.hint ? `${error.message}\n${error.hint}` : error.message)).join('\n') });
+            this.fail(source, { message: document.errors.map((error) => (error.hint ? `${error.message}\n${error.hint}` : error.message)).join('\n') });
             const suggestion = analyzeProtocolErrors(document.errors);
             if (suggestion) {
                 void presentSuggestion(this.root, suggestion);
@@ -631,7 +665,7 @@ export class FlowPanel {
             return;
         }
         if (!result.success || !document) {
-            this.post({ type: 'plan:failed', message: failureExcerpt(result.output || result.errors.join('\n')), update: isUnsupportedOption(result) });
+            this.fail(source, { message: failureExcerpt(result.output || result.errors.join('\n')), update: isUnsupportedOption(result) });
             return;
         }
 
@@ -641,11 +675,28 @@ export class FlowPanel {
             FlowPanel.drafts?.clear('describe', this.root);
             this.draft = undefined;
         }
+        this.onDidGenerate?.();
+        if (!this.shows(source)) {
+            vscode.window.showInformationMessage(t('flow.generatedNotice', entities.join(', ')));
+            return;
+        }
         this.panel.title = t('flow.panelReady');
         this.post({ type: 'showReady', data });
-        this.onDidGenerate?.();
         const routed = document.files.filter((file) => file.kind === 'Controller' && file.action === 'create' && file.entity).map((file) => file.entity as string);
         void this.actions.refreshRoutes(routed);
+    }
+
+    /** False once the panel is closed or shows another screen than the one that started the operation. */
+    private shows(source: GenerationSource): boolean {
+        return !this.disposed && this.source === source;
+    }
+
+    private fail(source: GenerationSource, failure: { message: string; update?: boolean }): void {
+        if (this.shows(source)) {
+            this.post({ type: 'plan:failed', ...failure });
+        } else {
+            vscode.window.showErrorMessage(failure.message);
+        }
     }
 
     private terminal(command: string): void {
