@@ -22,6 +22,8 @@ import {
     requirePackageCommand,
     usesLegacyLine,
     versionSupport,
+    MCP_TOOLS_MIN_VERSION,
+    supportsMcpTools,
 } from '../services/packageState';
 import { flagsFromConfig, schemaFromConfig } from '../services/schemaBuilder';
 import { StubRow, stubLine } from '../services/stubReport';
@@ -164,6 +166,7 @@ export class GeneratorPanel {
                 fieldTypes: [...FIELD_TYPES],
                 models: this.listModelNames(),
                 modifiers: this.packageState.kind === 'installed' && this.packageState.preview !== 'tooOld',
+                mcp: supportsMcpTools(this.workspaceRoot) ? { supported: true } : { supported: false, reason: t('builder.mcpNeedsPackage', MCP_TOOLS_MIN_VERSION) },
                 draft: GeneratorPanel.drafts?.read('builder', this.workspaceRoot) ?? null,
                 edit: this.edit ?? null,
             },
@@ -547,6 +550,7 @@ export class GeneratorPanel {
             queryBuilder: config.options.queryBuilder,
             pest: config.options.pest,
             jsonApi: config.options.jsonApi,
+            mcp: config.options.mcp,
         });
     }
 
@@ -961,6 +965,7 @@ export class GeneratorPanel {
             type: 'capabilities',
             fieldTypes: handshake.capabilities.fieldTypes,
             jsonApi: handshake.capabilities.options.json_api,
+            mcp: handshake.capabilities.options.mcp ?? { supported: false, reason: t('builder.mcpNeedsPackage', MCP_TOOLS_MIN_VERSION) },
             modifiers: this.usesSchemaGeneration(),
         });
     }

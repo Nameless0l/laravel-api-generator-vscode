@@ -4,12 +4,13 @@ import * as fs from 'fs';
 import * as path from 'path';
 import Ajv from 'ajv';
 import { flowArgs, sourceArgs } from '../../services/artisanArgs';
+import { parseDeleteDryRun } from '../../services/deletePlan';
 import { extractSchema } from '../../services/describePrompt';
 import { rebuildEntity, rebuiltSchema } from '../../services/entityRebuild';
 import { EntityScanner } from '../../services/entityScanner';
 import { GeneratorBridge } from '../../services/generatorBridge';
 import { lastProtocolDocument } from '../../services/generationOutput';
-import { mcpLaunch } from '../../services/mcpServer';
+import { apiServerLaunch, McpLaunch, mcpLaunch } from '../../services/mcpServer';
 import { flagsFromConfig, schemaFromConfig } from '../../services/schemaBuilder';
 import { DEFAULT_FLOW_OPTIONS, EntityConfig, GenerationSource } from '../../types';
 
@@ -72,24 +73,7 @@ async function main(): Promise<void> {
 
     const launch = mcpLaunch(app, { command: php[0], args: php.slice(1) });
     assert.ok(launch, 'no MCP server: laravel/mcp or the package is missing from vendor');
-    const messages = [
-        { jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'contract', version: '1' } } },
-        { jsonrpc: '2.0', method: 'notifications/initialized' },
-        { jsonrpc: '2.0', id: 2, method: 'tools/list' },
-    ];
-    const mcp = spawnSync(launch.command, launch.args, {
-        cwd: app,
-        input: messages.map((message) => `${JSON.stringify(message)}\n`).join(''),
-        encoding: 'utf8',
-    });
-    const tools = mcp.stdout
-        .split('\n')
-        .filter((line) => line.trim() !== '')
-        .map((line) => JSON.parse(line) as { id?: number; result?: { tools?: Array<{ name: string }> } })
-        .find((message) => message.id === 2)
-        ?.result?.tools?.map((tool) => tool.name)
-        .sort();
-    assert.deepEqual(tools, ['add-fields', 'generate-api', 'list-entities', 'plan-api'], mcp.stdout + mcp.stderr);
+    assert.deepEqual(toolNames(launch), ['add-fields', 'generate-api', 'list-entities', 'plan-api']);
 
     const spec = {
         openapi: '3.0.0',
@@ -153,7 +137,60 @@ async function main(): Promise<void> {
     spawnSync(php[0], [...php.slice(1), 'artisan', 'delete:fullapi', 'Receipt', '--force'], { cwd: app, encoding: 'utf8' });
     assert.equal(new EntityScanner(app).scan().some((entity) => entity.name === 'Receipt'), false);
 
-    console.log(`contract ok with ${php.join(' ')}`);
+    const mcpTools = handshake.capabilities.options.mcp?.supported === true;
+    if (mcpTools) {
+        checkMcpTools(validate);
+    }
+
+    console.log(`contract ok with ${php.join(' ')}${mcpTools ? '' : ' (MCP tools skipped: the package does not offer them)'}`);
+}
+
+function toolNames(launch: McpLaunch): string[] {
+    const messages = [
+        { jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'contract', version: '1' } } },
+        { jsonrpc: '2.0', method: 'notifications/initialized' },
+        { jsonrpc: '2.0', id: 2, method: 'tools/list' },
+    ];
+    const mcp = spawnSync(launch.command, launch.args, {
+        cwd: app,
+        input: messages.map((message) => `${JSON.stringify(message)}\n`).join(''),
+        encoding: 'utf8',
+    });
+    const tools = mcp.stdout
+        .split('\n')
+        .filter((line) => line.trim() !== '')
+        .map((line) => JSON.parse(line) as { id?: number; result?: { tools?: Array<{ name: string }> } })
+        .find((message) => message.id === 2)?.result?.tools;
+    assert.ok(tools, mcp.stdout + mcp.stderr);
+
+    return tools.map((tool) => tool.name).sort();
+}
+
+function checkMcpTools(validate: (definition: string, value: unknown) => void): void {
+    const command = { command: php[0], args: php.slice(1) };
+    const parcel = schemaFromConfig({ ...config, name: 'Parcel', relationships: [], options: { ...config.options, mcp: true } });
+    const written = spawnSync(php[0], [...php.slice(1), 'artisan', 'make:fullapi', '--schema=-', '--json'], { cwd: app, input: JSON.stringify(parcel), encoding: 'utf8' });
+    const document = lastProtocolDocument(written.stdout);
+    assert.ok(document, written.stdout + written.stderr);
+    validate('planDocument', document);
+    assert.deepEqual(document.errors, []);
+    const kinds = new Set(document.files.map((file) => file.kind));
+    for (const kind of ['McpTool', 'McpServer', 'McpRoutes']) {
+        assert.ok(kinds.has(kind), `${kind} missing from ${[...kinds].join(', ')}`);
+    }
+
+    const scanned = new EntityScanner(app).scan().find((entity) => entity.name === 'Parcel');
+    assert.ok(scanned?.files.some((file) => file.kind === 'McpTool' && file.exists), 'the scanner does not list the MCP tools of Parcel');
+
+    const api = apiServerLaunch(app, command);
+    assert.ok(api, 'the server of the generated API is not detected');
+    assert.deepEqual(toolNames(api), ['create-parcel', 'delete-parcel', 'list-parcels', 'restore-parcel', 'show-parcel', 'update-parcel']);
+
+    const dryRun = spawnSync(php[0], [...php.slice(1), 'artisan', 'delete:fullapi', 'Parcel', '--dry-run'], { cwd: app, encoding: 'utf8' });
+    assert.equal(parseDeleteDryRun(dryRun.stdout)?.mcpTools, true, dryRun.stdout + dryRun.stderr);
+
+    spawnSync(php[0], [...php.slice(1), 'artisan', 'delete:fullapi', 'Parcel', '--force'], { cwd: app, encoding: 'utf8' });
+    assert.equal(fs.existsSync(path.join(app, 'app', 'Mcp', 'Tools', 'Parcel')), false);
 }
 
 main().catch((error: unknown) => {

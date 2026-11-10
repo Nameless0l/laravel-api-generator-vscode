@@ -43,7 +43,7 @@ export function registerRegenerateFileCommand(extensionUri: vscode.Uri, onDidReg
 
         const files = new EntityScanner(root).getEntityFiles(entityName);
         const picks = await vscode.window.showQuickPick(
-            REGENERABLE_TYPES.map((type) => ({
+            [...REGENERABLE_TYPES, ...(files.some((file) => file.kind === 'McpTool') ? [{ kind: 'McpTool', path: 'app/Mcp/Tools/{Name}' }] : [])].map((type) => ({
                 label: t(`builder.kinds.${type.kind}`),
                 description: files.filter((file) => file.kind === type.kind).map((file) => file.path).join(', ') || type.path.split('{Name}').join(entityName),
                 fileKind: type.kind,

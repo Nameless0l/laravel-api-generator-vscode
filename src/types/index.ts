@@ -25,6 +25,8 @@ export interface GenerateOptions {
     pest?: boolean;
     /** Generate JSON:API-compliant resources (package >= 3.7, Laravel 12.45+). */
     jsonApi?: boolean;
+    /** Generate MCP tools and a server for agents (package >= 4.2, laravel/mcp). */
+    mcp?: boolean;
 }
 
 export interface EntityConfig {
@@ -120,7 +122,7 @@ export interface HandshakeResult {
         fieldTypes: string[];
         relationTypes: string[];
         keepsEditedFiles?: boolean;
-        options: { json_api: { supported: boolean; reason?: string } };
+        options: { json_api: { supported: boolean; reason?: string }; mcp?: { supported: boolean; reason?: string } };
     };
 }
 
@@ -148,7 +150,7 @@ export interface ApiSchemaEntity {
 }
 
 export interface ApiSchema {
-    options?: { query_builder?: boolean; pest?: boolean; json_api?: boolean };
+    options?: { query_builder?: boolean; pest?: boolean; json_api?: boolean; mcp?: boolean };
     entities: Record<string, ApiSchemaEntity>;
 }
 
@@ -175,6 +177,7 @@ export interface FlowOptions {
     queryBuilder: boolean;
     pest: boolean;
     jsonApi: boolean;
+    mcp: boolean;
     auth: boolean;
     postman: boolean;
     withMigrations: boolean;
@@ -185,6 +188,7 @@ export const DEFAULT_FLOW_OPTIONS: FlowOptions = {
     queryBuilder: false,
     pest: false,
     jsonApi: false,
+    mcp: false,
     auth: false,
     postman: false,
     withMigrations: false,

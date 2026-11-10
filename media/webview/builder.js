@@ -11,6 +11,7 @@
         ['auth', 'builder.optAuth'],
         ['queryBuilder', 'builder.optQueryBuilder'],
         ['jsonApi', 'builder.optJsonApi'],
+        ['mcp', 'builder.optMcp'],
         ['postman', 'builder.optPostman'],
     ];
     const RESERVED_NAMES = ['User', 'Auth', 'Admin', 'App', 'Config', 'Cache', 'Session', 'Request', 'Response', 'Route', 'View', 'Event', 'Job', 'Mail', 'Queue', 'Log', 'Gate', 'Policy', 'Middleware', 'Kernel', 'Console', 'Http', 'Provider', 'Test'];
@@ -104,7 +105,7 @@
             preset: null,
             fields: [blankField()],
             relations: [],
-            options: { softDeletes: false, pest: false, auth: false, queryBuilder: false, jsonApi: false, postman: false },
+            options: { softDeletes: false, pest: false, auth: false, queryBuilder: false, jsonApi: false, mcp: false, postman: false },
             onlySome: false,
             kinds: KINDS.slice(),
         };
@@ -128,6 +129,7 @@
         models: boot.models || [],
         fieldTypes: (boot.fieldTypes || ['string']).slice(),
         jsonApi: { supported: true },
+        mcp: boot.mcp || { supported: true },
         modifiers: boot.modifiers !== false,
         exists: false,
         touched: false,
@@ -352,7 +354,11 @@
             .filter((relation) => relation.target.trim() !== '')
             .map((relation) => ({ type: relation.type, target: relation.target.trim(), role: relation.role.trim() || defaultRole(relation) }));
         const onlyTypes = state.onlySome && state.kinds.length < KINDS.length ? state.kinds.slice() : undefined;
-        return { name: state.name.trim(), fields, relationships, options: Object.assign({}, state.options), onlyTypes };
+        const options = Object.assign({}, state.options);
+        if (rt.mcp && rt.mcp.supported === false) {
+            options.mcp = false;
+        }
+        return { name: state.name.trim(), fields, relationships, options, onlyTypes };
     }
 
     const requestPreview = debounce(() => {
@@ -628,7 +634,7 @@
         state.name = preset.name;
         state.fields = preset.fields.map((field) => blankField(field));
         state.relations = [];
-        state.options = Object.assign({ softDeletes: false, pest: false, auth: false, queryBuilder: false, jsonApi: false, postman: false }, state.options, { softDeletes: false }, preset.options || {});
+        state.options = Object.assign({ softDeletes: false, pest: false, auth: false, queryBuilder: false, jsonApi: false, mcp: false, postman: false }, state.options, { softDeletes: false }, preset.options || {});
         state.preset = key;
         rt.exists = false;
         rt.touched = true;
@@ -1079,7 +1085,8 @@
     function renderOptions() {
         clear(els.options);
         OPTIONS.forEach(([key, label]) => {
-            const disabled = key === 'jsonApi' && rt.jsonApi && rt.jsonApi.supported === false;
+            const gate = key === 'jsonApi' ? rt.jsonApi : key === 'mcp' ? rt.mcp : null;
+            const disabled = !!gate && gate.supported === false;
             const on = !!state.options[key] && !disabled;
             els.options.appendChild(
                 h(
@@ -1088,7 +1095,7 @@
                         class: `chip${on ? ' chip-on' : ''}`,
                         'aria-pressed': String(on),
                         disabled,
-                        title: disabled ? rt.jsonApi.reason || '' : '',
+                        title: disabled ? gate.reason || '' : '',
                         onclick: () => {
                             state.options[key] = !on;
                             changed({ options: true });
@@ -1573,6 +1580,9 @@
                 }
                 if (message.jsonApi) {
                     rt.jsonApi = message.jsonApi;
+                }
+                if (message.mcp) {
+                    rt.mcp = message.mcp;
                 }
                 if (typeof message.modifiers === 'boolean') {
                     rt.modifiers = message.modifiers;

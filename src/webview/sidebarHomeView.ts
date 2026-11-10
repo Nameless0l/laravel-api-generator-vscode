@@ -1,10 +1,10 @@
 import * as vscode from 'vscode';
 import * as crypto from 'crypto';
 import { t, getLocale } from '../i18n';
-import { agentHost } from '../providers/mcpServerProvider';
+import { agentHost, apiServerEnabled } from '../providers/mcpServerProvider';
 import { DescribeAvailability } from '../services/describeAvailability';
 import { LaravelDetector } from '../services/laravelDetector';
-import { claudeCodeCommand, mcpState } from '../services/mcpServer';
+import { apiServerLaunch, claudeCodeApiCommand, claudeCodeCommand, mcpState } from '../services/mcpServer';
 import { detectPackageState, MCP_MIN_VERSION, PREVIEW_MIN_VERSION, usesLegacyLine } from '../services/packageState';
 import { PhpCommand, resolvePhpCommand } from '../services/phpCommand';
 import { laravelVersion, phpVersion, projectName, schemaFile } from '../services/projectInfo';
@@ -142,21 +142,30 @@ export class SidebarHomeViewProvider implements vscode.WebviewViewProvider {
             return undefined;
         }
         const enabled = vscode.workspace.getConfiguration('laravelApiGenerator').get<boolean>('mcp.enabled', true);
+        const api = this.apiNote(root);
         switch (mcpState(root, enabled)) {
             case 'noPackage':
                 return undefined;
             case 'tooOld':
-                return { status: { tone: 'muted', text: t('home.agentsTooOld', MCP_MIN_VERSION), fix: { action: 'update', label: t('home.update') } }, claudeCommand: false };
+                return { status: { tone: 'muted', text: t('home.agentsTooOld', MCP_MIN_VERSION), fix: { action: 'update', label: t('home.update') } }, claudeCommand: false, api };
             case 'missingMcp':
-                return { status: { tone: 'muted', text: t('home.agentsMissingMcp'), fix: { action: 'installMcp', label: t('home.installMcp') } }, claudeCommand: false };
+                return { status: { tone: 'muted', text: t('home.agentsMissingMcp'), fix: { action: 'installMcp', label: t('home.installMcp') } }, claudeCommand: false, api };
             case 'disabled':
-                return { status: { tone: 'muted', text: t('home.agentsDisabled'), fix: { action: 'mcpSettings', label: t('home.settings') } }, claudeCommand: false };
+                return { status: { tone: 'muted', text: t('home.agentsDisabled'), fix: { action: 'mcpSettings', label: t('home.settings') } }, claudeCommand: false, api };
             case 'ready': {
                 const host = agentHost();
                 const text = host === 'cursor' ? t('home.agentsReadyCursor') : host === 'copilot' ? t('home.agentsReadyCopilot') : t('home.agentsReadyOther');
-                return { status: { tone: 'ok', text }, claudeCommand: true };
+                return { status: { tone: 'ok', text }, claudeCommand: true, api };
             }
         }
+    }
+
+    private apiNote(root: string): string | undefined {
+        if (!apiServerLaunch(root, this.phpCommand())) {
+            return undefined;
+        }
+        const host = apiServerEnabled() ? agentHost() : 'other';
+        return host === 'cursor' ? t('home.agentsApiCursor') : host === 'copilot' ? t('home.agentsApiCopilot') : t('home.agentsApiOther');
     }
 
     private phpCommand(): PhpCommand {
@@ -185,6 +194,11 @@ export class SidebarHomeViewProvider implements vscode.WebviewViewProvider {
                 return;
             case 'copyClaude':
                 void vscode.env.clipboard.writeText(claudeCodeCommand(this.phpCommand())).then(() => vscode.window.showInformationMessage(t('home.copiedClaude')));
+                return;
+            case 'copyClaudeApi':
+                if (root) {
+                    void vscode.env.clipboard.writeText(claudeCodeApiCommand(root, this.phpCommand())).then(() => vscode.window.showInformationMessage(t('home.copiedClaudeApi')));
+                }
                 return;
             case 'install':
                 void vscode.commands.executeCommand('laravelApiGenerator.installPackage');
@@ -228,6 +242,7 @@ export class SidebarHomeViewProvider implements vscode.WebviewViewProvider {
             docs: t('home.docs'),
             agents: t('home.agents'),
             copyClaude: t('home.copyClaude'),
+            copyClaudeApi: t('home.copyClaudeApi'),
             needsPackage: t('home.needsPackage'),
             tips: {
                 newApi: t('home.tips.newApi'),
@@ -241,6 +256,7 @@ export class SidebarHomeViewProvider implements vscode.WebviewViewProvider {
                 snippets: t('home.tips.snippets'),
                 docs: t('home.tips.docs'),
                 copyClaude: t('home.tips.copyClaude'),
+                copyClaudeApi: t('home.tips.copyClaudeApi'),
             },
         };
     }

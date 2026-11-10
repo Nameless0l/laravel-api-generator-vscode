@@ -501,6 +501,11 @@
           "default": true,
           "markdownDescription": "%config.mcpEnabled%"
         },
+        "laravelApiGenerator.mcp.apiServer": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "%config.mcpApiServer%"
+        },
         "laravelApiGenerator.locale": {
           "type": "string",
           "enum": [

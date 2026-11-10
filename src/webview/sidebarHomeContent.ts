@@ -1,7 +1,7 @@
 import { icon } from './ui/icons';
 import { esc } from './ui/page';
 
-export type HomeFix = 'install' | 'composerInstall' | 'update' | 'settings' | 'installMcp' | 'mcpSettings' | 'copyClaude';
+export type HomeFix = 'install' | 'composerInstall' | 'update' | 'settings' | 'installMcp' | 'mcpSettings' | 'copyClaude' | 'copyClaudeApi';
 
 export interface HomeStatus {
     tone: 'ok' | 'warn' | 'muted';
@@ -20,6 +20,8 @@ export interface HomeProject {
 export interface HomeAgents {
     status: HomeStatus;
     claudeCommand: boolean;
+    /** Set when the application has the MCP server `--mcp` writes: what to say about it. */
+    api?: string;
 }
 
 export interface SidebarHomeStrings {
@@ -42,6 +44,7 @@ export interface SidebarHomeStrings {
     docs: string;
     agents: string;
     copyClaude: string;
+    copyClaudeApi: string;
     needsPackage: string;
     tips: {
         newApi: string;
@@ -55,6 +58,7 @@ export interface SidebarHomeStrings {
         snippets: string;
         docs: string;
         copyClaude: string;
+        copyClaudeApi: string;
     };
 }
 
@@ -207,15 +211,19 @@ function agents(o: SidebarHomeOptions): string {
     if (!o.agents) {
         return '';
     }
-    const { status, claudeCommand } = o.agents;
+    const { status, claudeCommand, api } = o.agents;
     const state = status.tone === 'ok' ? `<p class="agents-note">${icon('bolt')}<span>${esc(status.text)}</span></p>` : alert(status);
     const claude = claudeCommand
         ? `<button class="item" data-fix="copyClaude" title="${esc(o.strings.tips.copyClaude)}">${icon('terminal')}<span class="item-label">${esc(o.strings.copyClaude)}</span></button>`
+        : '';
+    const own = api
+        ? `<p class="agents-note">${icon('bolt')}<span>${esc(api)}</span></p><button class="item" data-fix="copyClaudeApi" title="${esc(o.strings.tips.copyClaudeApi)}">${icon('terminal')}<span class="item-label">${esc(o.strings.copyClaudeApi)}</span></button>`
         : '';
     return `<nav class="list" aria-label="${esc(o.strings.agents)}">
         <div class="label list-title">${esc(o.strings.agents)}</div>
         ${state}
         ${claude}
+        ${own}
     </nav>
 `;
 }

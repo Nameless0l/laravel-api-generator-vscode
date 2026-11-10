@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import * as assert from 'node:assert/strict';
 import { getSidebarHomeHtml, OPEN_FOLDER_COMMAND, SidebarHomeOptions, SidebarHomeStrings } from '../webview/sidebarHomeContent';
 
-const tips = { newApi: 'tip new', describe: 'tip describe', database: 'tip database', schema: 'tip schema', mermaid: 'tip mermaid', openapi: 'tip openapi', diagram: 'tip diagram', projectActions: 'tip actions', snippets: 'tip snippets', docs: 'tip docs', copyClaude: 'tip claude' };
+const tips = { newApi: 'tip new', describe: 'tip describe', database: 'tip database', schema: 'tip schema', mermaid: 'tip mermaid', openapi: 'tip openapi', diagram: 'tip diagram', projectActions: 'tip actions', snippets: 'tip snippets', docs: 'tip docs', copyClaude: 'tip claude', copyClaudeApi: 'tip api' };
 const strings: SidebarHomeStrings = {
     settings: 'Settings',
     notLaravel: 'Not a Laravel project',
@@ -23,6 +23,7 @@ const strings: SidebarHomeStrings = {
     docs: 'Documentation',
     agents: 'Agents',
     copyClaude: 'Copy the Claude Code command',
+    copyClaudeApi: 'Copy the command for your API',
     needsPackage: 'Install the package first',
     tips,
 };
@@ -55,6 +56,18 @@ test('a ready project offers New API and every entry carries a title', () => {
         assert.doesNotMatch(item, / disabled/);
     }
     assert.match(html, /<a class="item" href="https:\/\/example\.test\/docs" title="tip docs">/);
+});
+
+test('the Agents block offers the server of the generated API once it exists', () => {
+    const project = { name: 'shop', versions: 'Laravel 12', status: { tone: 'ok' as const, text: 'Package 4.2' } };
+    const agents = { status: { tone: 'ok' as const, text: 'Agents can generate APIs.' }, claudeCommand: true };
+    const without = getSidebarHomeHtml(options({ project, agents }));
+    const withApi = getSidebarHomeHtml(options({ project, agents: { ...agents, api: 'Agents can use <your> API.' } }));
+
+    assert.doesNotMatch(without, /data-fix="copyClaudeApi"/);
+    assert.match(withApi, /Agents can use &lt;your&gt; API\./);
+    assert.match(withApi, /data-fix="copyClaudeApi" title="tip api"/);
+    assert.match(withApi, /data-fix="copyClaude" title="tip claude"/);
 });
 
 test('without the package the sources are disabled and the main button installs it', () => {

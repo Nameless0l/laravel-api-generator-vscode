@@ -4,6 +4,8 @@ export interface DeletePlan {
     files: Array<{ path: string; edited: boolean }>;
     /** True when the package also removes the entity's lines from routes/api.php and DatabaseSeeder.php. */
     sharedEntries: boolean;
+    /** True when the entity has MCP tools, which also leave app/Mcp/Servers/ApiServer.php. */
+    mcpTools: boolean;
 }
 
 /** Reads what `delete:fullapi --dry-run` prints. Null when the output is not a dry run. */
@@ -15,6 +17,7 @@ export function parseDeleteDryRun(output: string): DeletePlan | null {
     const paths: string[] = [];
     const edited = new Set<string>();
     let sharedEntries = false;
+    let mcpTools = false;
     for (const line of output.split(/\r?\n/)) {
         const removal = /^\s*delete\s+(\S+)\s*$/.exec(line);
         const mark = /^\s*!\s+(\S+) was edited by hand/.exec(line);
@@ -22,12 +25,14 @@ export function parseDeleteDryRun(output: string): DeletePlan | null {
             paths.push(removal[1]);
         } else if (mark) {
             edited.add(mark[1]);
+        } else if (/^\s*update\s+app\/Mcp\//.test(line)) {
+            mcpTools = true;
         } else if (/^\s*update\s+\S/.test(line)) {
             sharedEntries = true;
         }
     }
 
-    return { files: paths.map((path) => ({ path, edited: edited.has(path) })), sharedEntries };
+    return { files: paths.map((path) => ({ path, edited: edited.has(path) })), sharedEntries, mcpTools };
 }
 
 export function deletePlanFromFiles(files: EntityFile[], edited: string[]): DeletePlan {
@@ -35,5 +40,6 @@ export function deletePlanFromFiles(files: EntityFile[], edited: string[]): Dele
     return {
         files: files.filter((file) => file.exists).map((file) => ({ path: file.path, edited: marked.has(file.path) })),
         sharedEntries: true,
+        mcpTools: files.some((file) => file.kind === 'McpTool' && file.exists),
     };
 }

@@ -78,7 +78,7 @@ test('an entity generated before 4.1 is read back from its migrations, model and
             relations: { category: 'belongsTo Category', tags: 'belongsToMany Tag' },
             soft_deletes: true,
         },
-        options: { pest: false, queryBuilder: false, jsonApi: false },
+        options: { pest: false, queryBuilder: false, jsonApi: false, mcp: false },
     });
 });
 
@@ -92,7 +92,7 @@ test('the options come from the files the entity was generated with', () => {
 
     assert.deepEqual(rebuildEntity(root, 'Person'), {
         entity: { fields: { code: { type: 'string', primary: true } } },
-        options: { pest: true, queryBuilder: true, jsonApi: false },
+        options: { pest: true, queryBuilder: true, jsonApi: false, mcp: false },
     });
 });
 
@@ -105,6 +105,6 @@ test('without a migration creating the table there is nothing to rebuild', () =>
 test('the rebuilt entity is sent with the options picked on the review screen', () => {
     const entity = { fields: { title: { type: 'string' } } };
 
-    assert.deepEqual(rebuiltSchema('Post', entity, { pest: true, queryBuilder: false, jsonApi: true }), { options: { pest: true, json_api: true }, entities: { Post: entity } });
-    assert.deepEqual(rebuiltSchema('Post', entity, { pest: false, queryBuilder: false, jsonApi: false }), { entities: { Post: entity } });
+    assert.deepEqual(rebuiltSchema('Post', entity, { pest: true, queryBuilder: false, jsonApi: true, mcp: true }), { options: { pest: true, json_api: true, mcp: true }, entities: { Post: entity } });
+    assert.deepEqual(rebuiltSchema('Post', entity, { pest: false, queryBuilder: false, jsonApi: false, mcp: false }), { entities: { Post: entity } });
 });
