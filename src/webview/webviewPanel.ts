@@ -376,6 +376,9 @@ export class GeneratorPanel {
         if (config.options.queryBuilder) {
             void LaravelDetector.promptQueryBuilderInstallIfMissing(this.workspaceRoot);
         }
+        if (config.options.mcp) {
+            void LaravelDetector.promptMcpInstallIfMissing(this.workspaceRoot);
+        }
 
         const legacyRelations = !this.usesSchemaGeneration() && (config.relationships?.length ?? 0) > 0;
         if (legacyRelations && !(await this.confirmClassDataOverwrite(config.name))) {
@@ -967,7 +970,7 @@ export class GeneratorPanel {
             type: 'capabilities',
             fieldTypes: handshake.capabilities.fieldTypes,
             jsonApi: handshake.capabilities.options.json_api,
-            mcp: handshake.capabilities.options.mcp ?? { supported: false, reason: t('builder.mcpNeedsPackage', MCP_TOOLS_MIN_VERSION) },
+            mcp: handshake.capabilities.options.mcp ? { supported: true } : { supported: false, reason: t('builder.mcpNeedsPackage', MCP_TOOLS_MIN_VERSION) },
             modifiers: this.usesSchemaGeneration(),
         });
     }

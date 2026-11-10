@@ -17,7 +17,8 @@
     "sanctumMissing": "L'option Auth nécessite Laravel Sanctum (laravel/sanctum) qui n'est pas installé dans ce projet.",
     "generateWithoutAuth": "Générer sans Auth",
     "sanctumInstallStarted": "Installation de Sanctum lancée. Relancez la génération une fois terminée.",
-    "queryBuilderMissing": "L'option QueryBuilder nécessite spatie/laravel-query-builder qui n'est pas installé dans ce projet. Les endpoints de liste générés échoueront tant qu'il ne sera pas installé."
+    "queryBuilderMissing": "L'option QueryBuilder nécessite spatie/laravel-query-builder qui n'est pas installé dans ce projet. Les endpoints de liste générés échoueront tant qu'il ne sera pas installé.",
+    "mcpMissing": "L'option Outils MCP nécessite laravel/mcp, qui n'est pas installé dans ce projet. Les outils sont écrits, et les agents pourront s'en servir une fois le paquet installé."
   },
   "detector": {
     "noWorkspace": "Aucun dossier n'est ouvert.",

@@ -648,6 +648,9 @@ export class FlowPanel {
         if (this.options.queryBuilder) {
             void LaravelDetector.promptQueryBuilderInstallIfMissing(this.root);
         }
+        if (this.options.mcp) {
+            void LaravelDetector.promptMcpInstallIfMissing(this.root);
+        }
 
         this.generating = true;
         this.post({ type: 'plan:generating' });

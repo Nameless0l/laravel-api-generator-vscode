@@ -64,6 +64,20 @@ export class LaravelDetector {
         }
     }
 
+    /** Agents need laravel/mcp to start the generated server. Non-blocking, like the QueryBuilder prompt. */
+    static async promptMcpInstallIfMissing(workspaceRoot: string): Promise<void> {
+        if (this.hasComposerPackage(workspaceRoot, 'laravel/mcp')) {
+            return;
+        }
+        const installLabel = t('package.installViaComposer');
+        const action = await vscode.window.showWarningMessage(t('package.mcpMissing'), installLabel);
+        if (action === installLabel) {
+            const terminal = vscode.window.createTerminal({ name: 'Laravel API Generator', cwd: workspaceRoot });
+            terminal.sendText('composer require laravel/mcp');
+            terminal.show();
+        }
+    }
+
     private static hasComposerPackage(workspaceRoot: string, packageName: string): boolean {
         const composerPath = path.join(workspaceRoot, 'composer.json');
         if (!fs.existsSync(composerPath)) {
