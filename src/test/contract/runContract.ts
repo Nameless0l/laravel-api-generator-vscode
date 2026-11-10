@@ -176,9 +176,11 @@ function checkMcpTools(validate: (definition: string, value: unknown) => void): 
     validate('planDocument', document);
     assert.deepEqual(document.errors, []);
     const kinds = new Set(document.files.map((file) => file.kind));
-    for (const kind of ['McpTool', 'McpServer', 'McpRoutes']) {
+    for (const kind of ['McpTool', 'McpServer']) {
         assert.ok(kinds.has(kind), `${kind} missing from ${[...kinds].join(', ')}`);
     }
+    // routes/ai.php is written once and left alone afterwards, so a reused app does not plan it again.
+    assert.ok(fs.existsSync(path.join(app, 'routes', 'ai.php')), 'routes/ai.php was not written');
 
     const scanned = new EntityScanner(app).scan().find((entity) => entity.name === 'Parcel');
     assert.ok(scanned?.files.some((file) => file.kind === 'McpTool' && file.exists), 'the scanner does not list the MCP tools of Parcel');
