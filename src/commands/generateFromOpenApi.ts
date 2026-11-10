@@ -56,7 +56,7 @@ async function resolveSpecPath(root: string): Promise<string | undefined> {
     const fileUri = await vscode.window.showOpenDialog({
         canSelectFiles: true,
         canSelectMany: false,
-        filters: { 'OpenAPI / Swagger': ['yaml', 'yml', 'json'] },
+        filters: { [t('sources.filterOpenApi')]: ['yaml', 'yml', 'json'] },
         title: t('sources.openApiTitle'),
         defaultUri: vscode.Uri.file(root),
     });

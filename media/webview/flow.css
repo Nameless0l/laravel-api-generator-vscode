@@ -648,3 +648,49 @@ button.tok:hover {
         padding-left: 18px;
     }
 }
+
+.adjust {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.adjust-input {
+    flex: 1;
+    min-width: 0;
+    height: 32px;
+}
+
+.rm-list {
+    display: flex;
+    flex-direction: column;
+    padding: 6px;
+}
+
+.rm-file {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 28px;
+    padding: 2px 8px;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--fg);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.rm-file:hover {
+    background: var(--hover);
+}
+
+.rm-path {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    font-size: 12.5px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}

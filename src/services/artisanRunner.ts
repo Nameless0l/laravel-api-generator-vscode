@@ -5,7 +5,6 @@ import * as http from 'http';
 import { ArtisanResult, EntityConfig, FlowOptions, GenerationDocument, GenerationSource } from '../types';
 import { flowArgs, generateArgs, schemaGenerationArgs, sourceArgs, SourceOptions } from './artisanArgs';
 import { lastProtocolDocument } from './generationOutput';
-import { PREVIEW_MIN_VERSION, readInstalledVersion, versionSupport } from './packageState';
 import { PhpCommand, processLaunch, projectRelative, resolvePhpCommand, stopProcess } from './phpCommand';
 import { rebuiltSchema } from './entityRebuild';
 import { schemaFromConfig } from './schemaBuilder';
@@ -45,7 +44,7 @@ export class ArtisanRunner {
     async runSource(source: GenerationSource, options: FlowOptions, dryRun: boolean): Promise<{ result: ArtisanResult; document: GenerationDocument | null }> {
         const { args, stdin } = flowArgs(source, options, dryRun, (file) => projectRelative(this.workspaceRoot, file));
         let input: string | undefined;
-        if (stdin === 'text' && source.kind === 'describe') {
+        if (stdin === 'text' && (source.kind === 'describe' || source.kind === 'inline')) {
             input = source.text;
         } else if (stdin === 'text' && source.kind === 'regenerate' && source.rebuilt) {
             input = JSON.stringify(rebuiltSchema(source.entity, source.rebuilt, options));
@@ -60,13 +59,14 @@ export class ArtisanRunner {
         return this.run(['artisan', 'route:list', '--json', '--path=api']);
     }
 
-    async addFields(entityName: string, fields: string): Promise<ArtisanResult> {
-        return this.run(['artisan', 'make:fullapi', entityName, `--add-fields=${fields}`, ...this.jsonFlag()], 60000);
-    }
-
     async delete(entityName: string): Promise<ArtisanResult> {
         const args = ['artisan', 'delete:fullapi', entityName, '--force'];
         return this.run(args);
+    }
+
+    /** Package 3.11 or later. */
+    async deleteDryRun(entityName: string): Promise<ArtisanResult> {
+        return this.run(['artisan', 'delete:fullapi', entityName, '--dry-run']);
     }
 
     async migrate(): Promise<ArtisanResult> {
@@ -87,12 +87,6 @@ export class ArtisanRunner {
 
     async cleanRoutes(): Promise<ArtisanResult> {
         return this.run(['artisan', 'api-generator:clean-routes']);
-    }
-
-    /** Since 3.9 the package can answer one JSON document, whose errors carry a code. */
-    private jsonFlag(): string[] {
-        const version = readInstalledVersion(this.workspaceRoot);
-        return version !== null && versionSupport(version, PREVIEW_MIN_VERSION) !== 'tooOld' ? ['--json'] : [];
     }
 
     cancelAll(): void {

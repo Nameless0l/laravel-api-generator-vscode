@@ -1,6 +1,8 @@
 import * as vscode from 'vscode';
 import { ArtisanResult, ProtocolMessage } from '../types';
+import { ArtisanRunner } from '../services/artisanRunner';
 import { analyzeProtocolErrors, presentSuggestion } from '../services/errorAnalyzer';
+import { logCommand } from '../services/outputLog';
 import { t } from '../i18n';
 
 /** An option the installed package does not know yet. */
@@ -16,6 +18,14 @@ export function presentDocumentErrors(errors: ProtocolMessage[], workspaceRoot: 
     if (suggestion) {
         void presentSuggestion(workspaceRoot, suggestion);
     }
+}
+
+export function deleteWithProgress(workspaceRoot: string, entity: string): Thenable<ArtisanResult> {
+    return vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: t('delete.progress', entity), cancellable: false }, async () => {
+        const result = await new ArtisanRunner(workspaceRoot).delete(entity);
+        logCommand(`php artisan delete:fullapi ${entity} --force`, result.output);
+        return result;
+    });
 }
 
 export async function offerPackageUpdate(workspaceRoot: string): Promise<void> {

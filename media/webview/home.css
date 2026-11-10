@@ -151,6 +151,21 @@ body.vscode-high-contrast-light .logo .logo-light {
     background: var(--hover);
 }
 
+.item:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.item:disabled:hover {
+    background: transparent;
+}
+
+body.vscode-high-contrast .item:focus-visible,
+body.vscode-high-contrast-light .item:focus-visible {
+    outline: 1px solid var(--focus);
+    outline-offset: -1px;
+}
+
 .item > .ico:first-child {
     color: var(--vscode-icon-foreground, var(--muted));
 }
@@ -213,7 +228,24 @@ body.vscode-high-contrast-light .logo .logo-light {
 }
 
 .not-laravel {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 4px 6px 10px;
+}
+
+.not-laravel p {
     margin: 0;
-    padding: 4px 6px;
+}
+
+.not-laravel-title {
+    color: var(--fg);
+    font-weight: 600;
+}
+
+.not-laravel-hint {
     color: var(--muted);
+    font-size: 12px;
+    line-height: 1.45;
 }

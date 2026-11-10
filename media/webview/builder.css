@@ -164,8 +164,16 @@ body.builder-view {
 .grip {
     display: flex;
     flex: none;
+    padding: 2px;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
     color: var(--faint);
     cursor: grab;
+}
+
+.grip:focus-visible {
+    color: var(--fg);
 }
 
 .field-name {
@@ -772,4 +780,87 @@ body.builder-view {
         order: 1;
         flex: 1 1 auto;
     }
+}
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
+
+.row-msg {
+    padding: 0 6px 4px 34px;
+    font-size: 12px;
+    color: var(--red);
+}
+
+.ritem .row-msg {
+    padding-left: 8px;
+}
+
+.row-msg:empty {
+    display: none;
+}
+
+.frow.locked {
+    color: var(--muted);
+}
+
+.frow.locked:hover {
+    background: transparent;
+}
+
+.lock-ico {
+    flex: none;
+    margin: 0 2px;
+    color: var(--faint);
+}
+
+.locked-name,
+.locked-type {
+    font-family: var(--mono);
+    font-size: 12.5px;
+}
+
+.locked-name {
+    min-width: 150px;
+    color: var(--fg);
+}
+
+.lock-mark {
+    padding: 1px 8px;
+    border: 1px solid var(--hair);
+    border-radius: 999px;
+    font-family: var(--mono);
+    font-size: 11.5px;
+}
+
+.pv-warnings {
+    flex: none;
+}
+
+.foot-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.foot-block {
+    font-size: 12.5px;
+    color: var(--muted);
+}
+
+.name-input:disabled {
+    opacity: 1;
+    color: var(--strong);
+    cursor: default;
+}
+
+.sheet-card .hint {
+    font-size: 12.5px;
+    color: var(--muted);
 }

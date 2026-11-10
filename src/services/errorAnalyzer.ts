@@ -4,6 +4,7 @@ import * as fs from 'fs';
 import { t } from '../i18n';
 import { ProtocolMessage } from '../types';
 import { MANIFEST_PATH } from './manifest';
+import { outputChannel } from './outputLog';
 import { requirePackageCommand } from './packageState';
 
 export interface ErrorAction {
@@ -28,11 +29,11 @@ interface Pattern {
 }
 
 const openFile = (relPath: string): ErrorAction => ({
-    label: `Open ${path.basename(relPath)}`,
+    label: t('diagnosis.openFile', path.basename(relPath)),
     run: async (root) => {
         const full = path.join(root, relPath);
         if (!fs.existsSync(full)) {
-            vscode.window.showWarningMessage(`${relPath} does not exist.`);
+            vscode.window.showWarningMessage(t('diagnosis.missingFile', relPath));
             return;
         }
         const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(full));
@@ -49,11 +50,27 @@ const runInTerminal = (label: string, command: string | ((root: string) => strin
     },
 });
 
-const showOutput = (label = 'Show Full Output'): ErrorAction => ({
+const showOutput = (label = t('diagnosis.showOutput')): ErrorAction => ({
     label,
-    run: () => {
-        // The webview already has the output; this just reminds the user it's there.
-        vscode.window.showInformationMessage('See the output panel below the form for full details.');
+    run: () => outputChannel().show(true),
+});
+
+export function createSqliteFile(root: string): string {
+    const file = path.join(root, 'database', 'database.sqlite');
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.closeSync(fs.openSync(file, 'a'));
+    return file;
+}
+
+const createSqlite = (): ErrorAction => ({
+    label: t('diagnosis.createSqlite'),
+    run: (root) => {
+        try {
+            createSqliteFile(root);
+            vscode.window.showInformationMessage(t('diagnosis.sqliteCreated'));
+        } catch (e: unknown) {
+            vscode.window.showErrorMessage(t('diagnosis.sqliteFailed', e instanceof Error ? e.message : String(e)));
+        }
     },
 });
 
@@ -62,38 +79,35 @@ const PATTERNS: Pattern[] = [
     {
         match: /SQLSTATE\[HY000\] \[2002\]|Connection refused|getaddrinfo failed/i,
         build: () => ({
-            diagnosis: 'Cannot reach the database server. Check that it is running and that your .env credentials are correct.',
+            diagnosis: t('diagnosis.dbUnreachable'),
             actions: [openFile('.env'), showOutput()],
         }),
     },
     {
         match: /SQLSTATE\[HY000\] \[1045\]|Access denied for user/i,
         build: () => ({
-            diagnosis: 'The database refused your credentials (wrong DB_USERNAME / DB_PASSWORD).',
+            diagnosis: t('diagnosis.dbCredentials'),
             actions: [openFile('.env'), showOutput()],
         }),
     },
     {
         match: /could not find driver|PDOException.*driver/i,
         build: () => ({
-            diagnosis: 'PHP is missing the database driver extension (e.g. pdo_mysql, pdo_sqlite, pdo_pgsql).',
+            diagnosis: t('diagnosis.dbDriver'),
             actions: [openFile('.env'), showOutput()],
         }),
     },
     {
         match: /Database file (.+) does not exist|database file does not exist/i,
         build: () => ({
-            diagnosis: 'The SQLite database file does not exist. Touch it and re-run.',
-            actions: [
-                runInTerminal('Create database/database.sqlite', 'type nul > database\\database.sqlite'),
-                openFile('.env'),
-            ],
+            diagnosis: t('diagnosis.sqliteMissing'),
+            actions: [createSqlite(), openFile('.env')],
         }),
     },
     {
         match: /Unknown database|Database \[.+?\] not configured/i,
         build: () => ({
-            diagnosis: 'The database itself does not exist. Create it first, then re-run migrations.',
+            diagnosis: t('diagnosis.dbUnknown'),
             actions: [openFile('.env'), showOutput()],
         }),
     },
@@ -102,7 +116,7 @@ const PATTERNS: Pattern[] = [
     {
         match: /Class ".+" not found|Target class \[.+\] does not exist/i,
         build: () => ({
-            diagnosis: 'A class is missing from the autoloader. Refresh composer and try again.',
+            diagnosis: t('diagnosis.classMissing'),
             actions: [
                 runInTerminal('composer dump-autoload', 'composer dump-autoload'),
                 showOutput(),
@@ -112,7 +126,7 @@ const PATTERNS: Pattern[] = [
     {
         match: /Could not open input file: artisan/i,
         build: () => ({
-            diagnosis: 'No artisan file found in the workspace root. Open a Laravel project folder and try again.',
+            diagnosis: t('diagnosis.noArtisan'),
             actions: [showOutput()],
         }),
     },
@@ -122,7 +136,7 @@ const PATTERNS: Pattern[] = [
         match: /Migration table not found|Base table or view not found.*migrations/i,
         contexts: ['migrate', 'seed', 'test'],
         build: () => ({
-            diagnosis: 'The migrations table is missing: your database has never been initialized.',
+            diagnosis: t('diagnosis.migrationsTableMissing'),
             actions: [
                 runInTerminal('php artisan migrate:install', 'php artisan migrate:install'),
                 showOutput(),
@@ -133,7 +147,7 @@ const PATTERNS: Pattern[] = [
         match: /Table .+ already exists|already exists \(SQL/i,
         contexts: ['migrate', 'generate'],
         build: () => ({
-            diagnosis: 'A table from a previous run is still in the database. Reset it with migrate:fresh.',
+            diagnosis: t('diagnosis.tableExists'),
             actions: [
                 runInTerminal('php artisan migrate:fresh', 'php artisan migrate:fresh'),
                 showOutput(),
@@ -144,7 +158,7 @@ const PATTERNS: Pattern[] = [
         match: /Nothing to migrate/i,
         contexts: ['migrate'],
         build: () => ({
-            diagnosis: 'No pending migrations were found. Generate a new entity to add one.',
+            diagnosis: t('diagnosis.nothingToMigrate'),
             actions: [showOutput()],
         }),
     },
@@ -154,15 +168,15 @@ const PATTERNS: Pattern[] = [
         match: /FAIL(URES|ED)|Tests:.*failed|Failed asserting/i,
         contexts: ['test'],
         build: () => ({
-            diagnosis: 'Some tests failed. Review the test output for details.',
-            actions: [showOutput('Show Test Output')],
+            diagnosis: t('diagnosis.testsFailed'),
+            actions: [showOutput(t('diagnosis.showTestOutput'))],
         }),
     },
     {
         match: /No tests executed/i,
         contexts: ['test'],
         build: () => ({
-            diagnosis: 'No tests were executed. Generate an entity to create test files.',
+            diagnosis: t('diagnosis.noTests'),
             actions: [showOutput()],
         }),
     },
@@ -180,7 +194,7 @@ const PATTERNS: Pattern[] = [
         match: /Command "?make:fullapi"? is not defined|There are no commands defined in the "make:fullapi"/i,
         contexts: ['generate'],
         build: () => ({
-            diagnosis: 'The laravel-api-generator package is not installed in this project.',
+            diagnosis: t('diagnosis.packageMissing'),
             actions: [runInTerminal(t('package.installViaComposer'), requirePackageCommand)],
         }),
     },
@@ -188,10 +202,10 @@ const PATTERNS: Pattern[] = [
         match: /stub.*missing|Missing required placeholder/i,
         contexts: ['generate'],
         build: () => ({
-            diagnosis: 'A customized stub is missing required placeholders.',
+            diagnosis: t('diagnosis.stubPlaceholders'),
             actions: [
                 {
-                    label: 'Open Stubs Folder',
+                    label: t('generate.openStubsFolder'),
                     run: async (root) => {
                         await vscode.commands.executeCommand(
                             'revealInExplorer',
@@ -207,7 +221,7 @@ const PATTERNS: Pattern[] = [
     {
         match: /Permission denied|EACCES/i,
         build: () => ({
-            diagnosis: 'A file or directory could not be written. Check filesystem permissions.',
+            diagnosis: t('diagnosis.permission'),
             actions: [showOutput()],
         }),
     },

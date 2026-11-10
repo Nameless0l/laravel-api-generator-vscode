@@ -1,7 +1,10 @@
 import './vscodeStub';
 import { test } from 'node:test';
 import * as assert from 'node:assert/strict';
-import { analyzeError, analyzeProtocolErrors } from '../services/errorAnalyzer';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
+import { analyzeError, analyzeProtocolErrors, createSqliteFile } from '../services/errorAnalyzer';
 
 test('an unknown generator option points to an outdated package', () => {
     const suggestion = analyzeError('generate', 'The "--json-api" option does not exist.');
@@ -22,6 +25,18 @@ test('a refused database connection is diagnosed in any context', () => {
     const suggestion = analyzeError('migrate', 'SQLSTATE[HY000] [2002] Connection refused');
 
     assert.ok(suggestion);
+});
+
+test('the SQLite file is created empty and an existing one is left as it is', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'lag-sqlite-'));
+    const file = createSqliteFile(root);
+
+    assert.equal(file, path.join(root, 'database', 'database.sqlite'));
+    assert.equal(fs.statSync(file).size, 0);
+
+    fs.writeFileSync(file, 'rows');
+    createSqliteFile(root);
+    assert.equal(fs.readFileSync(file, 'utf8'), 'rows');
 });
 
 test('successful output yields no suggestion', () => {

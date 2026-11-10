@@ -49,7 +49,9 @@
     "openStubsFolder": "Ouvrir le dossier de stubs",
     "generateAnyway": "Générer quand même",
     "fixStubsCancelled": "Génération annulée. Corrigez les stubs et réessayez.",
-    "stubsCancelled": "Génération annulée à cause de stubs invalides."
+    "stubsCancelled": "Génération annulée à cause de stubs invalides.",
+    "cancelled": "Génération annulée.",
+    "stopped": "Génération arrêtée avant la fin. Certains fichiers sont peut-être déjà écrits."
   },
   "stubs": {
     "alreadyPublished": "Les stubs sont déjà publiés. Que voulez-vous faire ?",
@@ -62,7 +64,6 @@
     "deleteFailed": "Échec de la suppression des stubs : {0}"
   },
   "regenerate": {
-    "promptName": "Nom de l'entité à régénérer",
     "noDefinition": "Aucune définition trouvée pour \"{0}\" : le manifeste ne l'enregistre pas et aucune migration ne crée sa table. Générez-la d'abord à nouveau depuis sa source.",
     "pickPlaceholder": "Sélectionnez les fichiers à régénérer pour \"{0}\"",
     "pickTitle": "Régénérer des fichiers"
@@ -86,8 +87,8 @@
     "pickTablesPlaceholder": "Sélectionnez les tables à générer (users est décochée pour protéger User.php)",
     "columnsCount": "{0} colonne(s)",
     "failed": "Échec de la génération :\n{0}",
-    "packageTooOld": "Cette fonctionnalité nécessite une version plus récente de nameless/laravel-api-generator. Mettez à jour le paquet Composer puis réessayez.",
-    "updatePackage": "Mettre à jour le paquet",
+    "packageTooOld": "Cette fonctionnalité nécessite une version plus récente de nameless/laravel-api-generator. Mettez à jour le package Composer puis réessayez.",
+    "updatePackage": "Mettre à jour le package",
     "schemaTitle": "Générer depuis un fichier de schéma",
     "useDetectedSchema": "Utiliser {0} (trouvé à la racine du projet)",
     "browseSchema": "Parcourir pour choisir un fichier de schéma...",
@@ -95,31 +96,26 @@
     "useCurrentFile": "Utiliser le fichier actif ({0})",
     "browseMermaid": "Parcourir pour choisir un fichier Mermaid...",
     "openApiTitle": "Générer depuis une spec OpenAPI",
-    "browseOpenApi": "Parcourir pour choisir un fichier OpenAPI ou Swagger..."
+    "browseOpenApi": "Parcourir pour choisir un fichier OpenAPI ou Swagger...",
+    "filterSchema": "Schéma d'API (YAML / JSON)",
+    "filterMermaid": "Diagramme Mermaid",
+    "filterOpenApi": "OpenAPI / Swagger"
   },
   "describe": {
     "noApi": "Cette version de VS Code ne peut pas joindre de modèle de langage. Passez à VS Code 1.90 ou plus récent.",
-    "noModel": "Aucun modèle de chat disponible. Connectez-vous à GitHub Copilot, ou installez un autre fournisseur de modèles.",
+    "noModel": "Aucun modèle de chat disponible. Connectez-vous à votre fournisseur de modèles, ou installez-en un.",
     "failed": "Le modèle n'a pas pu rédiger le schéma :\n{0}",
-    "empty": "Le modèle n'a rien renvoyé. Vérifiez que vous êtes connecté à GitHub Copilot, ou choisissez un autre modèle.",
+    "empty": "Le modèle n'a rien renvoyé. Réessayez, ou choisissez un autre modèle.",
     "justification": "Rédige le fichier api-schema.yaml qui décrit votre API.",
     "exists": "api-schema.yaml existe déjà à la racine du projet. Le remplacer ?",
-    "replace": "Remplacer"
+    "replace": "Remplacer",
+    "noModelCopilot": "Aucun modèle de chat disponible. Connectez-vous à GitHub Copilot, ou installez un autre fournisseur de modèles.",
+    "emptyCopilot": "Le modèle n'a rien renvoyé. Vérifiez que vous êtes connecté à GitHub Copilot, ou choisissez un autre modèle."
   },
   "routes": {
     "orphanDetected": "route:list a échoué car un fichier de routes référence un contrôleur supprimé. Supprimer les routes orphelines ?",
     "cleanOrphans": "Nettoyer les routes orphelines",
     "cleaned": "Routes orphelines supprimées de routes/api.php et routes/web.php."
-  },
-  "addFields": {
-    "promptName": "Entité à laquelle ajouter des champs",
-    "promptFields": "Champs à ajouter à \"{0}\" (nom:type, séparés par des virgules ; enum(a,b) supporté)",
-    "invalidFormat": "Format attendu : nom:type,autre:enum(a,b)",
-    "progress": "Ajout des champs à {0}...",
-    "success": "Champs ajoutés à \"{0}\". Le modèle, la request, la factory et la resource ont été patchés en place.",
-    "failed": "Échec de l'ajout des champs :\n{0}",
-    "runMigrate": "Lancer les migrations",
-    "migrating": "Migrations en cours..."
   },
   "statusbar": {
     "entities": "Laravel API : {0}",
@@ -133,7 +129,6 @@
     "statusMissing": "Le package n'est pas encore installé.",
     "statusNotInstalled": "Le package est déclaré mais vendor manque.",
     "statusTooOld": "Package {0} installé, la {1} débloque l'aperçu en direct.",
-    "install": "Installer",
     "composerInstall": "composer install",
     "update": "Mettre à jour",
     "settings": "Réglages",
@@ -148,7 +143,7 @@
     "openapi": "Une spec OpenAPI",
     "project": "Projet",
     "diagram": "Diagramme des entités",
-    "projectActions": "Migrations, tests, seeders",
+    "projectActions": "Actions du projet",
     "snippets": "Snippets",
     "docs": "Documentation",
     "agents": "Agents",
@@ -160,10 +155,27 @@
     "agentsDisabled": "Le serveur MCP est désactivé dans les réglages.",
     "installMcp": "Installer",
     "copyClaude": "Copier la commande pour Claude Code",
-    "copiedClaude": "Commande copiée. Lancez-la dans un terminal à la racine du projet, puis démarrez Claude Code depuis ce dossier."
+    "copiedClaude": "Commande copiée. Lancez-la dans un terminal à la racine du projet, puis démarrez Claude Code depuis ce dossier.",
+    "installPackage": "Installer le package",
+    "notLaravelHint": "Ce dossier ne contient pas de fichier artisan. Ouvrez la racine d'un projet Laravel, ou créez-en un avec laravel new.",
+    "openFolder": "Ouvrir un dossier",
+    "describeDetailModel": "Modèle de chat",
+    "needsPackage": "Installez d'abord le package",
+    "tips": {
+      "newApi": "Décrire une entité dans un formulaire, avec l'aperçu en direct de ses fichiers",
+      "describe": "Décrire l'API en quelques phrases et laisser votre modèle de chat rédiger le schéma",
+      "database": "Choisir des tables de la base de données et générer leurs API",
+      "schema": "Générer toutes les entités d'un fichier api-schema.yaml ou api-schema.json",
+      "mermaid": "Générer depuis un erDiagram ou un classDiagram",
+      "openapi": "Générer depuis les schémas d'une spec OpenAPI 3 ou Swagger 2",
+      "diagram": "Voir les entités générées et leurs relations sur un canevas",
+      "projectActions": "Lancer les migrations, les tests et les seeders, ouvrir la documentation de l'API",
+      "snippets": "Insérer un snippet Laravel prêt à l'emploi",
+      "docs": "Ouvrir la documentation dans le navigateur",
+      "copyClaude": "Copier la commande claude mcp add qui enregistre le serveur MCP"
+    }
   },
   "tree": {
-    "empty": "Aucune entité générée pour l'instant",
     "files": "Fichiers",
     "fields": "Champs",
     "relations": "Relations",
@@ -185,11 +197,13 @@
     "copied": "Snippet « {0} » copié dans le presse-papiers."
   },
   "delete": {
-    "promptName": "Entrez le nom de l'entité à supprimer",
     "confirm": "Supprimer tous les fichiers de \"{0}\" ? Cette action est irréversible.",
     "deleteAction": "Supprimer",
     "success": "API \"{0}\" supprimée avec succès.",
-    "failed": "Échec de la suppression de \"{0}\" : {1}"
+    "failed": "Échec de la suppression de \"{0}\" : {1}",
+    "pickTitle": "Supprimer une API",
+    "checking": "Recherche des fichiers de {0} à supprimer...",
+    "progress": "Suppression de {0}..."
   },
   "builder": {
     "tabTitle": "Nouvelle API",
@@ -225,7 +239,7 @@
     "defaultValue": "valeur",
     "primaryKey": "Clé primaire : remplace l'id par défaut",
     "removeField": "Supprimer le champ",
-    "dragToReorder": "Glisser pour réordonner",
+    "dragToReorder": "Glissez pour réordonner, ou utilisez Alt+Haut et Alt+Bas",
     "enumValues": "Valeurs",
     "addValue": "valeur",
     "removeValue": "Retirer {0}",
@@ -293,7 +307,6 @@
     "viewDiffs_other": "Voir les {0} diffs",
     "generate": "Générer l'API",
     "generating": "Génération...",
-    "cancelHint": "Cliquez à nouveau pour annuler",
     "nameRequired": "Nommez l'entité.",
     "namePascal": "En PascalCase : une majuscule d'abord, puis des lettres et des chiffres.",
     "nameReserved": "« {0} » est réservé par Laravel.",
@@ -304,7 +317,7 @@
     "enumValuesRequired": "Ajoutez au moins une valeur.",
     "modifiersNeedPackage": "Nécessite nameless/laravel-api-generator 3.9 ou plus",
     "jsonTitle": "Entités de {0}",
-    "jsonGenerate": "Tout générer",
+    "jsonGenerate": "Continuer",
     "cancel": "Annuler",
     "dbImported": "{0} importée depuis la base avec {1} champs. Relisez-les, puis générez.",
     "runInTerminal": "Lancer dans le terminal",
@@ -312,7 +325,41 @@
     "generationFailed": "La génération a échoué",
     "close": "Fermer",
     "kbdEnter": "Ctrl+Entrée",
-    "kbdEnterMac": "⌘ Entrée"
+    "kbdEnterMac": "⌘ Entrée",
+    "editTabTitle": "Modifier {0}",
+    "newApi": "Nouvelle API",
+    "undo": "Annuler",
+    "replacedByExample": "Le formulaire a été remplacé par l'exemple \"{0}\".",
+    "locked": "Déjà généré, verrouillé",
+    "primary": "clé primaire",
+    "reorderField": "Réordonner {0} : Alt+Haut ou Alt+Bas",
+    "movedField": "{0} déplacé en position {1} sur {2}",
+    "relationTargetInvalid": "Nommez le modèle en PascalCase, comme Post.",
+    "relationRoleInvalid": "Utilisez des lettres, des chiffres et des underscores pour le nom de la relation.",
+    "blockedPackage": "Installez le package pour générer.",
+    "blockedField": "Ajoutez au moins un champ.",
+    "blockedNewField": "Ajoutez au moins un nouveau champ.",
+    "blockedRows_one": "{0} ligne à corriger, voir le message en dessous.",
+    "blockedRows_other": "{0} lignes à corriger, voir le message sous chacune.",
+    "blockedKinds": "Choisissez au moins un fichier à générer.",
+    "editNote": {
+      "recorded": "Ce que l'entité possède déjà est verrouillé. Ajoutez des champs, puis relisez les changements.",
+      "rebuilt": "Relue depuis ses migrations et son modèle, car le package n'a pas enregistré cette entité. Ajoutez des champs, puis relisez les changements.",
+      "scanned": "Seuls les noms ont pu être lus dans le modèle. Ajoutez des champs, puis relisez les changements."
+    },
+    "editFieldsHint": "les nouveaux champs arrivent avec leur migration",
+    "editRelationsHint": "verrouillées, les relations ne s'ajoutent pas d'ici",
+    "editPreview": "Relisez les changements pour voir la migration et chaque fichier modifié avant toute écriture.",
+    "editSummary_one": "{0} champ à ajouter",
+    "editSummary_other": "{0} champs à ajouter",
+    "reviewChanges": "Relire les changements",
+    "jsonHint": "Rien n'est écrit tant que vous n'avez pas confirmé à l'écran suivant.",
+    "jsonWrite": "Écrire et générer",
+    "jsonWriteConfirm": "Ces {0} classes ne peuvent pas être prévisualisées : class_data.json est écrit à la racine du projet, puis elles sont générées. Continuer ?",
+    "jsonPickTitle": "Sélectionnez un fichier class_data.json",
+    "jsonInvalid": "Fichier JSON invalide : {0}",
+    "openApiEmpty": "Aucun schéma trouvé dans cette spec OpenAPI.",
+    "openApiInvalid": "La spec OpenAPI n'a pas pu être lue : {0}"
   },
   "ready": {
     "titleOne": "L'API {0} est prête",
@@ -380,10 +427,10 @@
     "panelPlan": "Plan de génération",
     "panelReady": "API prête",
     "describeTitle": "Décrivez votre API",
-    "describeSubtitle": "Copilot propose un schéma, vous relisez le plan avant que le moindre fichier soit écrit.",
+    "describeSubtitle": "{0} propose un schéma, vous relisez le plan avant que le moindre fichier soit écrit.",
     "promptLabel": "Description de l'API",
     "placeholder": "Une bibliothèque prête des livres à ses membres. Un prêt a une date de retour et peut être rendu en retard.",
-    "modelDefault": "Modèle Copilot par défaut",
+    "modelDefault": "Modèle par défaut",
     "contextOn_one": "Tenir compte de l'entité existante",
     "contextOn_other": "Tenir compte des {0} entités existantes",
     "contextNone": "Aucune entité dans le projet",
@@ -407,7 +454,7 @@
     "badgeChanged": "modifiée",
     "existing": "Déjà dans le projet",
     "related": "reliée",
-    "existingHint": "Copilot connaît vos entités et s'y relie au lieu de les redéfinir.",
+    "existingHint": "{0} connaît vos entités et s'y relie au lieu de les redéfinir.",
     "editHint": "Cliquez sur une entité pour l'ajuster dans le brouillon YAML avant de relire le plan.",
     "review": "Relire le plan",
     "save": "Enregistrer en api-schema.yaml",
@@ -424,7 +471,7 @@
     "srcMermaid": "Diagramme Mermaid",
     "srcOpenapi": "Spec OpenAPI",
     "srcDatabase": "Base de données",
-    "srcDescribe": "Description Copilot",
+    "srcDescribe": "Description",
     "srcRecorded": "Définition enregistrée",
     "srcRebuilt": "Relue dans ses fichiers",
     "rebuiltNote": "Le package n'a pas enregistré la définition de cette entité (générée avant la 4.1) : elle a été relue dans ses migrations, son modèle et ses enums. Vérifiez chaque changement avant de générer.",
@@ -478,7 +525,29 @@
     "sameCount_one": "{0} identique",
     "sameCount_other": "{0} identiques",
     "noFields": "Aucun champ",
-    "tooOld": "La revue du plan demande nameless/laravel-api-generator {1} ou plus récent (installé : {0})."
+    "tooOld": "La revue du plan demande nameless/laravel-api-generator {1} ou plus récent (installé : {0}).",
+    "panelDelete": "Supprimer {0}",
+    "chatModel": "Votre modèle de chat",
+    "modelDefaultCopilot": "Modèle Copilot par défaut",
+    "srcDescribeCopilot": "Description Copilot",
+    "srcAddFields_one": "{0} champ à ajouter",
+    "srcAddFields_other": "{0} champs à ajouter",
+    "srcImported": "Classes importées",
+    "adjust": "Ajuster",
+    "adjustLabel": "Modification à apporter à la proposition",
+    "adjustPlaceholder": "Ajustez la proposition : ajouter un statut aux commandes, retirer les tags...",
+    "removeTitle": "Supprimer l'API {0}",
+    "removeDryRun": "Simulation par le package. Rien n'est supprimé tant que vous n'avez pas confirmé.",
+    "removeEdited_one": "{0} fichier a été retouché à la main depuis sa génération. La suppression emporte aussi vos modifications.",
+    "removeEdited_other": "{0} fichiers ont été retouchés à la main depuis leur génération. La suppression emporte aussi vos modifications.",
+    "removeEditedBadge": "retouché à la main",
+    "removeEditedLabel_one": "retouché à la main",
+    "removeEditedLabel_other": "retouchés à la main",
+    "toRemove_one": "fichier à supprimer",
+    "toRemove_other": "fichiers à supprimer",
+    "removeShared": "routes/api.php et DatabaseSeeder.php perdent les entrées de {0}.",
+    "removeConfirm": "Supprimer {0}",
+    "removing": "Suppression..."
   },
   "diagram": {
     "title": "Diagramme d'entités",
@@ -519,7 +588,12 @@
     "noRelations": "Aucune relation",
     "noFields": "Aucun champ",
     "untracked": "Le manifeste ne suit pas encore ces fichiers.",
-    "openExport": "Ouvrir"
+    "openExport": "Ouvrir",
+    "fitHint": "Tout afficher (F)",
+    "minimapHint": "Cliquez ou glissez pour déplacer la vue",
+    "arranged": "Entités réorganisées",
+    "undo": "Annuler",
+    "fileOk": "à jour"
   },
   "preview": {
     "notInstalled": "Le package figure dans composer.json mais n'est pas encore installé. Lancez composer install pour voir l'aperçu en direct.",
@@ -530,5 +604,50 @@
     "timeout": "Le processus d'aperçu n'a pas répondu à temps.",
     "extensionTooOld": "Le package installé parle un protocole plus récent. Mettez à jour l'extension Laravel API Generator.",
     "diffTitle": "{0} : actuel et généré"
+  },
+  "entity": {
+    "none": "Aucune entité générée dans ce projet pour l'instant.",
+    "pickPlaceholder": "Choisissez une entité"
+  },
+  "edit": {
+    "pickTitle": "Modifier une entité",
+    "notFound": "Aucun fichier généré trouvé pour \"{0}\"."
+  },
+  "related": {
+    "noEditor": "Aucun fichier n'est ouvert.",
+    "noEntity": "Ce fichier n'appartient à aucune entité générée.",
+    "noFiles": "Aucun fichier lié trouvé pour \"{0}\".",
+    "placeholder": "Fichiers liés à {0}"
+  },
+  "diagnosis": {
+    "openFile": "Ouvrir {0}",
+    "missingFile": "{0} n'existe pas.",
+    "showOutput": "Afficher la sortie complète",
+    "showTestOutput": "Afficher la sortie des tests",
+    "createSqlite": "Créer database/database.sqlite",
+    "sqliteCreated": "database/database.sqlite créé. Relancez la commande.",
+    "sqliteFailed": "Impossible de créer database/database.sqlite : {0}",
+    "dbUnreachable": "Impossible de joindre le serveur de base de données. Vérifiez qu'il est démarré et que les identifiants de votre .env sont corrects.",
+    "dbCredentials": "La base de données a refusé vos identifiants (DB_USERNAME ou DB_PASSWORD incorrect).",
+    "dbDriver": "Il manque à PHP l'extension du pilote de base de données (par exemple pdo_mysql, pdo_sqlite, pdo_pgsql).",
+    "sqliteMissing": "Le fichier de base de données SQLite n'existe pas. Créez-le puis relancez la commande.",
+    "dbUnknown": "La base de données elle-même n'existe pas. Créez-la d'abord, puis relancez les migrations.",
+    "classMissing": "Une classe manque dans l'autoloader. Rafraîchissez Composer puis réessayez.",
+    "noArtisan": "Aucun fichier artisan à la racine de l'espace de travail. Ouvrez le dossier d'un projet Laravel puis réessayez.",
+    "migrationsTableMissing": "La table des migrations manque : votre base de données n'a jamais été initialisée.",
+    "tableExists": "Une table d'une exécution précédente est encore dans la base de données. Réinitialisez-la avec migrate:fresh.",
+    "nothingToMigrate": "Aucune migration en attente. Générez une nouvelle entité pour en ajouter une.",
+    "testsFailed": "Des tests ont échoué. Consultez la sortie des tests pour le détail.",
+    "noTests": "Aucun test n'a été exécuté. Générez une entité pour créer des fichiers de test.",
+    "packageMissing": "Le package laravel-api-generator n'est pas installé dans ce projet.",
+    "stubPlaceholders": "Il manque des placeholders obligatoires dans un stub personnalisé.",
+    "permission": "Un fichier ou un dossier n'a pas pu être écrit. Vérifiez les droits du système de fichiers."
+  },
+  "status": {
+    "new": "nouveau",
+    "mod": "modifié",
+    "kept": "conservé, retouché à la main",
+    "same": "inchangé",
+    "err": "erreur"
   }
 }

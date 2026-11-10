@@ -5,8 +5,8 @@ body {
     --strong: color-mix(in srgb, var(--fg) 70%, var(--contrast));
     --muted: var(--vscode-descriptionForeground);
     --faint: color-mix(in srgb, var(--muted) 72%, var(--bg));
-    --accent: var(--vscode-button-background);
-    --accent-fg: var(--vscode-button-foreground);
+    --accent: var(--vscode-button-background, var(--vscode-focusBorder, #0e639c));
+    --accent-fg: var(--vscode-button-foreground, #ffffff);
     --accent-hover: var(--vscode-button-hoverBackground, var(--accent));
     --accent-text: color-mix(in srgb, var(--accent) 55%, #ffffff);
     --input: var(--vscode-input-background);
@@ -69,6 +69,26 @@ body.vscode-high-contrast-light {
 body.vscode-high-contrast,
 body.vscode-high-contrast-light {
     --hair: var(--vscode-contrastBorder, var(--fg));
+}
+
+body.vscode-high-contrast .btn,
+body.vscode-high-contrast-light .btn,
+body.vscode-high-contrast .chip,
+body.vscode-high-contrast-light .chip,
+body.vscode-high-contrast .icon-btn,
+body.vscode-high-contrast-light .icon-btn,
+body.vscode-high-contrast .badge,
+body.vscode-high-contrast-light .badge,
+body.vscode-high-contrast .card,
+body.vscode-high-contrast-light .card,
+body.vscode-high-contrast .msg,
+body.vscode-high-contrast-light .msg,
+body.vscode-high-contrast .menu,
+body.vscode-high-contrast-light .menu,
+body.vscode-high-contrast .dot,
+body.vscode-high-contrast-light .dot {
+    outline: 1px solid var(--hair);
+    outline-offset: -1px;
 }
 
 * {

@@ -3,44 +3,33 @@ import { LaravelDetector } from '../services/laravelDetector';
 import { rebuildEntity } from '../services/entityRebuild';
 import { EntityScanner } from '../services/entityScanner';
 import { recordedEntities } from '../services/manifest';
-import { EntityTreeItem } from '../providers/entityTreeProvider';
 import { FlowPanel } from '../webview/flowPanel';
+import { pickEntity } from './entityPick';
 import { t } from '../i18n';
 
-interface RegenerableType {
-    label: string;
-    description: string;
-    artisanType: string;
-}
-
-const REGENERABLE_TYPES: RegenerableType[] = [
-    { label: 'Model', description: 'app/Models/{Name}.php', artisanType: 'Model' },
-    { label: 'Controller', description: 'app/Http/Controllers/{Name}Controller.php', artisanType: 'Controller' },
-    { label: 'Service', description: 'app/Services/{Name}Service.php', artisanType: 'Service' },
-    { label: 'DTO', description: 'app/DTO/{Name}DTO.php', artisanType: 'DTO' },
-    { label: 'Requests', description: 'app/Http/Requests/Store{Name}Request.php, app/Http/Requests/Update{Name}Request.php', artisanType: 'Request' },
-    { label: 'Resource', description: 'app/Http/Resources/{Name}Resource.php', artisanType: 'Resource' },
-    { label: 'Factory', description: 'database/factories/{Name}Factory.php', artisanType: 'Factory' },
-    { label: 'Seeder', description: 'database/seeders/{Name}Seeder.php', artisanType: 'Seeder' },
-    { label: 'Policy', description: 'app/Policies/{Name}Policy.php', artisanType: 'Policy' },
-    { label: 'Feature Test', description: 'tests/Feature/{Name}ControllerTest.php', artisanType: 'FeatureTest' },
-    { label: 'Unit Test', description: 'tests/Unit/{Name}ServiceTest.php', artisanType: 'UnitTest' },
+const REGENERABLE_TYPES: Array<{ kind: string; path: string }> = [
+    { kind: 'Model', path: 'app/Models/{Name}.php' },
+    { kind: 'Controller', path: 'app/Http/Controllers/{Name}Controller.php' },
+    { kind: 'Service', path: 'app/Services/{Name}Service.php' },
+    { kind: 'DTO', path: 'app/DTO/{Name}DTO.php' },
+    { kind: 'Request', path: 'app/Http/Requests/Store{Name}Request.php, app/Http/Requests/Update{Name}Request.php' },
+    { kind: 'Resource', path: 'app/Http/Resources/{Name}Resource.php' },
+    { kind: 'Factory', path: 'database/factories/{Name}Factory.php' },
+    { kind: 'Seeder', path: 'database/seeders/{Name}Seeder.php' },
+    { kind: 'Policy', path: 'app/Policies/{Name}Policy.php' },
+    { kind: 'FeatureTest', path: 'tests/Feature/{Name}ControllerTest.php' },
+    { kind: 'UnitTest', path: 'tests/Unit/{Name}ServiceTest.php' },
 ];
 
 export function registerRegenerateFileCommand(extensionUri: vscode.Uri, onDidRegenerate: () => void): vscode.Disposable {
-    return vscode.commands.registerCommand('laravelApiGenerator.regenerateFile', async (item?: EntityTreeItem) => {
+    return vscode.commands.registerCommand('laravelApiGenerator.regenerateFile', async (item?: { entityName?: string }) => {
         const check = await LaravelDetector.validateOrPromptInstall();
         if (!check.valid || !check.root) {
             return;
         }
         const root = check.root;
 
-        const entityName =
-            item?.entityName ??
-            (await vscode.window.showInputBox({
-                prompt: t('regenerate.promptName'),
-                placeHolder: 'e.g. Article',
-            }));
+        const entityName = await pickEntity(root, item, t('regenerate.pickTitle'));
         if (!entityName) {
             return;
         }
@@ -54,12 +43,10 @@ export function registerRegenerateFileCommand(extensionUri: vscode.Uri, onDidReg
 
         const files = new EntityScanner(root).getEntityFiles(entityName);
         const picks = await vscode.window.showQuickPick(
-            REGENERABLE_TYPES.map((rt) => ({
-                label: rt.label,
-                description:
-                    files.filter((file) => file.kind === rt.artisanType).map((file) => file.path).join(', ') ||
-                    rt.description.split('{Name}').join(entityName),
-                artisanType: rt.artisanType,
+            REGENERABLE_TYPES.map((type) => ({
+                label: t(`builder.kinds.${type.kind}`),
+                description: files.filter((file) => file.kind === type.kind).map((file) => file.path).join(', ') || type.path.split('{Name}').join(entityName),
+                fileKind: type.kind,
             })),
             {
                 canPickMany: true,
@@ -74,7 +61,7 @@ export function registerRegenerateFileCommand(extensionUri: vscode.Uri, onDidReg
         FlowPanel.plan(
             extensionUri,
             root,
-            { kind: 'regenerate', entity: entityName, only: picks.map((pick) => pick.artisanType), rebuilt: rebuilt?.entity },
+            { kind: 'regenerate', entity: entityName, only: picks.map((pick) => pick.fileKind), rebuilt: rebuilt?.entity },
             onDidRegenerate,
             rebuilt?.options ?? {}
         );

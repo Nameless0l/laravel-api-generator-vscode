@@ -4,7 +4,9 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { ArtisanRunner } from '../services/artisanRunner';
 import { failureExcerpt } from '../services/commandSummary';
-import { describePrompt, extractSchema, ModelErrorLink, preferredModels, readableModelError } from '../services/describePrompt';
+import { DeletePlan } from '../services/deletePlan';
+import { adjustPrompt, describePrompt, extractSchema, ModelErrorLink, namesCopilot, preferredModels, readableModelError } from '../services/describePrompt';
+import { DraftStore } from '../services/drafts';
 import { EntityScanner } from '../services/entityScanner';
 import { analyzeProtocolErrors, presentSuggestion } from '../services/errorAnalyzer';
 import { LaravelDetector } from '../services/laravelDetector';
@@ -15,7 +17,7 @@ import { parseSchemaDraft } from '../services/schemaDraft';
 import { DEFAULT_FLOW_OPTIONS, FlowOptions, GenerationDocument, GenerationSource } from '../types';
 import { specLabel } from '../services/projectInfo';
 import { getLocale, t, tn, webviewStrings } from '../i18n';
-import { isUnsupportedOption } from '../commands/generationShared';
+import { deleteWithProgress, isUnsupportedOption } from '../commands/generationShared';
 import { confirmSanctum, ProjectActions, readyData, StepId } from './projectActions';
 import { iconSet } from './ui/icons';
 import { renderPage } from './ui/page';
@@ -37,8 +39,18 @@ interface Draft {
     text: string;
     model: string;
     durationMs: number;
+    copilot: boolean;
     document?: vscode.TextDocument;
 }
+
+interface DescribeDraft {
+    prompt: string;
+    useContext: boolean;
+    model: string | null;
+    proposal?: Pick<Draft, 'text' | 'model' | 'durationMs' | 'copilot'>;
+}
+
+const EMPTY_DESCRIBE: DescribeDraft = { prompt: '', useContext: true, model: null };
 
 export interface PlanHeader {
     icon: string;
@@ -56,11 +68,13 @@ function languageModels(): typeof vscode.lm | undefined {
 }
 
 /**
- * One panel for the sources that describe several entities: the Copilot
- * description, the review of the package's dry run, then the ready screen.
+ * One panel for the sources that describe several entities: the description
+ * a chat model drafts, the review of the package's dry run, then the ready
+ * screen. The same review screen lists what a deletion removes.
  */
 export class FlowPanel {
     private static current: FlowPanel | undefined;
+    private static drafts: DraftStore | undefined;
 
     private readonly panel: vscode.WebviewPanel;
     private readonly actions: ProjectActions;
@@ -78,6 +92,7 @@ export class FlowPanel {
     private draft: Draft | undefined;
     private draftTimer: ReturnType<typeof setTimeout> | undefined;
     private errorLinks: ModelErrorLink[] = [];
+    private removal: { entity: string; plan: DeletePlan } | undefined;
     private onDidGenerate: (() => void) | undefined;
 
     private constructor(
@@ -102,10 +117,21 @@ export class FlowPanel {
                 if (this.draft?.document && event.document === this.draft.document) {
                     this.draft.text = event.document.getText();
                     clearTimeout(this.draftTimer);
-                    this.draftTimer = setTimeout(() => this.postProposal(), 300);
+                    this.draftTimer = setTimeout(() => {
+                        this.rememberProposal();
+                        this.postProposal();
+                    }, 300);
                 }
             })
         );
+    }
+
+    static useDrafts(drafts: DraftStore): void {
+        FlowPanel.drafts = drafts;
+    }
+
+    static remove(extensionUri: vscode.Uri, root: string, entity: string, plan: DeletePlan, onDidDelete: () => void): void {
+        FlowPanel.open(extensionUri, root, onDidDelete).showRemoval(entity, plan);
     }
 
     static describe(extensionUri: vscode.Uri, root: string, onDidGenerate: () => void): void {
@@ -154,7 +180,7 @@ export class FlowPanel {
             bodyClass: 'flow-view',
             boot: {
                 locale: getLocale(),
-                strings: webviewStrings('flow', 'ready', 'builder', 'describe'),
+                strings: webviewStrings('flow', 'ready', 'builder', 'describe', 'status'),
                 icons: iconSet(),
             },
         });
@@ -188,8 +214,19 @@ export class FlowPanel {
                 break;
             case 'describe:send':
                 if (message.text && message.text.trim() !== '') {
-                    await this.draftSchema(message.text, message.context !== false, message.model);
+                    await this.draftSchema(describePrompt(message.text, message.context !== false ? this.existingEntities() : []), message.model);
                 }
+                break;
+            case 'describe:adjust':
+                if (this.draft && message.text && message.text.trim() !== '') {
+                    await this.draftSchema(adjustPrompt(this.draft.text, message.text, message.context !== false ? this.existingEntities() : []), message.model);
+                }
+                break;
+            case 'describe:draft':
+                this.rememberDescribe({ prompt: message.text ?? '', useContext: message.context !== false, model: message.model ?? null });
+                break;
+            case 'removal:confirm':
+                await this.remove();
                 break;
             case 'describe:stop':
                 this.request?.cancel();
@@ -255,11 +292,67 @@ export class FlowPanel {
     private showDescribe(): void {
         this.panel.title = t('flow.panelDescribe');
         this.source = undefined;
-        this.post({ type: 'screen', screen: 'describe', existing: this.existingEntities() });
+        this.removal = undefined;
+        const stored = this.storedDescribe();
+        if (!this.draft && stored.proposal) {
+            this.draft = { ...stored.proposal };
+        }
+        this.post({
+            type: 'screen',
+            screen: 'describe',
+            existing: this.existingEntities(),
+            draft: { prompt: stored.prompt, useContext: stored.useContext, model: stored.model },
+            fresh: !this.draft,
+        });
+        this.postProposal();
         void this.announceModels();
     }
 
+    private storedDescribe(): DescribeDraft {
+        return FlowPanel.drafts?.read<DescribeDraft>('describe', this.root) ?? EMPTY_DESCRIBE;
+    }
+
+    private rememberDescribe(change: Partial<DescribeDraft>): void {
+        FlowPanel.drafts?.write('describe', this.root, { ...this.storedDescribe(), ...change });
+    }
+
+    private rememberProposal(): void {
+        const draft = this.draft;
+        if (draft) {
+            this.rememberDescribe({ proposal: { text: draft.text, model: draft.model, durationMs: draft.durationMs, copilot: draft.copilot } });
+        }
+    }
+
+    private showRemoval(entity: string, plan: DeletePlan): void {
+        this.planRun++;
+        this.planner.cancelAll();
+        this.source = undefined;
+        this.removal = { entity, plan };
+        this.panel.title = t('flow.panelDelete', entity);
+        this.post({ type: 'removal', entity, files: plan.files, sharedEntries: plan.sharedEntries });
+    }
+
+    private async remove(): Promise<void> {
+        const removal = this.removal;
+        if (!removal || this.generating) {
+            return;
+        }
+        this.generating = true;
+        this.post({ type: 'removal:running' });
+        const result = await deleteWithProgress(this.root, removal.entity);
+        this.generating = false;
+
+        if (!result.success) {
+            this.post({ type: 'removal:failed', message: failureExcerpt(result.output || result.errors.join('\n')) });
+            return;
+        }
+        this.onDidGenerate?.();
+        vscode.window.showInformationMessage(t('delete.success', removal.entity));
+        this.panel.dispose();
+    }
+
     private showActions(): void {
+        this.removal = undefined;
         this.panel.title = t('ready.titleActions');
         const data = readyData(this.root, undefined);
         this.post({ type: 'showReady', data });
@@ -273,7 +366,7 @@ export class FlowPanel {
     private async announceModels(): Promise<void> {
         const lm = languageModels();
         if (!lm) {
-            this.post({ type: 'describe:models', models: [], note: t('describe.noApi') });
+            this.post({ type: 'describe:models', models: [], note: t('describe.noApi'), copilot: false });
             return;
         }
         let models: vscode.LanguageModelChat[] = [];
@@ -285,11 +378,16 @@ export class FlowPanel {
         this.post({
             type: 'describe:models',
             models: models.map((model) => ({ id: model.id, name: model.name, vendor: model.vendor })),
-            note: models.length === 0 ? t('describe.noModel') : undefined,
+            note: models.length === 0 ? this.noModel() : undefined,
+            copilot: namesCopilot(models, vscode.env.uriScheme),
         });
     }
 
-    private async draftSchema(text: string, useContext: boolean, modelId: string | undefined): Promise<void> {
+    private noModel(): string {
+        return t(namesCopilot([], vscode.env.uriScheme) ? 'describe.noModelCopilot' : 'describe.noModel');
+    }
+
+    private async draftSchema(prompt: string, modelId: string | undefined): Promise<void> {
         const lm = languageModels();
         if (!lm) {
             this.post({ type: 'describe:failed', message: t('describe.noApi') });
@@ -302,7 +400,7 @@ export class FlowPanel {
             model = undefined;
         }
         if (!model) {
-            this.post({ type: 'describe:failed', message: t('describe.noModel') });
+            this.post({ type: 'describe:failed', message: this.noModel() });
             return;
         }
 
@@ -314,7 +412,6 @@ export class FlowPanel {
         const started = Date.now();
         let answer = '';
         try {
-            const prompt = describePrompt(text, useContext ? this.existingEntities() : []);
             const response = await model.sendRequest([vscode.LanguageModelChatMessage.User(prompt)], { justification: t('describe.justification') }, request.token);
             for await (const part of response.text) {
                 answer += part;
@@ -337,11 +434,12 @@ export class FlowPanel {
             return;
         }
         if (answer.trim() === '') {
-            this.post({ type: 'describe:failed', message: t('describe.empty') });
+            this.post({ type: 'describe:failed', message: t(model.vendor === 'copilot' ? 'describe.emptyCopilot' : 'describe.empty') });
             return;
         }
 
-        this.draft = { text: extractSchema(answer), model: model.name, durationMs: Date.now() - started };
+        this.draft = { text: extractSchema(answer), model: model.name, durationMs: Date.now() - started, copilot: model.vendor === 'copilot' };
+        this.rememberProposal();
         this.postProposal();
     }
 
@@ -402,6 +500,7 @@ export class FlowPanel {
     }
 
     private async startPlan(source: GenerationSource, options: Partial<FlowOptions> = {}): Promise<void> {
+        this.removal = undefined;
         this.source = source;
         this.options = { ...DEFAULT_FLOW_OPTIONS, ...options, force: false };
         this.panel.title = t('flow.panelPlan');
@@ -459,6 +558,9 @@ export class FlowPanel {
         if (source.kind === 'regenerate') {
             return { values: this.options, available: source.rebuilt ? ['pest', 'queryBuilder', 'jsonApi'] : [] };
         }
+        if (source.kind === 'addFields') {
+            return { values: this.options, available: [] };
+        }
         return { values: this.options, available: [...OPTION_KEYS, ...(source.kind === 'database' ? (['withMigrations'] as const) : [])] };
     }
 
@@ -483,8 +585,12 @@ export class FlowPanel {
                 return { icon: 'database', chip: t('flow.srcDatabase'), mono: false, meta: tn('flow.tables', source.tables.length) };
             case 'regenerate':
                 return { icon: 'refresh', chip: source.entity, mono: false, meta: source.rebuilt ? t('flow.srcRebuilt') : t('flow.srcRecorded') };
+            case 'addFields':
+                return { icon: 'plus', chip: source.entity, mono: false, meta: tn('flow.srcAddFields', source.fields.split(/,(?![^()]*\))/).length) };
+            case 'inline':
+                return { icon: 'fileCode', chip: source.label, mono: true, meta: t('flow.srcImported') };
             case 'describe':
-                return { icon: 'sparkle', chip: t('flow.srcDescribe'), mono: false, meta: this.draft?.model ?? '' };
+                return { icon: 'sparkle', chip: t(this.draft?.copilot ? 'flow.srcDescribeCopilot' : 'flow.srcDescribe'), mono: false, meta: this.draft?.model ?? '' };
         }
     }
 
@@ -531,6 +637,10 @@ export class FlowPanel {
 
         const entities = [...new Set(document.files.flatMap((file) => (file.entity ? [file.entity] : [])))];
         const data = readyData(this.root, { entities, files: document.files, durationMs: Date.now() - started, queryBuilder: this.options.queryBuilder });
+        if (source.kind === 'describe') {
+            FlowPanel.drafts?.clear('describe', this.root);
+            this.draft = undefined;
+        }
         this.panel.title = t('flow.panelReady');
         this.post({ type: 'showReady', data });
         this.onDidGenerate?.();

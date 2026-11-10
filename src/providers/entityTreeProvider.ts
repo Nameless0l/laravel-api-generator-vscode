@@ -1,8 +1,9 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { EntityScanner } from '../services/entityScanner';
+import { entitySummary } from '../services/entitySummary';
 import { GeneratedEntity, EntityFile } from '../types';
-import { t, tn } from '../i18n';
+import { t } from '../i18n';
 
 type NodeKind = 'entity' | 'group' | 'file' | 'field' | 'relation' | 'empty';
 
@@ -120,19 +121,20 @@ export class EntityTreeProvider implements vscode.TreeDataProvider<EntityTreeIte
     private _onDidChangeTreeData = new vscode.EventEmitter<EntityTreeItem | undefined | null | void>();
     readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
-    private scanner: EntityScanner;
+    private workspaceRoot: string | undefined;
+    private scanner: EntityScanner | undefined;
     private entities: GeneratedEntity[] = [];
 
-    constructor(
-        private workspaceRoot: string,
-        private readonly decorations?: EntityDecorations
-    ) {
-        this.scanner = new EntityScanner(workspaceRoot);
+    constructor(private readonly decorations?: EntityDecorations) {}
+
+    setRoot(workspaceRoot: string | undefined): void {
+        this.workspaceRoot = workspaceRoot;
+        this.scanner = workspaceRoot ? new EntityScanner(workspaceRoot) : undefined;
         this.refresh();
     }
 
     refresh(): void {
-        this.entities = this.scanner.scan();
+        this.entities = this.scanner?.scan() ?? [];
         this.decorations?.update(this.entities);
         this._onDidChangeTreeData.fire();
     }
@@ -147,9 +149,6 @@ export class EntityTreeProvider implements vscode.TreeDataProvider<EntityTreeIte
 
     getChildren(element?: EntityTreeItem): EntityTreeItem[] {
         if (!element) {
-            if (this.entities.length === 0) {
-                return [new EntityTreeItem(t('tree.empty'), vscode.TreeItemCollapsibleState.None)];
-            }
             return this.entities.map((entity) => this.entityItem(entity));
         }
 
@@ -237,9 +236,8 @@ export class EntityTreeProvider implements vscode.TreeDataProvider<EntityTreeIte
     }
 
     private entityItem(entity: GeneratedEntity): EntityTreeItem {
-        const existing = entity.files.filter((f) => f.exists).length;
         const edited = entity.edited ?? [];
-        const description = [tn('tree.filesCount', existing), ...(edited.length > 0 ? [tn('tree.editedCount', edited.length)] : [])].join(', ');
+        const description = entitySummary(entity);
         const tooltip = new vscode.MarkdownString(
             [`**${entity.name}**`, description, ...(edited.length > 0 ? ['', t('tree.editedTooltip'), '', ...edited.map((file) => `- \`${file}\``)] : [])].join('\n')
         );

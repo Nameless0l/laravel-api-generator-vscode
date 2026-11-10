@@ -47,7 +47,7 @@ async function resolveSchemaPath(root: string): Promise<string | undefined> {
     const fileUri = await vscode.window.showOpenDialog({
         canSelectFiles: true,
         canSelectMany: false,
-        filters: { 'API schema (YAML / JSON)': ['yaml', 'yml', 'json'] },
+        filters: { [t('sources.filterSchema')]: ['yaml', 'yml', 'json'] },
         title: t('sources.schemaTitle'),
         defaultUri: vscode.Uri.file(root),
     });

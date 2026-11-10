@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import * as assert from 'node:assert/strict';
-import { describePrompt, extractSchema, preferredModels, readableModelError } from '../services/describePrompt';
+import { adjustPrompt, describePrompt, extractSchema, namesCopilot, preferredModels, readableModelError } from '../services/describePrompt';
 
 test('the prompt carries the description, the format and the entities to reuse', () => {
     const prompt = describePrompt('  a library that lends books to members  ', ['User', 'Book']);
@@ -14,6 +14,18 @@ test('the prompt carries the description, the format and the entities to reuse',
 
 test('the prompt leaves out the reuse line when the project has no entity yet', () => {
     assert.doesNotMatch(describePrompt('a blog', []), /already has/);
+});
+
+test('a follow-up sends the drafted schema back with what to change', () => {
+    const schema = 'entities:\n  Book:\n    fields:\n      title: string\n';
+    const prompt = adjustPrompt(schema, '  add a price to Book  ', ['User']);
+
+    assert.ok(prompt.includes('```yaml\nentities:\n  Book:\n    fields:\n      title: string\n```'));
+    assert.match(prompt, /Change it this way: add a price to Book\n/);
+    assert.match(prompt, /whole updated YAML document/);
+    assert.match(prompt, /enum\(a,b\)/);
+    assert.match(prompt, /relate to them instead of redefining them: User\./);
+    assert.doesNotMatch(adjustPrompt(schema, 'add a price', []), /already has/);
 });
 
 test('the schema is taken from a yaml block, or from the whole answer', () => {
@@ -37,6 +49,18 @@ test('copilot models come first, in the order VS Code lists them', () => {
         preferredModels(models).map((model) => model.id),
         ['auto', 'gpt-4.1', 'deepseek-v4-flash', 'fake-yaml']
     );
+});
+
+test('Copilot is named only when it answers, or in VS Code before any model is there', () => {
+    const copilot = { id: 'gpt-4.1', vendor: 'copilot' };
+    const other = { id: 'claude', vendor: 'cursor' };
+
+    assert.equal(namesCopilot([other, copilot], 'cursor'), true);
+    assert.equal(namesCopilot([other], 'vscode'), false);
+    assert.equal(namesCopilot([], 'vscode'), true);
+    assert.equal(namesCopilot([], 'vscode-insiders'), true);
+    assert.equal(namesCopilot([], 'cursor'), false);
+    assert.equal(namesCopilot([], 'vscodium'), false);
 });
 
 test('a provider error in Markdown becomes plain text and its links become actions', () => {

@@ -49,7 +49,7 @@ async function resolveDiagramPath(root: string): Promise<string | undefined> {
     const fileUri = await vscode.window.showOpenDialog({
         canSelectFiles: true,
         canSelectMany: false,
-        filters: { 'Mermaid diagram': ['mmd', 'mermaid', 'md', 'txt'] },
+        filters: { [t('sources.filterMermaid')]: ['mmd', 'mermaid', 'md', 'txt'] },
         title: t('sources.mermaidTitle'),
         defaultUri: vscode.Uri.file(root),
     });

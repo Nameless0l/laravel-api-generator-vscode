@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import { t } from '../i18n';
-import { readInstalledPackages, readLaravelMajor, requirePackageCommand, usesLegacyLine } from './packageState';
+import { detectPackageState, readInstalledPackages, readLaravelMajor, requirePackageCommand, usesLegacyLine } from './packageState';
 
 export class LaravelDetector {
     static isLaravelProject(workspaceRoot: string): boolean {
@@ -12,6 +12,20 @@ export class LaravelDetector {
 
     static isPackageInstalled(workspaceRoot: string): boolean {
         return this.hasComposerPackage(workspaceRoot, 'nameless/laravel-api-generator');
+    }
+
+    /** Declared in composer.json and present in vendor. */
+    static isPackageReady(workspaceRoot: string): boolean {
+        return detectPackageState(workspaceRoot, this.isPackageInstalled(workspaceRoot)).kind === 'installed';
+    }
+
+    static installPackage(workspaceRoot: string): void {
+        const terminal = vscode.window.createTerminal({
+            name: 'Laravel API Generator',
+            cwd: workspaceRoot,
+        });
+        terminal.sendText(requirePackageCommand(workspaceRoot));
+        terminal.show();
     }
 
     static isScrambleInstalled(workspaceRoot: string): boolean {
@@ -136,6 +150,16 @@ export class LaravelDetector {
         return undefined;
     }
 
+    /** The Laravel project of the workspace, with an error shown when there is none. */
+    static projectRoot(): string | undefined {
+        const root = this.getWorkspaceRoot();
+        if (root && this.isLaravelProject(root)) {
+            return root;
+        }
+        vscode.window.showErrorMessage(root ? t('detector.notLaravel') : t('detector.noWorkspace'));
+        return undefined;
+    }
+
     static validate(): { valid: boolean; root?: string; message?: string; packageMissing?: boolean } {
         const root = this.getWorkspaceRoot();
         if (!root) {
@@ -162,16 +186,10 @@ export class LaravelDetector {
             const installLabel = t('package.installViaComposer');
             const action = await vscode.window.showWarningMessage(
                 usesLegacyLine(check.root) ? t('package.missingLegacyLaravel', readLaravelMajor(check.root) ?? '') : t('package.missing'),
-                installLabel,
-                t('common.cancel')
+                installLabel
             );
             if (action === installLabel) {
-                const terminal = vscode.window.createTerminal({
-                    name: 'Laravel API Generator',
-                    cwd: check.root,
-                });
-                terminal.sendText(requirePackageCommand(check.root));
-                terminal.show();
+                this.installPackage(check.root);
             }
             return { valid: false };
         }

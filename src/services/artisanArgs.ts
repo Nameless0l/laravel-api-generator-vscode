@@ -83,9 +83,18 @@ export function flowArgs(
         return source.rebuilt ? { args, stdin: 'text' } : { args };
     }
 
+    if (source.kind === 'addFields') {
+        const args = ['artisan', 'make:fullapi', source.entity, `--add-fields=${source.fields}`];
+        if (options.force) {
+            args.push('--force');
+        }
+        args.push(...(dryRun ? ['--dry-run', '--json'] : ['--json']));
+        return { args };
+    }
+
     let flags: string[];
     let stdin: 'text' | 'file' | undefined;
-    if (source.kind === 'describe') {
+    if (source.kind === 'describe' || source.kind === 'inline') {
         flags = ['--schema=-'];
         stdin = 'text';
     } else if (source.kind === 'database') {
