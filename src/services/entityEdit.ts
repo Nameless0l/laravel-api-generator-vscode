@@ -136,11 +136,11 @@ export function editableFromScan(entity: GeneratedEntity): EditableEntity {
 }
 
 /** The value of `--add-fields`: name:type pairs, an enum carrying its values. */
-export function addFieldsSpec(fields: Array<Pick<Field, 'name' | 'type'>>): string {
+export function addFieldsSpec(fields: Array<Pick<Field, 'name' | 'type' | 'nullable' | 'unique'>>, modifiers = false): string {
     return fields
-        .map((field) => ({ name: field.name.trim(), type: field.type.trim() }))
+        .map((field) => ({ ...field, name: field.name.trim(), type: field.type.trim() }))
         .filter((field) => field.name !== '' && field.type !== '')
-        .map((field) => `${field.name}:${field.type}`)
+        .map((field) => `${field.name}:${field.type}${modifiers && field.nullable ? ':nullable' : ''}${modifiers && field.unique ? ':unique' : ''}`)
         .join(',');
 }
 

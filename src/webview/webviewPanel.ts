@@ -23,6 +23,7 @@ import {
     usesLegacyLine,
     versionSupport,
     MCP_TOOLS_MIN_VERSION,
+    supportsFieldModifiers,
     supportsMcpTools,
 } from '../services/packageState';
 import { flagsFromConfig, schemaFromConfig } from '../services/schemaBuilder';
@@ -138,7 +139,7 @@ export class GeneratorPanel {
         }
         this.edit = edit;
         this.panel.title = edit ? t('builder.editTabTitle', edit.name) : t('builder.tabTitle');
-        void this.panel.webview.postMessage({ type: 'mode', edit: edit ?? null });
+        void this.panel.webview.postMessage({ type: 'mode', edit: edit ?? null, modifiers: supportsFieldModifiers(this.workspaceRoot) });
     }
 
     /** After its fields were added, the entity shows them locked like the others. */
@@ -169,6 +170,7 @@ export class GeneratorPanel {
                 mcp: supportsMcpTools(this.workspaceRoot) ? { supported: true } : { supported: false, reason: t('builder.mcpNeedsPackage', MCP_TOOLS_MIN_VERSION) },
                 draft: GeneratorPanel.drafts?.read('builder', this.workspaceRoot) ?? null,
                 edit: this.edit ?? null,
+                editModifiers: supportsFieldModifiers(this.workspaceRoot),
             },
         });
     }
@@ -283,7 +285,7 @@ export class GeneratorPanel {
     }
 
     private reviewAddFields(entity: string, fields: Field[]): void {
-        const spec = addFieldsSpec(fields);
+        const spec = addFieldsSpec(fields, supportsFieldModifiers(this.workspaceRoot));
         if (spec === '') {
             return;
         }

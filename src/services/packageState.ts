@@ -91,6 +91,11 @@ export function supportsMcpTools(root: string): boolean {
     return version !== null && versionSupport(version, MCP_TOOLS_MIN_VERSION) !== 'tooOld';
 }
 
+/** `--add-fields` reads `:nullable` and `:unique` since 4.2. */
+export function supportsFieldModifiers(root: string): boolean {
+    return supportsMcpTools(root);
+}
+
 export function detectPackageState(root: string, declared: boolean): PackageState {
     if (!declared) {
         return { kind: 'notDeclared' };

@@ -131,6 +131,7 @@
         jsonApi: { supported: true },
         mcp: boot.mcp || { supported: true },
         modifiers: boot.modifiers !== false,
+        editModifiers: !!boot.editModifiers,
         exists: false,
         touched: false,
         preview: { state: 'idle' },
@@ -831,7 +832,7 @@
             grip,
             name,
             type.wrap,
-            rt.edit ? null : h('div', { class: 'mods' }, modChip(field, 'nullable'), modChip(field, 'unique'), defaultChip(field)),
+            rt.edit && !rt.editModifiers ? null : h('div', { class: 'mods' }, modChip(field, 'nullable'), modChip(field, 'unique'), rt.edit ? null : defaultChip(field)),
             h('span', { class: 'spacer' }),
             rt.edit ? null : pk,
             remove
@@ -1395,7 +1396,7 @@
         }
         hideBanner();
         if (rt.edit) {
-            post({ type: 'reviewAddFields', entity: rt.edit.name, fields: config().fields.map((field) => ({ name: field.name, type: field.type })) });
+            post({ type: 'reviewAddFields', entity: rt.edit.name, fields: config().fields.map((field) => ({ name: field.name, type: field.type, nullable: !!field.nullable, unique: !!field.unique })) });
             return;
         }
         rt.generating = true;
@@ -1614,6 +1615,7 @@
                 showBanner('info', '', message.text || '');
                 break;
             case 'mode':
+                rt.editModifiers = !!message.modifiers;
                 setMode(message.edit);
                 break;
             case 'showReady':
