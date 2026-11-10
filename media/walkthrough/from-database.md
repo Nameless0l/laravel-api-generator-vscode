@@ -13,9 +13,11 @@ The other sources work the same way:
 - **Schema file**: an `api-schema.yaml` or `.json` describing every entity
 - **Mermaid diagram**: an ER or class diagram from your documentation
 - **OpenAPI spec**: the object schemas of an OpenAPI 3 or Swagger 2 document
-- **A description**: Copilot drafts the schema from a few sentences
+- **A description**: your chat model drafts the schema from a few
+  sentences, then adjusts it when you ask
 
 Each source opens a review screen with the entities, their fields and every
 file with its diff. Nothing is written until you click **Generate**. The
 sources live in the sidebar, in the command palette under
-**Laravel API Generator**, and in the `…` menu of the entities view.
+**Laravel API Generator**, in the `…` menu of the entities view, and in
+the right-click menu of a schema, Mermaid or OpenAPI file.
