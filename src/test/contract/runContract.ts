@@ -6,6 +6,7 @@ import Ajv from 'ajv';
 import { flowArgs, sourceArgs } from '../../services/artisanArgs';
 import { parseDeleteDryRun } from '../../services/deletePlan';
 import { extractSchema } from '../../services/describePrompt';
+import { addFieldsSpec } from '../../services/entityEdit';
 import { rebuildEntity, rebuiltSchema } from '../../services/entityRebuild';
 import { EntityScanner } from '../../services/entityScanner';
 import { GeneratorBridge } from '../../services/generatorBridge';
@@ -185,6 +186,23 @@ function checkMcpTools(validate: (definition: string, value: unknown) => void): 
     const api = apiServerLaunch(app, command);
     assert.ok(api, 'the server of the generated API is not detected');
     assert.deepEqual(toolNames(api), ['create-parcel', 'delete-parcel', 'list-parcels', 'restore-parcel', 'show-parcel', 'update-parcel']);
+
+    const fields = addFieldsSpec(
+        [
+            { name: 'note', type: 'text', nullable: true },
+            { name: 'reference', type: 'string', nullable: true, unique: true },
+        ],
+        true
+    );
+    const { args } = flowArgs({ kind: 'addFields', entity: 'Parcel', fields }, DEFAULT_FLOW_OPTIONS, true, (file) => file);
+    const added = spawnSync(php[0], [...php.slice(1), ...args], { cwd: app, encoding: 'utf8' });
+    const addedDocument = lastProtocolDocument(added.stdout);
+    assert.ok(addedDocument, added.stdout + added.stderr);
+    validate('planDocument', addedDocument);
+    assert.deepEqual(addedDocument.errors, []);
+    const patched = addedDocument.files.map((file) => file.content ?? '').join('\n');
+    assert.match(patched, /\$table->text\('note'\)->nullable\(\);/);
+    assert.match(patched, /\$table->string\('reference'\)->nullable\(\)->unique\(\);/);
 
     const dryRun = spawnSync(php[0], [...php.slice(1), 'artisan', 'delete:fullapi', 'Parcel', '--dry-run'], { cwd: app, encoding: 'utf8' });
     assert.equal(parseDeleteDryRun(dryRun.stdout)?.mcpTools, true, dryRun.stdout + dryRun.stderr);
