@@ -103,7 +103,7 @@ export function activate(context: vscode.ExtensionContext): void {
                     ...registerAgents(root, context.extensionPath),
                     // Files change outside our own commands too: make:fullapi in a terminal, git pull, a manual deletion.
                     ...watch(root, '{app/**/*.php,database/migrations/*.php,.api-generator/*.json}', refresh, 500),
-                    ...watch(root, '{composer.json,vendor/composer/installed.json,api-schema.yaml,api-schema.yml,api-schema.json}', syncPackage, 400),
+                    ...watch(root, '{composer.json,vendor/composer/installed.json,api-schema.yaml,api-schema.yml,api-schema.json,routes/ai.php}', syncPackage, 400),
                 ];
             }
             DiagramPanel.refresh();
