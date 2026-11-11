@@ -18,7 +18,7 @@ Generate complete REST APIs for Laravel without touching the terminal. Visual in
 
 ### Build an entity, the preview follows
 
-![Pick an example, add a relation, and the live preview follows](docs/ext-builder.gif)
+![Pick an example, add a relation, turn on the MCP tools, and the live preview follows](docs/ext-builder.gif)
 
 *The files on the right come from the package installed in your project, rendered as you edit the form.*
 
@@ -30,7 +30,7 @@ Generate complete REST APIs for Laravel without touching the terminal. Visual in
 
 ### Review before anything is written
 
-![The review of an OpenAPI spec, then the generation of both entities](docs/ext-review.gif)
+![The review of an OpenAPI spec with the MCP tools, then the generation of both entities](docs/ext-review.gif)
 
 *A description, the database, a schema file, a Mermaid diagram or an OpenAPI spec: every source opens the package's dry run first.*
 
