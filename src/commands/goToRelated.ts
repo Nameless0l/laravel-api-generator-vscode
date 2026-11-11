@@ -3,18 +3,19 @@ import * as path from 'path';
 import { LaravelDetector } from '../services/laravelDetector';
 import { EntityScanner } from '../services/entityScanner';
 import { entityOfFile } from '../services/entityOfFile';
+import { t } from '../i18n';
 
 export function registerGoToRelatedCommand(): vscode.Disposable {
     return vscode.commands.registerCommand('laravelApiGenerator.goToRelated', async () => {
         const editor = vscode.window.activeTextEditor;
         if (!editor) {
-            vscode.window.showWarningMessage('No active editor.');
+            vscode.window.showWarningMessage(t('related.noEditor'));
             return;
         }
 
         const check = LaravelDetector.validate();
         if (!check.valid || !check.root) {
-            vscode.window.showErrorMessage(check.message || 'Cannot detect Laravel project.');
+            vscode.window.showErrorMessage(check.message || t('detector.undetected'));
             return;
         }
 
@@ -22,7 +23,7 @@ export function registerGoToRelatedCommand(): vscode.Disposable {
         const entityName = entityOfFile(check.root, currentFilePath);
 
         if (!entityName) {
-            vscode.window.showWarningMessage('Could not determine entity name from the current file.');
+            vscode.window.showWarningMessage(t('related.noEntity'));
             return;
         }
 
@@ -32,7 +33,7 @@ export function registerGoToRelatedCommand(): vscode.Disposable {
         const existingFiles = entityFiles.filter((f) => f.exists);
 
         if (existingFiles.length === 0) {
-            vscode.window.showInformationMessage(`No related files found for entity "${entityName}".`);
+            vscode.window.showInformationMessage(t('related.noFiles', entityName));
             return;
         }
 
@@ -44,7 +45,7 @@ export function registerGoToRelatedCommand(): vscode.Disposable {
         }));
 
         const selected = await vscode.window.showQuickPick(items, {
-            placeHolder: `Related files for ${entityName}`,
+            placeHolder: t('related.placeholder', entityName),
             matchOnDescription: true,
             matchOnDetail: true,
         });

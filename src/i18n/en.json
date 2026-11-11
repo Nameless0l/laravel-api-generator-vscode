@@ -49,7 +49,10 @@
     "openStubsFolder": "Open Stubs Folder",
     "generateAnyway": "Generate Anyway",
     "fixStubsCancelled": "Generation cancelled. Fix the stubs and try again.",
-    "stubsCancelled": "Generation cancelled due to invalid stubs."
+    "stubsCancelled": "Generation cancelled due to invalid stubs.",
+    "cancelled": "Generation cancelled.",
+    "stopped": "Generation stopped before the end. Some files may already be written.",
+    "classDataOverwrite": "\"{0}\" has relations, and the installed package reads them from class_data.json. The file at the project root will be replaced. Continue?"
   },
   "stubs": {
     "alreadyPublished": "Stubs are already published. What do you want to do?",
@@ -62,7 +65,6 @@
     "deleteFailed": "Failed to delete stubs: {0}"
   },
   "regenerate": {
-    "promptName": "Entity name to regenerate",
     "noDefinition": "No definition found for \"{0}\": the manifest does not record it and no migration creates its table. Generate it again from its source first.",
     "pickPlaceholder": "Select files to regenerate for \"{0}\"",
     "pickTitle": "Regenerate Files"
@@ -95,31 +97,26 @@
     "useCurrentFile": "Use current file ({0})",
     "browseMermaid": "Browse for a Mermaid file...",
     "openApiTitle": "Generate from OpenAPI Spec",
-    "browseOpenApi": "Browse for an OpenAPI or Swagger file..."
+    "browseOpenApi": "Browse for an OpenAPI or Swagger file...",
+    "filterSchema": "API schema (YAML / JSON)",
+    "filterMermaid": "Mermaid diagram",
+    "filterOpenApi": "OpenAPI / Swagger"
   },
   "describe": {
     "noApi": "This version of VS Code cannot reach a language model. Update VS Code to 1.90 or later.",
-    "noModel": "No chat model is available. Sign in to GitHub Copilot, or install another model provider.",
+    "noModel": "No chat model is available. Sign in to your model provider, or install one.",
     "failed": "The model could not draft the schema:\n{0}",
-    "empty": "The model sent back nothing. Check that you are signed in to GitHub Copilot, or pick another model.",
+    "empty": "The model sent back nothing. Try again, or pick another model.",
     "justification": "Drafts the api-schema.yaml file that describes your API.",
     "exists": "api-schema.yaml already exists at the project root. Replace it?",
-    "replace": "Replace"
+    "replace": "Replace",
+    "noModelCopilot": "No chat model is available. Sign in to GitHub Copilot, or install another model provider.",
+    "emptyCopilot": "The model sent back nothing. Check that you are signed in to GitHub Copilot, or pick another model."
   },
   "routes": {
     "orphanDetected": "route:list failed because a route file references a deleted controller. Remove the orphan routes?",
     "cleanOrphans": "Clean Orphan Routes",
     "cleaned": "Orphan routes removed from routes/api.php and routes/web.php."
-  },
-  "addFields": {
-    "promptName": "Entity to add fields to",
-    "promptFields": "Fields to add to \"{0}\" (name:type, comma-separated; enum(a,b) supported)",
-    "invalidFormat": "Expected format: name:type,other:enum(a,b)",
-    "progress": "Adding fields to {0}...",
-    "success": "Fields added to \"{0}\". The model, request, factory and resource were patched in place.",
-    "failed": "Failed to add fields:\n{0}",
-    "runMigrate": "Run Migrations",
-    "migrating": "Running migrations..."
   },
   "statusbar": {
     "entities": "Laravel API: {0}",
@@ -133,7 +130,6 @@
     "statusMissing": "The package is not installed yet.",
     "statusNotInstalled": "The package is declared but vendor is missing.",
     "statusTooOld": "Package {0} installed, {1} unlocks the live preview.",
-    "install": "Install",
     "composerInstall": "composer install",
     "update": "Update",
     "settings": "Settings",
@@ -148,7 +144,7 @@
     "openapi": "An OpenAPI spec",
     "project": "Project",
     "diagram": "Entity diagram",
-    "projectActions": "Migrations, tests, seeders",
+    "projectActions": "Project actions",
     "snippets": "Snippets",
     "docs": "Documentation",
     "agents": "Agents",
@@ -160,10 +156,27 @@
     "agentsDisabled": "The MCP server is turned off in the settings.",
     "installMcp": "Install",
     "copyClaude": "Copy the command for Claude Code",
-    "copiedClaude": "Command copied. Run it in a terminal at the project root, then start Claude Code there."
+    "copiedClaude": "Command copied. Run it in a terminal at the project root, then start Claude Code there.",
+    "installPackage": "Install the package",
+    "notLaravelHint": "This folder has no artisan file. Open the root of a Laravel project, or create one with laravel new.",
+    "openFolder": "Open a folder",
+    "describeDetailModel": "Chat model",
+    "needsPackage": "Install the package first",
+    "tips": {
+      "newApi": "Describe one entity in a form, with a live preview of its files",
+      "describe": "Describe the API in plain words and let your chat model draft the schema",
+      "database": "Pick tables of the database and generate their APIs",
+      "schema": "Generate every entity of an api-schema.yaml or api-schema.json file",
+      "mermaid": "Generate from an erDiagram or a classDiagram",
+      "openapi": "Generate from the schemas of an OpenAPI 3 or Swagger 2 spec",
+      "diagram": "See the generated entities and their relations on a canvas",
+      "projectActions": "Run the migrations, the tests and the seeders, open the API documentation",
+      "snippets": "Insert a ready-made Laravel snippet",
+      "docs": "Open the documentation in the browser",
+      "copyClaude": "Copy the claude mcp add command that registers the MCP server"
+    }
   },
   "tree": {
-    "empty": "No entities generated yet",
     "files": "Files",
     "fields": "Fields",
     "relations": "Relations",
@@ -185,11 +198,13 @@
     "copied": "Snippet \"{0}\" copied to clipboard."
   },
   "delete": {
-    "promptName": "Enter the entity name to delete",
     "confirm": "Delete all files for \"{0}\"? This cannot be undone.",
     "deleteAction": "Delete",
     "success": "\"{0}\" API deleted successfully.",
-    "failed": "Failed to delete \"{0}\": {1}"
+    "failed": "Failed to delete \"{0}\": {1}",
+    "pickTitle": "Delete an API",
+    "checking": "Listing the files of {0} to delete...",
+    "progress": "Deleting {0}..."
   },
   "builder": {
     "tabTitle": "New API",
@@ -225,7 +240,7 @@
     "defaultValue": "value",
     "primaryKey": "Primary key: replaces the default id",
     "removeField": "Remove the field",
-    "dragToReorder": "Drag to reorder",
+    "dragToReorder": "Drag to reorder, or press Alt+Up or Alt+Down",
     "enumValues": "Values",
     "addValue": "value",
     "removeValue": "Remove {0}",
@@ -293,7 +308,6 @@
     "viewDiffs_other": "View the {0} diffs",
     "generate": "Generate the API",
     "generating": "Generating...",
-    "cancelHint": "Click again to cancel",
     "nameRequired": "Name the entity.",
     "namePascal": "Use PascalCase: a capital first, then letters and digits.",
     "nameReserved": "\"{0}\" is reserved by Laravel.",
@@ -304,7 +318,7 @@
     "enumValuesRequired": "Add at least one value.",
     "modifiersNeedPackage": "Needs nameless/laravel-api-generator 3.9 or later",
     "jsonTitle": "Entities of {0}",
-    "jsonGenerate": "Generate them all",
+    "jsonGenerate": "Continue",
     "cancel": "Cancel",
     "dbImported": "{0} imported from the database with {1} fields. Review them, then generate.",
     "runInTerminal": "Run in the terminal",
@@ -312,7 +326,42 @@
     "generationFailed": "The generation failed",
     "close": "Close",
     "kbdEnter": "Ctrl+Enter",
-    "kbdEnterMac": "⌘ Enter"
+    "kbdEnterMac": "⌘ Enter",
+    "editTabTitle": "Edit {0}",
+    "newApi": "New API",
+    "undo": "Undo",
+    "replacedByExample": "The form was replaced by the example \"{0}\".",
+    "locked": "Already generated, locked",
+    "primary": "primary key",
+    "reorderField": "Reorder {0}: Alt+Up or Alt+Down",
+    "movedField": "{0} moved to position {1} of {2}",
+    "relationTargetInvalid": "Name the model in PascalCase, like Post.",
+    "relationRoleInvalid": "Use letters, digits and underscores for the relation name.",
+    "blockedPackage": "Install the package to generate.",
+    "blockedField": "Add at least one field.",
+    "blockedNewField": "Add at least one new field.",
+    "blockedRows_one": "{0} row needs a fix, see the message under it.",
+    "blockedRows_other": "{0} rows need a fix, see the message under each one.",
+    "blockedKinds": "Pick at least one file to generate.",
+    "editNote": {
+      "recorded": "What this entity already has is locked. Add fields, then review the changes.",
+      "rebuilt": "Read back from its migrations and model, since the package did not record this entity. Add fields, then review the changes.",
+      "scanned": "Only the names could be read from the model. Add fields, then review the changes."
+    },
+    "editFieldsHint": "new fields come with their migration",
+    "editRelationsHint": "locked, relations are not added from here",
+    "editPreview": "Review the changes to see the migration and every patched file before anything is written.",
+    "editSummary_one": "{0} field to add",
+    "editSummary_other": "{0} fields to add",
+    "reviewChanges": "Review the changes",
+    "jsonHint": "Nothing is written until you confirm on the next screen.",
+    "jsonWrite": "Write and generate",
+    "jsonWriteConfirm_one": "This class cannot be previewed: class_data.json is written at the project root, then it is generated. Continue?",
+    "jsonWriteConfirm_other": "These {0} classes cannot be previewed: class_data.json is written at the project root, then they are generated. Continue?",
+    "jsonPickTitle": "Select a class_data.json file",
+    "jsonInvalid": "Invalid JSON file: {0}",
+    "openApiEmpty": "No schema was found in this OpenAPI spec.",
+    "openApiInvalid": "The OpenAPI spec could not be read: {0}"
   },
   "ready": {
     "titleOne": "The {0} API is ready",
@@ -379,11 +428,13 @@
     "panelDescribe": "Describe an API",
     "panelPlan": "Generation plan",
     "panelReady": "API ready",
+    "busy": "Another operation is still running in this panel. Wait for it to finish.",
+    "generatedNotice": "Generation finished for {0}.",
     "describeTitle": "Describe your API",
-    "describeSubtitle": "Copilot drafts a schema, you review the plan before a single file is written.",
+    "describeSubtitle": "{0} drafts a schema, you review the plan before a single file is written.",
     "promptLabel": "API description",
     "placeholder": "A library lends books to its members. A loan has a due date and can be returned late.",
-    "modelDefault": "Default Copilot model",
+    "modelDefault": "Default model",
     "contextOn_one": "Relate to the existing entity",
     "contextOn_other": "Relate to the {0} existing entities",
     "contextNone": "No entity in the project yet",
@@ -407,7 +458,7 @@
     "badgeChanged": "changed",
     "existing": "Already in the project",
     "related": "related",
-    "existingHint": "Copilot knows your entities and relates to them instead of redefining them.",
+    "existingHint": "{0} knows your entities and relates to them instead of redefining them.",
     "editHint": "Click an entity to adjust it in the YAML draft before reviewing the plan.",
     "review": "Review the plan",
     "save": "Save as api-schema.yaml",
@@ -424,7 +475,7 @@
     "srcMermaid": "Mermaid diagram",
     "srcOpenapi": "OpenAPI spec",
     "srcDatabase": "Database",
-    "srcDescribe": "Copilot description",
+    "srcDescribe": "Description",
     "srcRecorded": "Recorded definition",
     "srcRebuilt": "Read back from its files",
     "rebuiltNote": "The package did not record this entity's definition (generated before 4.1), so it was read back from its migrations, model and enums. Check each change before you generate.",
@@ -478,7 +529,29 @@
     "sameCount_one": "{0} identical",
     "sameCount_other": "{0} identical",
     "noFields": "No field",
-    "tooOld": "Reviewing the plan needs nameless/laravel-api-generator {1} or later (installed: {0})."
+    "tooOld": "Reviewing the plan needs nameless/laravel-api-generator {1} or later (installed: {0}).",
+    "panelDelete": "Delete {0}",
+    "chatModel": "Your chat model",
+    "modelDefaultCopilot": "Default Copilot model",
+    "srcDescribeCopilot": "Copilot description",
+    "srcAddFields_one": "{0} field to add",
+    "srcAddFields_other": "{0} fields to add",
+    "srcImported": "Imported classes",
+    "adjust": "Adjust",
+    "adjustLabel": "Change to make to the proposal",
+    "adjustPlaceholder": "Adjust the proposal: add a status to orders, drop the tags...",
+    "removeTitle": "Delete the {0} API",
+    "removeDryRun": "Dry run by the package. Nothing is deleted until you confirm.",
+    "removeEdited_one": "{0} file was edited by hand since it was generated. Deleting removes your changes too.",
+    "removeEdited_other": "{0} files were edited by hand since they were generated. Deleting removes your changes too.",
+    "removeEditedBadge": "edited by hand",
+    "removeEditedLabel_one": "edited by hand",
+    "removeEditedLabel_other": "edited by hand",
+    "toRemove_one": "file to delete",
+    "toRemove_other": "files to delete",
+    "removeShared": "routes/api.php and DatabaseSeeder.php lose the {0} entries.",
+    "removeConfirm": "Delete {0}",
+    "removing": "Deleting..."
   },
   "diagram": {
     "title": "Entity diagram",
@@ -519,7 +592,12 @@
     "noRelations": "No relation",
     "noFields": "No field",
     "untracked": "The manifest does not track these files yet.",
-    "openExport": "Open"
+    "openExport": "Open",
+    "fitHint": "Show all (F)",
+    "minimapHint": "Click or drag to move the view",
+    "arranged": "Entities rearranged",
+    "undo": "Undo",
+    "fileOk": "up to date"
   },
   "preview": {
     "notInstalled": "The package is in composer.json but not installed yet. Run composer install to see the live preview.",
@@ -530,5 +608,51 @@
     "timeout": "The preview process did not answer in time.",
     "extensionTooOld": "The installed package speaks a newer protocol. Update the Laravel API Generator extension.",
     "diffTitle": "{0}: current and generated"
+  },
+  "entity": {
+    "none": "No generated entity in this project yet.",
+    "pickPlaceholder": "Pick an entity"
+  },
+  "edit": {
+    "pickTitle": "Edit an entity",
+    "notFound": "No generated file was found for \"{0}\"."
+  },
+  "related": {
+    "noEditor": "No file is open.",
+    "noEntity": "This file does not belong to a generated entity.",
+    "noFiles": "No related file was found for \"{0}\".",
+    "placeholder": "Related files for {0}"
+  },
+  "diagnosis": {
+    "openFile": "Open {0}",
+    "missingFile": "{0} does not exist.",
+    "showOutput": "Show Full Output",
+    "showTestOutput": "Show Test Output",
+    "createSqlite": "Create the SQLite file",
+    "sqliteCreated": "{0} created. Run the command again.",
+    "sqliteFailed": "{0} could not be created: {1}",
+    "sqliteElsewhere": "The database file is expected outside this project. Check DB_DATABASE in .env.",
+    "dbUnreachable": "Cannot reach the database server. Check that it is running and that your .env credentials are correct.",
+    "dbCredentials": "The database refused your credentials (wrong DB_USERNAME / DB_PASSWORD).",
+    "dbDriver": "PHP is missing the database driver extension (e.g. pdo_mysql, pdo_sqlite, pdo_pgsql).",
+    "sqliteMissing": "The SQLite database file does not exist. Create it and run the command again.",
+    "dbUnknown": "The database itself does not exist. Create it first, then re-run migrations.",
+    "classMissing": "A class is missing from the autoloader. Refresh composer and try again.",
+    "noArtisan": "No artisan file found in the workspace root. Open a Laravel project folder and try again.",
+    "migrationsTableMissing": "The migrations table is missing: your database has never been initialized.",
+    "tableExists": "A table from a previous run is still in the database. Reset it with migrate:fresh.",
+    "nothingToMigrate": "No pending migrations were found. Generate a new entity to add one.",
+    "testsFailed": "Some tests failed. Review the test output for details.",
+    "noTests": "No tests were executed. Generate an entity to create test files.",
+    "packageMissing": "The laravel-api-generator package is not installed in this project.",
+    "stubPlaceholders": "A customized stub is missing required placeholders.",
+    "permission": "A file or directory could not be written. Check filesystem permissions."
+  },
+  "status": {
+    "new": "new",
+    "mod": "modified",
+    "kept": "kept, edited by hand",
+    "same": "unchanged",
+    "err": "error"
   }
 }

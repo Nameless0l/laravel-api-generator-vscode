@@ -49,15 +49,17 @@ Create API entities through a form instead of CLI flags:
 - **Entity name** input with PascalCase validation and reserved name detection
 - **Examples menu**: fills the form with a blog post, a product, a task, a comment, a profile or an article
 - **Nullable, unique and default** on each field, sent to the package in the schema file format (package >= 3.9)
-- **Drag-and-drop fields** -- reorder fields with a hamburger handle, the live preview updates on drop
+- **Reorder fields** -- drag a field by its handle, or press Alt+Up / Alt+Down on its row; the live preview follows
 - **Dynamic fields** -- add/remove fields with name and type selector (string, integer, text, float, boolean, json, date, datetime, uuid, etc.)
-- **Relationships section** -- add `belongsTo` / `hasMany` / `hasOne` / `belongsToMany` relations directly in the UI; generation hands the form to the package in the schema file format, so you get full FK support, foreign-keyed factories and tests
+- **Relations section** -- add `belongsTo` / `hasMany` / `hasOne` / `belongsToMany` relations directly in the UI; generation hands the form to the package in the schema file format, so you get full FK support, foreign-keyed factories and tests
 - **Options toggles** -- Auth (Sanctum), Postman collection export, Soft Deletes, Spatie QueryBuilder, Pest tests
 - **Enum fields** -- pick the `enum` type, type the values (`draft,published`) and get a backed PHP enum class, model cast, `Rule::enum()` validation and factory fake (package >= 3.6)
 - **Primary key designation** -- check `PK` on a field to replace the default `id`; the model, migration and every incoming relation follow (package >= 3.6)
-- **Model autocomplete** -- relationship targets suggest the models already in `app/Models`
-- **Cancellable operations** -- click a spinning button to kill the running artisan process
-- **File preview** -- see what files will be generated before running
+- **Model autocomplete** -- relation targets suggest the models already in `app/Models`
+- **Inline validation** -- each invalid row says what is wrong under it, and the footer says what still blocks **Generate the API**
+- **Your form is kept** -- the draft is saved per project and comes back when you reopen the builder or VS Code; an example or an import applied over a filled form offers **Undo**
+- **Stop a running generation** -- while the API is generated the main button is locked, so a double click cannot start it twice, and a **Stop** button ends the artisan process; a stopped generation says so in a neutral notice, not as a failure
+- **File preview** -- see what files will be generated before running, with the package's warnings
 - **Sail and Docker** -- point `laravelApiGenerator.phpCommand` at `["./vendor/bin/sail", "php"]` or `["docker", "compose", "exec", "-T", "app", "php"]` and every action runs inside the container
 - **Real-time code preview** -- rendered by the package installed in your project, so it is exactly the code that will be written: every generated file, routes and seeder included, your published stubs, badges for new, modified and unchanged files, and a diff for modified ones
 - **Agent skill** -- in Laravel projects, GitHub Copilot (VS Code 1.109+) and Cursor get the package's `laravel-api-generator` skill, so they generate APIs with `make:fullapi` instead of writing the files by hand
@@ -101,15 +103,17 @@ Prefer to review one table before generating?
 - The form is auto-filled with the entity name (singularized + PascalCased), the field list, and the Soft Deletes flag (when `deleted_at` is present)
 - Review and click **Generate API**
 
-### Describe an API with Copilot
+### Describe an API
 
 Start from a sentence: *a library that lends books to members, a loan has a due date*.
 
 ![The Describe your API panel](docs/ext-describe.png)
 
-- Open **A description** in the sidebar, or run **Describe an API with Copilot**, and write your API or start from an example
+- Open **A description** in the sidebar, or run **Describe an API**, and write your API or start from an example
 - Pick the chat model (GitHub Copilot first, VS Code 1.90+); it drafts an `api-schema.yaml` that relates to the entities your project already has. The model list follows Copilot as it loads. In Cursor and the other forks without chat models, the entry stays hidden: their agent reaches the same generator through MCP
 - The proposed entities show up as cards; click one to adjust it in the YAML draft, the cards follow your edits
+- **Adjust** sends the proposal back to the model with what to change (*add a status to orders, drop the tags*) and replaces it; **Propose something else** starts over from your description
+- Your description, the model and the last proposal are kept per project: closing the panel or reloading the window loses nothing
 - **Review the plan** runs the package's dry run: entities, files to create or update, options, then **Generate**. **Save as api-schema.yaml** keeps the draft as the source of your API
 - When the model cannot answer, the panel says why and offers the provider's own fix, such as setting its API key
 
@@ -127,24 +131,32 @@ Hand an OpenAPI 3.0, 3.1 or Swagger 2.0 spec, JSON or YAML, to the package from 
 Import a `class_data.json` file to generate multiple entities at once:
 
 - Visual preview of all entities with their fields and relationships
-- One-click generation for the entire schema
+- **Continue** opens the review screen with the files of every entity. Nothing is written before **Generate**, `class_data.json` included
+- A class that extends another, or a package too old for the dry run, still goes through `class_data.json`: a modal asks before the file is written
 - Supports relationships (oneToMany, manyToOne, manyToMany, compositions, aggregations)
 - [Download a sample class_data.json](https://github.com/Nameless0l/laravel-api-generator/blob/main/examples/class_data.json) to try it out (Blog with Author, Category, Article, Tag)
 
-### Add Fields to an Existing Entity
+### Edit an Existing Entity
 
 Day-30 problem solved: evolve a generated API without wiping your manual changes (package >= 3.6).
 
-- Right-click an entity in the sidebar tree -> **Add Fields to Entity...** (or run it from the command palette)
-- Type the new fields: `excerpt:text,status:enum(draft,published)`
-- The package creates an incremental `Schema::table()` migration and patches the fillable columns, the casts, the model PHPDoc, the validation rules, the factory and the resource in place
-- One click to run the migration when it's done
+- Click **Edit Entity** on an entity in the sidebar tree (on hover or by right-click), or run **Edit Entity...** or **Add Fields to Entity...** from the command palette and pick the entity in the list
+- The builder opens on the entity. Its fields and relations are shown locked: they come from the definition the package recorded (4.1+), or are read back from its migrations and model
+- Add the new fields as rows, then **Review the changes**: the review screen runs the `--add-fields` dry run and shows the incremental migration and every patched file with its diff
+- **Generate** applies it: an incremental `Schema::table()` migration, and the fillable columns, the casts, the model PHPDoc, the validation rules, the factory and the resource patched in place
+- The API ready screen then runs the migration and shows its result
+
+### Delete an API, after a review
+
+- Click **Delete** on an entity in the sidebar tree, or run **Delete API...** from the command palette and pick the entity in the list (each one with its file count and its edited files)
+- The review screen lists what the package's dry run would remove, calls out the files you edited by hand, and names the entries that leave `routes/api.php` and `DatabaseSeeder.php`. Nothing is deleted before the red **Delete** button
+- With a package too old for the dry run, the confirmation modal is kept
 
 ### Regenerate Single File(s)
 
 Want a fresh resource or fresh tests without retyping the schema?
 
-- Hover an entity in the sidebar tree and click **Regenerate File(s)**, or use **Regenerate** in the diagram inspector
+- Hover an entity in the sidebar tree and click **Regenerate File(s)**, use **Regenerate** in the diagram inspector, or run the command from the palette and pick the entity in the list
 - Multi-select the artifacts to rebuild (Model, Controller, Service, DTO, Requests, Resource, Factory, Seeder, Policy, Feature Test, Unit Test)
 - The review screen shows the diff of every file before anything is written, and keeps the files you edited by hand unless you choose to overwrite them
 - With package 4.1 or later, the entity comes back from the definition the package recorded when it generated it: relations, enum values, foreign keys, unique and nullable columns and options included. An entity generated before 4.1 is read back from its migrations, its model and its enums
@@ -152,7 +164,7 @@ Want a fresh resource or fresh tests without retyping the schema?
 
 ### Sidebar Entity Explorer
 
-The activity bar view opens on a **home panel**: the project with its Laravel and PHP versions and the package state (with the Composer command that fixes it when needed), a **New API** button, the sources to generate from (a description, the database, a schema file, a Mermaid diagram, an OpenAPI spec) and the project tools (entity diagram, migrations and tests, snippets, documentation). Right below, the entity tree tracks everything the generator created:
+The activity bar view opens on a **home panel**: the project with its Laravel and PHP versions and the package state (with the Composer command that fixes it when needed), a **New API** button, the sources to generate from (a description, the database, a schema file, a Mermaid diagram, an OpenAPI spec) and the project tools (entity diagram, migrations and tests, snippets, documentation). While the package is missing, the main button installs it and the sources wait for it. Outside a Laravel project, the panel says so and offers to open a folder or read the documentation. Right below, the entity tree tracks everything the generator created:
 
 ![The sidebar home above the entity tree](docs/ext-sidebar.png)
 
@@ -161,7 +173,10 @@ The activity bar view opens on a **home panel**: the project with its Laravel an
 - **Fields** are read from the model's `$fillable`, or its `#[Fillable]` attribute on Laravel 13
 - **Relations** are extracted from the model's `belongsTo` / `hasMany` / `hasOne` / `belongsToMany` methods, with a `belongsTo -> Author` style description
 - Files you edited by hand since the generation are flagged, and the entity shows how many (package >= 3.11)
-- Inline actions on each entity: **Regenerate File(s)** and **Delete**
+- Actions on each entity, on hover and in its context menu: **Edit Entity**, **Regenerate File(s)** and **Delete**
+- An empty tree says why and offers the next step: install the package, or create the first API
+
+Right-click an `api-schema.yaml` / `.json`, a `.mmd` file or an OpenAPI / Swagger spec in the Explorer, or its editor tab, to generate from it.
 
 ### Entity Diagram (infinite canvas)
 
@@ -171,10 +186,11 @@ Visualize every generated entity and its relationships on an Obsidian-style canv
 - Scroll pans, Shift+scroll pans horizontally, Ctrl+wheel (or a trackpad pinch) zooms toward the cursor
 - Each card lists the columns with their type, read from the migrations, foreign keys included
 - Inverse declarations are merged into one link with cardinality pills; cards stay draggable at any zoom
-- Search an entity or a field (Ctrl+F), a minimap, **Show all**, **Arrange**, and an export to SVG or Mermaid
+- Search an entity or a field (Ctrl+F, Cmd+F on macOS), a minimap, **Show all** (F), **Arrange** with **Undo**, and an export to SVG or Mermaid
+- The arrow keys pan the view, Shift makes the steps longer
 - Select a card to inspect its fields, relations and files (up to date, edited or missing), then add fields, regenerate, open the model or delete the API
 
-### API Ready and Project Actions
+### API Ready and Project actions
 
 After a generation, the panel shows the files written and the routes registered, then runs the next steps in place, each with its own progress and result:
 
@@ -186,7 +202,7 @@ After a generation, the panel shows the files written and the routes registered,
 | **Open the API documentation** | Finds or starts the dev server, then opens the Scramble docs; offers to install Scramble when missing |
 | **Customize the generated code** | Publishes the package's stubs, then opens their folder |
 
-**Project Actions**, in the sidebar and the entities view menu, opens the same steps at any time with the API routes of the project.
+**Project actions**, in the sidebar and the entities view menu, opens the same steps at any time with the API routes of the project.
 
 ### Stub Validation Guard
 
@@ -196,7 +212,7 @@ When you customize stubs (`stubs/vendor/laravel-api-generator/...`), the extensi
 
 The extension never lets a missing package silently break the flow:
 
-- Open a Laravel project where `nameless/laravel-api-generator` is missing -> a notification offers **Install via Composer**
+- The package `nameless/laravel-api-generator` is missing -> the sidebar, the entities view and the walkthrough offer **Install the package** (also in the palette as **Install the Composer Package**), with the 3.15 line on Laravel 10 and 11; the builder says what it waits for instead of failing on Generate
 - Open the API documentation without `dedoc/scramble` -> the step offers to install it
 - Check the **Auth (Sanctum)** option without `laravel/sanctum` -> prompted to install or generate without auth
 
@@ -211,7 +227,7 @@ The API documentation step handles the development server:
 
 ### French / English UI (i18n)
 
-The whole UI -- panel labels, popups, QuickPick prompts, error messages -- is available in **English and French**. Language follows VS Code's display language by default; can be forced via the `laravelApiGenerator.locale` setting (`auto` / `en` / `fr`).
+The whole UI -- command titles, views, the walkthrough, settings, panel labels, popups, QuickPick prompts, error messages -- is available in **English and French**. Language follows VS Code's display language by default; can be forced via the `laravelApiGenerator.locale` setting (`auto` / `en` / `fr`).
 
 ---
 
@@ -238,7 +254,7 @@ Search **"Laravel API Generator"** in VS Code Extensions (`Ctrl+Shift+X`), or in
 
 ### 4. Customize the generated code
 
-Want a different controller layout, different test asserts, more fields in the resource? Run **Customize the generated code** from Project Actions (or **Customize the stubs** in the builder's menu), edit the files in `stubs/vendor/laravel-api-generator/`, and regenerate. Your stubs are validated before every generation.
+Want a different controller layout, different test asserts, more fields in the resource? Run **Customize the generated code** from Project actions (or **Customize the stubs** in the builder's menu), edit the files in `stubs/vendor/laravel-api-generator/`, and regenerate. Your stubs are validated before every generation.
 
 ---
 

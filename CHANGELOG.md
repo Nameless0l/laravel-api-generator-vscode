@@ -2,6 +2,43 @@
 
 All notable changes to the Laravel API Generator VS Code extension will be documented in this file.
 
+## [1.3.0] - 2026-11-11
+
+Pairs with `nameless/laravel-api-generator` 4.1 and still works with 3.9 or later.
+
+### Added
+- **Edit an entity in the builder.** **Edit Entity**, on each entity of the tree and in the command palette, opens the builder on a generated entity. Its fields and relations are shown locked, from the definition the package recorded or read back from its files. The fields you add go through the review screen with the `--add-fields` dry run, then the API ready screen runs the migration and shows its result. **Add Fields to Entity...** opens the same screen instead of asking for a typed `name:type` list.
+- **A review before deleting.** Delete lists what the package's dry run would remove, calls out the files edited by hand and names the route and seeder entries that go. Nothing is deleted before the red **Delete** button, and the deletion shows its progress. Packages without the dry run keep the confirmation modal.
+- **Follow-ups in Describe.** After a proposal, **Adjust** sends it back to the model with what to change and replaces it. The description, the model and the last proposal are kept per project, so closing the panel loses nothing.
+- **The builder keeps your form.** The draft is saved per project and comes back when the builder or the window reopens; **Reset** and a successful generation clear it. An example or an import applied over a filled form offers **Undo**.
+- **Right-click to generate** from an `api-schema.yaml` or `.json`, a `.mmd` file and an OpenAPI or Swagger spec, in the Explorer and on editor tabs.
+- **Install the package** as one command, offered by the sidebar, the entities view and the walkthrough, with the 3.15 line on Laravel 10 and 11. The walkthrough step completes by itself once the package is installed.
+- **French everywhere**: command titles, views, welcome texts, the walkthrough steps and the settings follow the display language, like the panels already did.
+- Keyboard: Alt+Up and Alt+Down reorder the fields of the builder, the arrow keys pan the diagram and F shows all of it.
+
+### Fixed
+- **A double click no longer confirms or cancels by accident.** The second click on **Fill the database** is ignored for a moment after the first, so a double click cannot run `migrate:fresh --seed`. While an API is generated, the main button is locked and a separate **Stop** button ends it. Ctrl+Enter held down, or pressed while a dialog is open, does nothing.
+- A stopped generation shows a neutral notice instead of the red failure banner.
+- **Stop** also ends a generation that still waits for an answer, such as the Sanctum question, instead of leaving the builder on "Generating...".
+- A deletion or a generation that finishes after its panel moved to another screen no longer closes or replaces that screen.
+- Importing a `class_data.json` file no longer writes it into the project before you agree: it opens the review screen, and nothing is written before **Generate**.
+- Cursor users no longer read "Copilot": the texts name Copilot only when a Copilot model answers, and say "your chat model" otherwise.
+- An empty entities view shows its welcome content, with **Install the package** or **New API**, instead of a single grey line.
+- **Show Full Output** opens the output channel, and a failed generation writes its output there.
+- The fix that creates the SQLite file works on every platform, where it ran a `cmd.exe` command before, and it creates the file the error names when that file belongs to the project.
+- In the diagram, the minimap tooltip says what the minimap does and the search hint reads Cmd+F on macOS.
+
+### Changed
+- The sidebar home stays visible outside a Laravel project, where it offers to open a folder and links to the documentation. The extension follows a project that appears or goes while the window is open: a workspace folder added or removed, an `artisan` file created or deleted.
+- While the package is missing, the sidebar's main button installs it, the sources are disabled and say why, and the builder says what it waits for instead of failing on Generate.
+- **New API** names the entry point everywhere; the command was "Generate Full API". **Describe an API** lost "with Copilot". **Project actions** and **Relations** are spelled one way.
+- From the command palette, Delete, Edit and Regenerate pick the entity in a list, with its file count and its edited files, instead of a typed name.
+- The builder says why Generate is off: a message under each invalid row and a line in the footer. Its preview shows the warnings of the package.
+- Accessibility: the reorder handle is a button, the file status dots carry a text, the error banner is announced, the JSON import sheet behaves as a dialog, each entity has Edit, Regenerate and Delete in its context menu, and borders stay visible in high-contrast themes.
+- **Arrange** in the diagram offers **Undo**.
+- Four notifications lost a Cancel button that did the same as closing them, and the sidebar entries have a tooltip.
+- The bundled agent skill follows package 4.1.1.
+
 ## [1.2.0] - 2026-10-27
 
 Pairs with `nameless/laravel-api-generator` 4.1 and still works with 3.9 or later.

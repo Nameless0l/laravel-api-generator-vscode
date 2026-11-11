@@ -5,10 +5,10 @@ import { agentHost } from '../providers/mcpServerProvider';
 import { DescribeAvailability } from '../services/describeAvailability';
 import { LaravelDetector } from '../services/laravelDetector';
 import { claudeCodeCommand, mcpState } from '../services/mcpServer';
-import { detectPackageState, MCP_MIN_VERSION, PREVIEW_MIN_VERSION, requirePackageCommand, usesLegacyLine } from '../services/packageState';
+import { detectPackageState, MCP_MIN_VERSION, PREVIEW_MIN_VERSION, usesLegacyLine } from '../services/packageState';
 import { PhpCommand, resolvePhpCommand } from '../services/phpCommand';
 import { laravelVersion, phpVersion, projectName, schemaFile } from '../services/projectInfo';
-import { getSidebarHomeHtml, HomeAgents, HomeFix, HomeProject, SidebarHomeStrings } from './sidebarHomeContent';
+import { getSidebarHomeHtml, HomeAgents, HomeFix, HomeProject, OPEN_FOLDER_COMMAND, SidebarHomeStrings } from './sidebarHomeContent';
 
 const DOCS_BASE = 'https://nameless0l.github.io/laravel-api-generator/';
 
@@ -22,6 +22,7 @@ const ALLOWED_COMMANDS = new Set([
     'laravelApiGenerator.diagram',
     'laravelApiGenerator.showSnippets',
     'laravelApiGenerator.projectActions',
+    OPEN_FOLDER_COMMAND,
 ]);
 
 export class SidebarHomeViewProvider implements vscode.WebviewViewProvider {
@@ -43,7 +44,6 @@ export class SidebarHomeViewProvider implements vscode.WebviewViewProvider {
         };
         this.render();
 
-        const root = LaravelDetector.getWorkspaceRoot();
         const disposables: vscode.Disposable[] = [
             view.webview.onDidReceiveMessage((msg: { type?: string; command?: string; action?: HomeFix }) => {
                 if (msg?.type === 'run' && msg.command && ALLOWED_COMMANDS.has(msg.command)) {
@@ -67,19 +67,6 @@ export class SidebarHomeViewProvider implements vscode.WebviewViewProvider {
                 }
             }),
         ];
-        if (root) {
-            const watcher = vscode.workspace.createFileSystemWatcher(
-                new vscode.RelativePattern(root, '{composer.json,vendor/composer/installed.json,api-schema.yaml,api-schema.yml,api-schema.json}')
-            );
-            let timer: ReturnType<typeof setTimeout> | undefined;
-            const later = () => {
-                clearTimeout(timer);
-                timer = setTimeout(() => this.render(), 400);
-            };
-            disposables.push(watcher, watcher.onDidChange(later), watcher.onDidCreate(later), watcher.onDidDelete(later), {
-                dispose: () => clearTimeout(timer),
-            });
-        }
         view.onDidDispose(() => {
             this.view = undefined;
             disposables.forEach((d) => d.dispose());
@@ -87,6 +74,7 @@ export class SidebarHomeViewProvider implements vscode.WebviewViewProvider {
     }
 
     refresh(): void {
+        this.php = undefined;
         this.render();
     }
 
@@ -131,9 +119,11 @@ export class SidebarHomeViewProvider implements vscode.WebviewViewProvider {
         };
 
         if (state.kind === 'notDeclared') {
-            project.status = { tone: 'warn', text: t('home.statusMissing'), fix: { action: 'install', label: t('home.install') } };
+            project.status = { tone: 'warn', text: t('home.statusMissing'), fix: { action: 'install', label: t('home.installPackage') } };
+            project.locked = true;
         } else if (state.kind === 'notInstalled') {
             project.status = { tone: 'warn', text: t('home.statusNotInstalled'), fix: { action: 'composerInstall', label: t('home.composerInstall') } };
+            project.locked = true;
         } else if (state.preview === 'tooOld') {
             project.status = {
                 tone: 'warn',
@@ -196,12 +186,14 @@ export class SidebarHomeViewProvider implements vscode.WebviewViewProvider {
             case 'copyClaude':
                 void vscode.env.clipboard.writeText(claudeCodeCommand(this.phpCommand())).then(() => vscode.window.showInformationMessage(t('home.copiedClaude')));
                 return;
+            case 'install':
+                void vscode.commands.executeCommand('laravelApiGenerator.installPackage');
+                return;
         }
         if (!root) {
             return;
         }
         const commands: Partial<Record<HomeFix, string>> = {
-            install: requirePackageCommand(root),
             composerInstall: 'composer install',
             update: 'composer update nameless/laravel-api-generator -W',
             installMcp: 'composer require --dev laravel/mcp',
@@ -219,10 +211,12 @@ export class SidebarHomeViewProvider implements vscode.WebviewViewProvider {
         return {
             settings: t('home.settings'),
             notLaravel: t('home.notLaravel'),
+            notLaravelHint: t('home.notLaravelHint'),
+            openFolder: t('home.openFolder'),
             newApi: t('home.newApi'),
             generateFrom: t('home.generateFrom'),
             describe: t('home.describe'),
-            describeDetail: t('home.describeDetail'),
+            describeDetail: this.describe.copilot ? t('home.describeDetail') : t('home.describeDetailModel'),
             database: t('home.database'),
             schema: t('home.schema'),
             mermaid: t('home.mermaid'),
@@ -234,6 +228,20 @@ export class SidebarHomeViewProvider implements vscode.WebviewViewProvider {
             docs: t('home.docs'),
             agents: t('home.agents'),
             copyClaude: t('home.copyClaude'),
+            needsPackage: t('home.needsPackage'),
+            tips: {
+                newApi: t('home.tips.newApi'),
+                describe: t('home.tips.describe'),
+                database: t('home.tips.database'),
+                schema: t('home.tips.schema'),
+                mermaid: t('home.tips.mermaid'),
+                openapi: t('home.tips.openapi'),
+                diagram: t('home.tips.diagram'),
+                projectActions: t('home.tips.projectActions'),
+                snippets: t('home.tips.snippets'),
+                docs: t('home.tips.docs'),
+                copyClaude: t('home.tips.copyClaude'),
+            },
         };
     }
 }

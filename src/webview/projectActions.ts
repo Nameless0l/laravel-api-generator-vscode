@@ -53,7 +53,7 @@ export async function ensureEnvReady(root: string): Promise<boolean> {
     const examplePath = path.join(root, '.env.example');
     const hasExample = fs.existsSync(examplePath);
     const copyLabel = t('env.copyFromExample');
-    const choice = await vscode.window.showWarningMessage(t('env.missing'), ...(hasExample ? [copyLabel, t('common.cancel')] : [t('common.cancel')]));
+    const choice = await vscode.window.showWarningMessage(t('env.missing'), ...(hasExample ? [copyLabel] : []));
 
     if (choice === copyLabel && hasExample) {
         try {
@@ -221,7 +221,7 @@ export class ProjectActions {
     /** route:list fails while a route file still names a deleted controller; the package can remove those lines. */
     private async cleanOrphanRoutes(runner: ArtisanRunner): Promise<boolean> {
         const cleanLabel = t('routes.cleanOrphans');
-        const choice = await vscode.window.showWarningMessage(t('routes.orphanDetected'), cleanLabel, t('common.cancel'));
+        const choice = await vscode.window.showWarningMessage(t('routes.orphanDetected'), cleanLabel);
         if (choice !== cleanLabel) {
             return false;
         }

@@ -77,9 +77,14 @@
             });
     }
 
-    /** A state dot: new, mod, kept, err, or plain when the state is empty. */
-    function statusDot(state) {
-        return h('span', { class: state ? `dot is-${state}` : 'dot' });
+    /**
+     * A state dot: new, mod, kept, err, or plain when the state is empty.
+     * Its label says what colour alone cannot; pass false next to a text that already does.
+     */
+    function statusDot(state, label) {
+        const named = lookup(`status.${state || 'same'}`);
+        const text = label === false ? '' : label || (typeof named === 'string' ? named : '');
+        return h('span', { class: state ? `dot is-${state}` : 'dot', role: text ? 'img' : null, title: text || null, 'aria-label': text || null });
     }
 
     function clear(el) {

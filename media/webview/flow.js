@@ -1,7 +1,7 @@
 (function () {
     'use strict';
 
-    const { vscode, t, tn, h, svg, clear, menu, post, seconds, basename, locale, rich, statusDot } = window.UI;
+    const { vscode, t, tn, h, svg, clear, menu, post, seconds, basename, locale, rich, statusDot, debounce } = window.UI;
 
     const EXAMPLES = [
         ['flow.exShop', 'flow.exShopPrompt'],
@@ -27,9 +27,12 @@
         model: saved.model || null,
         models: [],
         modelsNote: '',
+        copilot: false,
         existing: [],
         describe: { state: 'idle' },
         proposal: null,
+        adjust: '',
+        removal: null,
         plan: null,
         planKey: null,
         expanded: new Set(),
@@ -43,14 +46,30 @@
     const screens = {
         describe: h('div', { class: 'screen describe-screen hidden' }),
         plan: h('div', { class: 'screen plan-screen hidden' }),
+        removal: h('div', { class: 'screen plan-screen hidden' }),
         ready: h('div', { class: 'screen ready-screen hidden' }),
     };
-    app.append(screens.describe, screens.plan, screens.ready);
+    app.append(screens.describe, screens.plan, screens.removal, screens.ready);
     const toast = h('div', { class: 'toast hidden', role: 'status', 'aria-live': 'polite' });
     document.body.appendChild(toast);
 
+    function draftMessage() {
+        return { type: 'describe:draft', text: st.prompt, context: st.useContext, model: st.model || undefined };
+    }
+
+    const saveDraft = debounce(() => post(draftMessage()), 500);
+
     function persist() {
         vscode.setState({ prompt: st.prompt, useContext: st.useContext, model: st.model });
+        saveDraft();
+    }
+
+    function modelName() {
+        return st.copilot ? 'Copilot' : t('flow.chatModel');
+    }
+
+    function defaultModelLabel() {
+        return st.copilot ? t('flow.modelDefaultCopilot') : t('flow.modelDefault');
     }
 
     function show(screen) {
@@ -138,6 +157,7 @@
         );
         d.result = h('section', { class: 'proposal', 'aria-live': 'polite' });
         d.foot = h('footer', { class: 'd-foot hidden' });
+        d.subtitle = h('div', { class: 'muted' });
 
         screens.describe.appendChild(
             h(
@@ -147,7 +167,7 @@
                     'div',
                     { class: 'd-head' },
                     h('div', { class: 'd-mark' }, svg('sparkle')),
-                    h('div', { class: 'd-title' }, h('h1', { class: 'h1', text: t('flow.describeTitle') }), h('div', { class: 'muted', text: t('flow.describeSubtitle') }))
+                    h('div', { class: 'd-title' }, h('h1', { class: 'h1', text: t('flow.describeTitle') }), d.subtitle)
                 ),
                 composer,
                 examples,
@@ -164,7 +184,8 @@
     }
 
     function paintComposer() {
-        clear(d.modelChip).append(h('span', { text: (selectedModel() || {}).name || t('flow.modelDefault') }), svg('chevronDown', 'xs'));
+        d.subtitle.textContent = t('flow.describeSubtitle', modelName());
+        clear(d.modelChip).append(h('span', { text: (selectedModel() || {}).name || defaultModelLabel() }), svg('chevronDown', 'xs'));
         d.modelChip.disabled = st.models.length === 0;
         d.modelChip.title = st.modelsNote || t('flow.modelPick');
 
@@ -187,7 +208,7 @@
 
     function openModels() {
         menu(d.modelChip, [
-            { icon: st.model === null ? 'check' : 'blank', label: t('flow.modelDefault'), run: () => pickModel(null) },
+            { icon: st.model === null ? 'check' : 'blank', label: defaultModelLabel(), run: () => pickModel(null) },
             'sep',
             ...st.models.map((model) => ({ icon: st.model === model.id ? 'check' : 'blank', label: model.name, run: () => pickModel(model.id) })),
         ]);
@@ -210,7 +231,32 @@
         if (text === '' || st.describe.state === 'drafting') {
             return;
         }
+        post(draftMessage());
         post({ type: 'describe:send', text, context: st.useContext, model: st.model || undefined });
+    }
+
+    function adjustBar() {
+        const input = h('input', { class: 'input adjust-input', id: 'adjust', value: st.adjust, placeholder: t('flow.adjustPlaceholder'), 'aria-label': t('flow.adjustLabel'), autocomplete: 'off' });
+        const button = h('button', { class: 'btn btn-soft', disabled: st.adjust.trim() === '' }, svg('pencil', 'sm'), t('flow.adjust'));
+        const submit = () => {
+            const text = input.value.trim();
+            if (text !== '' && st.describe.state !== 'drafting') {
+                st.adjusting = true;
+                post({ type: 'describe:adjust', text, context: st.useContext, model: st.model || undefined });
+            }
+        };
+        input.addEventListener('input', () => {
+            st.adjust = input.value;
+            button.disabled = input.value.trim() === '';
+        });
+        input.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                submit();
+            }
+        });
+        button.addEventListener('click', submit);
+        return h('div', { class: 'adjust' }, input, button);
     }
 
     function fieldType(field) {
@@ -265,7 +311,7 @@
             { class: 'ecard existing' },
             h('div', { class: 'eh' }, svg('folder', 'muted'), h('b', { class: 'existing-title', text: t('flow.existing') })),
             ...related.map((name) => h('div', { class: 'rel' }, svg('cls', 'sm cls-ico'), h('span', { class: 'strong', text: name }), h('span', { class: 'muted push', text: t('flow.related') }))),
-            h('div', { class: 'existing-hint', text: t('flow.existingHint') })
+            h('div', { class: 'existing-hint', text: t('flow.existingHint', modelName()) })
         );
     }
 
@@ -322,9 +368,7 @@
         }
 
         if (!proposal.parsed) {
-            d.result.appendChild(
-                h('div', { class: 'msg msg-warn' }, svg('warning'), h('div', { class: 'msg-body' }, t('flow.unparsed')), proposalActions())
-            );
+            d.result.append(h('div', { class: 'msg msg-warn' }, svg('warning'), h('div', { class: 'msg-body' }, t('flow.unparsed')), proposalActions()), adjustBar());
             paintFoot(proposal);
             return;
         }
@@ -342,6 +386,7 @@
                 proposalActions()
             ),
             h('div', { class: 'egrid' }, ...proposal.entities.map(entityCard), proposal.related.length > 0 ? existingCard(proposal.related) : null),
+            adjustBar(),
             h('div', { class: 'msg msg-info hint-bar' }, svg('info'), h('span', { class: 'msg-body', text: t('flow.editHint') }))
         );
         paintFoot(proposal);
@@ -700,7 +745,68 @@
     }
 
     function stat(value, label, dot, cls) {
-        return h('div', { class: `stat${cls ? ` ${cls}` : ''}` }, h('b', { text: String(value) }), h('span', { text: label }), dot ? statusDot(dot) : null);
+        return h('div', { class: `stat${cls ? ` ${cls}` : ''}` }, h('b', { text: String(value) }), h('span', { text: label }), dot ? statusDot(dot, false) : null);
+    }
+
+    function renderRemoval() {
+        const view = st.removal;
+        const edited = view.files.filter((file) => file.edited);
+        const confirm = h('button', { class: 'btn btn-danger-solid', disabled: view.running, onclick: () => post({ type: 'removal:confirm', name: view.entity }) });
+        confirm.append(view.running ? h('span', { class: 'spinner' }) : svg('trash'), view.running ? t('flow.removing') : t('flow.removeConfirm', view.entity));
+
+        const main = h(
+            'div',
+            { class: 'p-main' },
+            h(
+                'div',
+                { class: 'p-head' },
+                h('div', { class: 'row' }, h('span', { class: 'chip static' }, svg('trash', 'sm accent'), h('span', { class: 'mono', text: view.entity }))),
+                h('h1', { class: 'h1 p-title', text: t('flow.removeTitle', view.entity) }),
+                h('div', { class: 'muted', text: t('flow.removeDryRun') })
+            ),
+            view.error
+                ? h(
+                      'div',
+                      { class: 'msg msg-err error-box', role: 'alert' },
+                      svg('error'),
+                      h(
+                          'div',
+                          { class: 'msg-body' },
+                          h('pre', { text: view.error }),
+                          h('div', { class: 'row error-actions' }, h('button', { class: 'btn btn-ghost btn-sm', onclick: () => post({ type: 'showOutput' }) }, t('ready.showOutput')))
+                      )
+                  )
+                : null,
+            edited.length > 0 ? h('div', { class: 'msg msg-warn' }, svg('warning'), h('span', { class: 'msg-body', text: tn('flow.removeEdited', edited.length) })) : null,
+            h(
+                'div',
+                { class: 'card rm-list' },
+                ...view.files.map((file) =>
+                    h(
+                        'button',
+                        { class: 'rm-file', title: file.path, onclick: () => post({ type: 'openFile', path: file.path }) },
+                        statusDot(file.edited ? 'kept' : 'err', false),
+                        h('span', { class: 'mono rm-path', text: file.path }),
+                        file.edited ? h('span', { class: 'badge b-kept', text: t('flow.removeEditedBadge') }) : null
+                    )
+                )
+            ),
+            view.sharedEntries ? h('div', { class: 'msg msg-info' }, svg('info'), h('span', { class: 'msg-body', text: t('flow.removeShared', view.entity) })) : null
+        );
+        const column = h(
+            'aside',
+            { class: 'p-side' },
+            h(
+                'div',
+                { class: 'card p-card' },
+                h('div', { class: 'label sub-label', text: t('flow.summary') }),
+                stat(view.files.length, tn('flow.toRemove', view.files.length), 'err'),
+                edited.length > 0 ? stat(edited.length, tn('flow.removeEditedLabel', edited.length), 'kept') : null
+            ),
+            h('div', { class: 'grow' }),
+            h('div', { class: 'p-actions' }, confirm, h('button', { class: 'btn btn-ghost muted-btn', disabled: view.running, onclick: () => post({ type: 'plan:cancel' }) }, t('flow.cancel')))
+        );
+        clear(screens.removal).appendChild(h('div', { class: 'p-wrap' }, main, column));
     }
 
     function summaryCard(view) {
@@ -789,6 +895,18 @@
             case 'screen':
                 if (message.screen === 'describe') {
                     st.existing = message.existing || [];
+                    if (message.draft) {
+                        st.prompt = message.draft.prompt || '';
+                        st.useContext = message.draft.useContext !== false;
+                        st.model = message.draft.model || null;
+                        d.textarea.value = st.prompt;
+                        vscode.setState({ prompt: st.prompt, useContext: st.useContext, model: st.model });
+                    }
+                    if (message.fresh) {
+                        st.proposal = null;
+                        st.adjust = '';
+                        paintDescribe();
+                    }
                     paintComposer();
                     show('describe');
                     d.textarea.focus();
@@ -797,10 +915,33 @@
             case 'describe:models':
                 st.models = message.models || [];
                 st.modelsNote = message.note || '';
+                st.copilot = !!message.copilot;
                 if (st.model && !st.models.some((model) => model.id === st.model)) {
                     st.model = null;
                 }
                 paintComposer();
+                if (st.proposal && st.describe.state !== 'drafting') {
+                    paintDescribe();
+                }
+                break;
+            case 'removal':
+                st.removal = { entity: message.entity, files: message.files || [], sharedEntries: !!message.sharedEntries, running: false, error: '' };
+                renderRemoval();
+                show('removal');
+                break;
+            case 'removal:running':
+                if (st.removal) {
+                    st.removal.running = true;
+                    st.removal.error = '';
+                    renderRemoval();
+                }
+                break;
+            case 'removal:failed':
+                if (st.removal) {
+                    st.removal.running = false;
+                    st.removal.error = message.message || '';
+                    renderRemoval();
+                }
                 break;
             case 'describe:drafting':
                 st.describe = { state: 'drafting', model: message.model };
@@ -808,15 +949,21 @@
                 break;
             case 'describe:failed':
                 st.describe = { state: 'failed', message: message.message, links: message.links || [] };
+                st.adjusting = false;
                 paintDescribe();
                 break;
             case 'describe:stopped':
                 st.describe = { state: 'idle' };
+                st.adjusting = false;
                 paintDescribe();
                 break;
             case 'describe:proposed':
                 st.describe = { state: 'idle' };
                 st.proposal = message;
+                if (st.adjusting) {
+                    st.adjusting = false;
+                    st.adjust = '';
+                }
                 paintDescribe();
                 break;
             case 'plan':

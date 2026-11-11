@@ -20,6 +20,23 @@ test('each source becomes its make:fullapi flags, dry run last', () => {
     });
 });
 
+test('an imported definition goes through stdin like a draft', () => {
+    assert.deepEqual(flowArgs({ kind: 'inline', text: 'entities: {}', label: 'class_data.json' }, { ...DEFAULT_FLOW_OPTIONS, force: true }, false, inside), {
+        args: ['artisan', 'make:fullapi', '--schema=-', '--force', '--json'],
+        stdin: 'text',
+    });
+});
+
+test('new fields name the entity and are previewed before they are written', () => {
+    assert.deepEqual(flowArgs({ kind: 'addFields', entity: 'Post', fields: 'subtitle:string,views:integer' }, DEFAULT_FLOW_OPTIONS, true, inside), {
+        args: ['artisan', 'make:fullapi', 'Post', '--add-fields=subtitle:string,views:integer', '--dry-run', '--json'],
+    });
+    assert.deepEqual(
+        flowArgs({ kind: 'addFields', entity: 'Post', fields: 'subtitle:string' }, { ...DEFAULT_FLOW_OPTIONS, force: true, auth: true, pest: true }, false, inside),
+        { args: ['artisan', 'make:fullapi', 'Post', '--add-fields=subtitle:string', '--force', '--json'] }
+    );
+});
+
 test('a spec outside the project goes through stdin', () => {
     assert.deepEqual(flowArgs({ kind: 'openapi', path: 'C:/specs/petstore.yaml' }, DEFAULT_FLOW_OPTIONS, true, inside), {
         args: ['artisan', 'make:fullapi', '--openapi=-', '--dry-run', '--json'],

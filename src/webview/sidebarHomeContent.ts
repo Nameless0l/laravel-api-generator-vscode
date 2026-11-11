@@ -13,6 +13,8 @@ export interface HomeProject {
     name: string;
     versions: string;
     status: HomeStatus;
+    /** True while the package is missing: generating is replaced by its install. */
+    locked?: boolean;
 }
 
 export interface HomeAgents {
@@ -23,6 +25,8 @@ export interface HomeAgents {
 export interface SidebarHomeStrings {
     settings: string;
     notLaravel: string;
+    notLaravelHint: string;
+    openFolder: string;
     newApi: string;
     generateFrom: string;
     describe: string;
@@ -38,6 +42,20 @@ export interface SidebarHomeStrings {
     docs: string;
     agents: string;
     copyClaude: string;
+    needsPackage: string;
+    tips: {
+        newApi: string;
+        describe: string;
+        database: string;
+        schema: string;
+        mermaid: string;
+        openapi: string;
+        diagram: string;
+        projectActions: string;
+        snippets: string;
+        docs: string;
+        copyClaude: string;
+    };
 }
 
 export interface SidebarHomeOptions {
@@ -61,42 +79,53 @@ export interface SidebarHomeOptions {
     strings: SidebarHomeStrings;
 }
 
+export const OPEN_FOLDER_COMMAND = 'workbench.action.files.openFolder';
+
 /**
  * Pure HTML builder for the sidebar home view. Kept free of any vscode
  * import so it can also render outside the extension host (tests, previews).
  */
 export function getSidebarHomeHtml(o: SidebarHomeOptions): string {
     const s = o.strings;
-    const item = (command: string, glyph: string, label: string, detail = '', mono = false) =>
-        `<button class="item" data-command="${command}">${icon(glyph)}<span class="item-label">${esc(label)}</span>${
+    const locked = o.project?.locked === true;
+    const item = (command: string, glyph: string, label: string, tip: string, detail = '', mono = false, needsPackage = false) => {
+        const off = needsPackage && locked;
+        return `<button class="item" data-command="${command}" title="${esc(off ? s.needsPackage : tip)}"${off ? ' disabled' : ''}>${icon(glyph)}<span class="item-label">${esc(label)}</span>${
             detail ? `<span class="item-detail${mono ? ' mono' : ''}">${esc(detail)}</span>` : ''
         }</button>`;
+    };
+    const docs = `<a class="item" href="${esc(o.docsUrl)}" title="${esc(s.tips.docs)}">${icon('book')}<span class="item-label">${esc(s.docs)}</span>${icon('external', 'xs item-detail')}</a>`;
 
     const body = o.project
         ? `${header(o, o.project)}
-    ${alert(o.project.status)}
-    <button class="btn btn-primary btn-block new-api" data-command="laravelApiGenerator.generate">${icon('plus')}${esc(s.newApi)}</button>
+    ${alert(o.project.status, !locked)}
+    ${primary(o, o.project)}
 
     <nav class="list" aria-label="${esc(s.generateFrom)}">
         <div class="label list-title">${esc(s.generateFrom)}</div>
-        ${o.canDescribe ? item('laravelApiGenerator.describeApi', 'sparkle', s.describe, s.describeDetail) : ''}
-        ${item('laravelApiGenerator.generateFromDatabase', 'database', s.database)}
-        ${item('laravelApiGenerator.generateFromSchema', 'fileCode', s.schema, o.schemaFile, true)}
-        ${item('laravelApiGenerator.generateFromMermaid', 'mermaid', s.mermaid)}
-        ${item('laravelApiGenerator.generateFromOpenApi', 'openapi', s.openapi)}
+        ${o.canDescribe ? item('laravelApiGenerator.describeApi', 'sparkle', s.describe, s.tips.describe, s.describeDetail, false, true) : ''}
+        ${item('laravelApiGenerator.generateFromDatabase', 'database', s.database, s.tips.database, '', false, true)}
+        ${item('laravelApiGenerator.generateFromSchema', 'fileCode', s.schema, s.tips.schema, o.schemaFile, true, true)}
+        ${item('laravelApiGenerator.generateFromMermaid', 'mermaid', s.mermaid, s.tips.mermaid, '', false, true)}
+        ${item('laravelApiGenerator.generateFromOpenApi', 'openapi', s.openapi, s.tips.openapi, '', false, true)}
     </nav>
     ${agents(o)}
     <nav class="list" aria-label="${esc(s.project)}">
         <div class="label list-title">${esc(s.project)}</div>
-        ${item('laravelApiGenerator.diagram', 'hierarchy', s.diagram)}
-        ${item('laravelApiGenerator.projectActions', 'terminal', s.projectActions)}
-        ${item('laravelApiGenerator.showSnippets', 'braces', s.snippets)}
-        <a class="item" href="${esc(o.docsUrl)}">${icon('book')}<span class="item-label">${esc(s.docs)}</span>${icon('external', 'xs item-detail')}</a>
+        ${item('laravelApiGenerator.diagram', 'hierarchy', s.diagram, s.tips.diagram)}
+        ${item('laravelApiGenerator.projectActions', 'terminal', s.projectActions, s.tips.projectActions)}
+        ${item('laravelApiGenerator.showSnippets', 'braces', s.snippets, s.tips.snippets)}
+        ${docs}
     </nav>
     ${footer(o.project.status)}`
-        : `<p class="not-laravel">${esc(s.notLaravel)}</p>
+        : `<div class="not-laravel">
+        <div class="logo"><img class="logo-dark" src="${esc(o.logoDarkUri)}" alt=""><img class="logo-light" src="${esc(o.logoLightUri)}" alt=""></div>
+        <p class="not-laravel-title">${esc(s.notLaravel)}</p>
+        <p class="not-laravel-hint">${esc(s.notLaravelHint)}</p>
+    </div>
+    <button class="btn btn-primary btn-block new-api" data-command="${OPEN_FOLDER_COMMAND}">${icon('folder')}${esc(s.openFolder)}</button>
     <nav class="list">
-        <a class="item" href="${esc(o.docsUrl)}">${icon('book')}<span class="item-label">${esc(s.docs)}</span>${icon('external', 'xs item-detail')}</a>
+        ${docs}
     </nav>`;
 
     const csp = [
@@ -159,11 +188,18 @@ function header(o: SidebarHomeOptions, project: HomeProject): string {
     </header>`;
 }
 
-function alert(status: HomeStatus): string {
+function primary(o: SidebarHomeOptions, project: HomeProject): string {
+    const fix = project.locked ? project.status.fix : undefined;
+    return fix
+        ? `<button class="btn btn-primary btn-block new-api" data-fix="${fix.action}">${icon('download')}${esc(fix.label)}</button>`
+        : `<button class="btn btn-primary btn-block new-api" data-command="laravelApiGenerator.generate" title="${esc(o.strings.tips.newApi)}">${icon('plus')}${esc(o.strings.newApi)}</button>`;
+}
+
+function alert(status: HomeStatus, withFix = true): string {
     if (status.tone === 'ok') {
         return '';
     }
-    const fix = status.fix ? `<button class="btn btn-soft" data-fix="${status.fix.action}">${esc(status.fix.label)}</button>` : '';
+    const fix = withFix && status.fix ? `<button class="btn btn-soft" data-fix="${status.fix.action}">${esc(status.fix.label)}</button>` : '';
     return `<div class="alert alert-${status.tone}" role="status">${icon(status.tone === 'warn' ? 'warning' : 'info')}<span>${esc(status.text)}</span>${fix}</div>`;
 }
 
@@ -174,7 +210,7 @@ function agents(o: SidebarHomeOptions): string {
     const { status, claudeCommand } = o.agents;
     const state = status.tone === 'ok' ? `<p class="agents-note">${icon('bolt')}<span>${esc(status.text)}</span></p>` : alert(status);
     const claude = claudeCommand
-        ? `<button class="item" data-fix="copyClaude">${icon('terminal')}<span class="item-label">${esc(o.strings.copyClaude)}</span></button>`
+        ? `<button class="item" data-fix="copyClaude" title="${esc(o.strings.tips.copyClaude)}">${icon('terminal')}<span class="item-label">${esc(o.strings.copyClaude)}</span></button>`
         : '';
     return `<nav class="list" aria-label="${esc(o.strings.agents)}">
         <div class="label list-title">${esc(o.strings.agents)}</div>

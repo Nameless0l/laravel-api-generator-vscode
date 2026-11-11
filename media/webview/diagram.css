@@ -637,12 +637,24 @@ body {
     }
 }
 
+.undo-bar {
+    bottom: 76px;
+    left: 224px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 6px 5px 14px;
+    border-radius: 999px;
+    font-size: 12.5px;
+}
+
 @media (max-width: 720px) {
     .minimap {
         display: none;
     }
 
-    .zoombar {
+    .zoombar,
+    .undo-bar {
         left: 20px;
     }
 }

@@ -10,6 +10,8 @@
     const MIN_SCALE = 0.2;
     const MAX_SCALE = 2.5;
     const SVG_NS = 'http://www.w3.org/2000/svg';
+    const FIND_KEY = /Mac|iPhone|iPad/.test(navigator.platform || '') ? '⌘F' : 'Ctrl+F';
+    const PAN = { ArrowLeft: [1, 0], ArrowRight: [-1, 0], ArrowUp: [0, 1], ArrowDown: [0, -1] };
 
     const saved = vscode.getState() || {};
     const st = {
@@ -42,11 +44,11 @@
     const titleChip = h('div', { class: 'float title-chip' }, svg('hierarchy', 'accent'), h('span', { class: 'strong title-text', text: t('diagram.title') }), titleMeta);
 
     const searchInput = h('input', { class: 'search-input', id: 'find', placeholder: t('diagram.search'), autocomplete: 'off', spellcheck: 'false' });
-    const searchNote = h('span', { class: 'kbd muted', text: 'Ctrl+F' });
+    const searchNote = h('span', { class: 'kbd muted', text: FIND_KEY });
     const searchBox = h('div', { class: 'float search' }, svg('search', 'muted'), h('label', { class: 'sr-only', for: 'find', text: t('diagram.search') }), searchInput, searchNote);
 
     const miniInner = h('div', { class: 'mini-inner' });
-    const minimap = h('div', { class: 'float minimap', title: t('diagram.fit') }, miniInner);
+    const minimap = h('div', { class: 'float minimap', title: t('diagram.minimapHint') }, miniInner);
 
     const zoomLabel = h('button', { class: 'btn btn-ghost mono zoom-pct', title: t('diagram.zoomReset'), onclick: () => zoomAt(1) });
     const exportBtn = h('button', { class: 'btn btn-ghost pill', title: t('diagram.export'), 'aria-haspopup': 'menu' }, svg('download', 'sm'), h('span', { class: 'pill-text', text: t('diagram.export') }));
@@ -63,15 +65,16 @@
         zoomLabel,
         h('button', { class: 'icon-btn round', title: t('diagram.zoomIn'), 'aria-label': t('diagram.zoomIn'), onclick: () => zoomAt(scale * 1.2) }, svg('zoomIn')),
         h('span', { class: 'sep-v' }),
-        h('button', { class: 'btn btn-ghost pill', title: t('diagram.fit'), onclick: fitAll }, svg('fit', 'sm'), h('span', { class: 'pill-text', text: t('diagram.fit') })),
+        h('button', { class: 'btn btn-ghost pill', title: t('diagram.fitHint'), onclick: fitAll }, svg('fit', 'sm'), h('span', { class: 'pill-text', text: t('diagram.fit') })),
         h('button', { class: 'btn btn-ghost pill', title: t('diagram.arrange'), onclick: arrange }, svg('layout', 'sm'), h('span', { class: 'pill-text', text: t('diagram.arrange') })),
         exportBtn
     );
 
     const inspector = h('aside', { class: 'float inspector hidden', 'aria-label': t('diagram.title') });
     const empty = h('div', { class: 'empty hidden' });
+    const undoBar = h('div', { class: 'float undo-bar hidden', role: 'status' });
 
-    app.append(canvas, titleChip, searchBox, minimap, zoombar, inspector, empty);
+    app.append(canvas, titleChip, searchBox, minimap, zoombar, undoBar, inspector, empty);
 
     function persist() {
         vscode.setState({ selected: st.selected, tab: st.tab, view: { scale, tx, ty } });
@@ -456,10 +459,39 @@
     }
 
     function arrange() {
+        const before = { positions: Object.assign({}, st.positions), scale, tx, ty };
         layout(layoutOrder(), { x: 0, y: 0 });
         drawEdges();
         fitAll();
         savePositions();
+        offerUndo(before);
+    }
+
+    let undoTimer;
+
+    function offerUndo(before) {
+        const undo = () => {
+            st.positions = Object.assign({}, st.positions, before.positions);
+            Object.keys(st.positions).forEach(place);
+            scale = before.scale;
+            tx = before.tx;
+            ty = before.ty;
+            drawEdges();
+            applyTransform();
+            savedView();
+            savePositions();
+            hideUndo();
+        };
+        clear(undoBar).append(h('span', { text: t('diagram.arranged') }), h('button', { class: 'btn btn-ghost btn-sm', onclick: undo }, t('diagram.undo')));
+        undoBar.classList.remove('hidden');
+        clearTimeout(undoTimer);
+        undoTimer = setTimeout(hideUndo, 10000);
+    }
+
+    function hideUndo() {
+        clearTimeout(undoTimer);
+        undoBar.classList.add('hidden');
+        clear(undoBar);
     }
 
     function savePositions() {
@@ -572,7 +604,7 @@
     function fileState(entity) {
         const rows = [h('div', { class: 'card-sep wide' }), h('div', { class: 'label pad-label', text: t('diagram.fileState') })];
         const upToDate = entity.files.filter((file) => file.exists && !file.edited).length;
-        rows.push(h('div', { class: 'irow' }, statusDot('new'), h('span', { text: tn('diagram.upToDate', upToDate) })));
+        rows.push(h('div', { class: 'irow' }, statusDot('new', false), h('span', { text: tn('diagram.upToDate', upToDate) })));
         entity.files
             .filter((file) => file.edited || !file.exists)
             .forEach((file) => {
@@ -580,7 +612,7 @@
                     h(
                         'button',
                         { class: 'irow link-row', title: file.path, disabled: !file.exists, onclick: () => post({ type: 'open', path: file.path }) },
-                        statusDot(file.edited ? 'kept' : 'err'),
+                        statusDot(file.edited ? 'kept' : 'err', false),
                         h('span', { class: 'mono ellipsis', text: file.path.split('/').pop() }),
                         h('span', { class: `push small ${file.edited ? 'violet' : 'red'}`, text: file.edited ? t('diagram.edited') : t('diagram.missing') })
                     )
@@ -612,7 +644,7 @@
             h(
                 'button',
                 { class: 'irow link-row', title: file.path, disabled: !file.exists, onclick: () => post({ type: 'open', path: file.path }) },
-                statusDot(!file.exists ? 'err' : file.edited ? 'kept' : 'new'),
+                statusDot(!file.exists ? 'err' : file.edited ? 'kept' : 'new', !file.exists ? t('diagram.missing') : file.edited ? t('diagram.edited') : t('diagram.fileOk')),
                 h('span', { class: 'mono ellipsis', text: file.path.split('/').pop() }),
                 h('span', { class: 'muted push small', text: file.label })
             )
@@ -693,7 +725,7 @@
             el.classList.toggle('dim', query !== '' && !found.includes(name));
             el.querySelectorAll('.nr').forEach((row) => row.classList.toggle('hit', query !== '' && row.dataset.column.toLowerCase().includes(query)));
         });
-        searchNote.textContent = query !== '' && found.length === 0 ? t('diagram.noMatch') : query !== '' ? `${found.length}` : 'Ctrl+F';
+        searchNote.textContent = query !== '' && found.length === 0 ? t('diagram.noMatch') : query !== '' ? `${found.length}` : FIND_KEY;
         return found;
     }
 
@@ -781,6 +813,7 @@
         if (typing) {
             return;
         }
+        const plain = !event.ctrlKey && !event.metaKey && !event.altKey;
         if (event.key === 'Escape' && st.selected) {
             select(null);
         } else if (event.key === '+' || event.key === '=') {
@@ -789,6 +822,15 @@
             zoomAt(scale / 1.2);
         } else if (event.key === '0') {
             zoomAt(1);
+        } else if (plain && event.key.toLowerCase() === 'f') {
+            fitAll();
+        } else if (plain && PAN[event.key] && !(event.target.closest && event.target.closest('.menu'))) {
+            event.preventDefault();
+            const step = event.shiftKey ? 240 : 60;
+            tx += PAN[event.key][0] * step;
+            ty += PAN[event.key][1] * step;
+            applyTransform();
+            savedView();
         }
     });
 
@@ -890,6 +932,7 @@
         [titleChip, searchBox, minimap, zoombar].forEach((el) => el.classList.toggle('hidden', none));
         clear(empty);
         if (none) {
+            hideUndo();
             empty.append(
                 h('div', { class: 'empty-mark' }, svg('hierarchy')),
                 h('div', { class: 'strong empty-title', text: t('diagram.empty') }),

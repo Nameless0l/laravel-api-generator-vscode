@@ -174,12 +174,26 @@
         }
         if (def.confirm) {
             const button = h('button', { class: step.confirming ? 'btn btn-danger-solid' : 'btn btn-soft' }, step.confirming ? t('ready.confirmSeed') : step.state === 'idle' ? t('ready.run') : t('ready.runAgain'));
+            // A double click on Run must not land on the confirmation that replaces it.
+            const hold = step.confirming ? step.armedAt - Date.now() : 0;
+            if (hold > 0) {
+                button.disabled = true;
+                setTimeout(() => {
+                    button.disabled = false;
+                    if (document.activeElement === document.body && button.isConnected) {
+                        button.focus();
+                    }
+                }, hold);
+            }
             button.addEventListener('click', () => {
                 if (step.confirming) {
-                    run();
+                    if (Date.now() >= step.armedAt) {
+                        run();
+                    }
                     return;
                 }
                 step.confirming = true;
+                step.armedAt = Date.now() + 700;
                 paint(step);
                 clearTimeout(step.confirmTimer);
                 step.confirmTimer = setTimeout(() => {

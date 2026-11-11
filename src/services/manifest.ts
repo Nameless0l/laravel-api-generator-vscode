@@ -61,10 +61,18 @@ export function editedFiles(root: string, entries: ManifestEntry[]): Set<string>
 
 /** Entities whose definition the package recorded (4.1+), which regenerate without retyping their fields. */
 export function recordedEntities(root: string): Set<string> {
+    return new Set(Object.keys(recordedDefinitions(root)));
+}
+
+export function recordedDefinition(root: string, entity: string): unknown {
+    return recordedDefinitions(root)[entity];
+}
+
+function recordedDefinitions(root: string): Record<string, unknown> {
     try {
         const entities = (JSON.parse(fs.readFileSync(path.join(root, MANIFEST_PATH), 'utf-8')) as { entities?: unknown } | null)?.entities;
-        return typeof entities === 'object' && entities !== null && !Array.isArray(entities) ? new Set(Object.keys(entities)) : new Set();
+        return typeof entities === 'object' && entities !== null && !Array.isArray(entities) ? (entities as Record<string, unknown>) : {};
     } catch {
-        return new Set();
+        return {};
     }
 }
