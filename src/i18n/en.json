@@ -18,7 +18,9 @@
     "generateWithoutAuth": "Generate without Auth",
     "sanctumInstallStarted": "Sanctum installation started. Re-run generation once it completes.",
     "queryBuilderMissing": "The QueryBuilder option requires spatie/laravel-query-builder, which is not installed in this project. Generated list endpoints will fail until it is installed.",
-    "mcpMissing": "The MCP tools option requires laravel/mcp, which is not installed in this project. The tools are written, and agents can use them once it is installed."
+    "mcpMissing": "The MCP tools option requires laravel/mcp, which is not installed in this project. The tools are written, and agents can use them once it is installed.",
+    "mcpDevOnly": "The MCP tools need laravel/mcp in production, but this project lists it in require-dev.",
+    "mcpMoveToRequire": "Move to require"
   },
   "detector": {
     "noWorkspace": "No folder is open.",

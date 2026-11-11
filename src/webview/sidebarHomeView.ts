@@ -210,7 +210,7 @@ export class SidebarHomeViewProvider implements vscode.WebviewViewProvider {
         const commands: Partial<Record<HomeFix, string>> = {
             composerInstall: 'composer install',
             update: 'composer update nameless/laravel-api-generator -W',
-            installMcp: 'composer require --dev laravel/mcp',
+            installMcp: 'composer require laravel/mcp',
         };
         const command = commands[action];
         if (!command) {
