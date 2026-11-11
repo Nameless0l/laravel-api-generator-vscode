@@ -21,6 +21,7 @@ export interface ReadyData {
     entities: string[];
     files: Array<{ path: string; action: 'create' | 'update' }>;
     routes: RouteRow[];
+    routesRegistered: boolean;
     durationMs?: number;
     manifest: boolean;
     controller?: string;
@@ -102,6 +103,7 @@ export function readyData(root: string, input: ReadyInput | undefined): ReadyDat
             entities: entities.map((entity) => entity.name),
             files: [],
             routes: entities.flatMap((entity) => estimatedRoutes(entity.name, softDeletes(root, entity.name))),
+            routesRegistered: false,
             queryBuilder: false,
             newEntity: false,
             ...common,
@@ -111,12 +113,15 @@ export function readyData(root: string, input: ReadyInput | undefined): ReadyDat
     const written = input.files.filter((file) => file.action === 'create' || file.action === 'update');
     const controllers = input.files.filter((file) => file.kind === 'Controller' && file.action === 'create');
     const routed = controllers.map((file) => file.entity ?? path.basename(file.path, 'Controller.php'));
+    const known = routed.length > 0 ? new Set<string>() : new Set(scanner.scan().map((entity) => entity.name));
+    const existing = input.entities.filter((entity) => known.has(entity));
     const policies = input.files.filter((file) => file.kind === 'Policy');
     return {
         mode: 'generated',
         entities: input.entities,
         files: written.map((file) => ({ path: file.path, action: file.action as 'create' | 'update' })),
-        routes: routed.flatMap((entity) => estimatedRoutes(entity, softDeletes(root, entity))),
+        routes: (routed.length > 0 ? routed : existing).flatMap((entity) => estimatedRoutes(entity, softDeletes(root, entity))),
+        routesRegistered: routed.length > 0,
         durationMs: input.durationMs,
         controller: input.files.find((file) => file.kind === 'Controller')?.path,
         policy: policies.length === 1 ? path.basename(policies[0].path, '.php') : policies.length > 1 ? t('ready.policies') : undefined,

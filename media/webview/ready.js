@@ -27,8 +27,11 @@
             return t('ready.actionsSubtitle');
         }
         const files = tn('ready.filesWritten', data.files.length);
-        const routes = tn('ready.routesRegistered', data.routes.length);
-        const sub = data.durationMs !== undefined && data.durationMs !== null ? t('ready.summary', files, routes, seconds(data.durationMs)) : `${files}, ${routes}.`;
+        const routes = data.routesRegistered === false ? null : tn('ready.routesRegistered', data.routes.length);
+        const timed = data.durationMs !== undefined && data.durationMs !== null;
+        const sub = routes === null
+            ? timed ? t('ready.summaryFiles', files, seconds(data.durationMs)) : `${files}.`
+            : timed ? t('ready.summary', files, routes, seconds(data.durationMs)) : `${files}, ${routes}.`;
         return data.manifest ? `${sub} ${t('ready.manifestNote')}` : sub;
     }
 

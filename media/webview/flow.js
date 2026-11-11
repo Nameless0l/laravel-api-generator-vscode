@@ -745,7 +745,10 @@
         if (plan.view) {
             column.appendChild(summaryCard(plan.view));
         }
-        column.appendChild(optionsCard(plan));
+        const options = optionsCard(plan);
+        if (options) {
+            column.appendChild(options);
+        }
         column.appendChild(h('div', { class: 'grow' }));
         column.appendChild(actions(plan));
         return column;
@@ -838,6 +841,9 @@
         const hasKept = plan.view && plan.view.totals.kept > 0;
         if (hasKept || values.force) {
             keys.push('force');
+        }
+        if (keys.length === 0) {
+            return null;
         }
         return h(
             'div',

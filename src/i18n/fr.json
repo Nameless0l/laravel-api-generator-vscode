@@ -384,6 +384,7 @@
     "routesRegistered_one": "{0} route enregistrée",
     "routesRegistered_other": "{0} routes enregistrées",
     "summary": "{0} et {1} en {2} s.",
+    "summaryFiles": "{0} en {1} s.",
     "manifestNote": "Le manifeste garde la trace de chaque fichier.",
     "actionsSubtitle": "Les commandes courantes du projet, avec leur résultat ici même.",
     "openController": "Ouvrir {0}",

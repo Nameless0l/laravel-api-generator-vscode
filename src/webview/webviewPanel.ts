@@ -123,7 +123,7 @@ export class GeneratorPanel {
             return;
         }
 
-        const panel = vscode.window.createWebviewPanel('laravelApiGenerator', t('builder.tabTitle'), vscode.ViewColumn.One, {
+        const panel = vscode.window.createWebviewPanel('laravelApiGenerator', edit ? t('builder.editTabTitle', edit.name) : t('builder.tabTitle'), vscode.ViewColumn.One, {
             enableScripts: true,
             retainContextWhenHidden: true,
             localResourceRoots: [vscode.Uri.joinPath(extensionUri, 'media')],
@@ -131,6 +131,15 @@ export class GeneratorPanel {
 
         GeneratorPanel.currentPanel = new GeneratorPanel(panel, extensionUri, workspaceRoot, edit);
         GeneratorPanel.currentPanel.onDidGenerate = onDidGenerate;
+    }
+
+    /** A deleted entity takes no new fields: the builder goes back to a new API. */
+    static forget(workspaceRoot: string, entity: string): void {
+        GeneratorPanel.drafts?.writeEntry('edit', workspaceRoot, entity, null);
+        const current = GeneratorPanel.currentPanel;
+        if (current?.edit?.name === entity) {
+            current.setEdit(undefined);
+        }
     }
 
     private setEdit(edit: EditableEntity | undefined): void {

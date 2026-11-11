@@ -17,6 +17,12 @@ Pairs with `nameless/laravel-api-generator` 4.2 and still works with 3.9 or late
 - The bundled agent skill and schema follow package 4.2: the `mcp` option, and the `:nullable` and `:unique` modifiers of `--fields` and `--add-fields`.
 - The **Agents** block installs `laravel/mcp` as a regular dependency, since the MCP tools of your API need it in production. Generating MCP tools while `laravel/mcp` sits in `require-dev` offers to move it.
 
+### Fixed
+- **Edit Entity** names its tab after the entity when it opens a new builder, instead of "New API".
+- The review of added fields no longer shows an empty **Generation options** card.
+- After fields are added or files regenerated, the API ready screen lists the routes the entity already has, instead of "0 routes registered".
+- Deleting an entity that is open in **Edit Entity** takes the builder back to a new API and forgets the fields typed for it.
+
 ## [1.3.0] - 2026-11-11
 
 Pairs with `nameless/laravel-api-generator` 4.1 and still works with 3.9 or later.
