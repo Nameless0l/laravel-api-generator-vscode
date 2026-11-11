@@ -18,7 +18,7 @@ Generate complete REST APIs for Laravel without touching the terminal. Visual in
 
 ### Build an entity, the preview follows
 
-![Pick an example, add a relation, and the live preview follows](docs/ext-builder.gif)
+![Pick an example, add a relation, turn on the MCP tools, and the live preview follows](docs/ext-builder.gif)
 
 *The files on the right come from the package installed in your project, rendered as you edit the form.*
 
@@ -30,7 +30,7 @@ Generate complete REST APIs for Laravel without touching the terminal. Visual in
 
 ### Review before anything is written
 
-![The review of an OpenAPI spec, then the generation of both entities](docs/ext-review.gif)
+![The review of an OpenAPI spec with the MCP tools, then the generation of both entities](docs/ext-review.gif)
 
 *A description, the database, a schema file, a Mermaid diagram or an OpenAPI spec: every source opens the package's dry run first.*
 
@@ -64,6 +64,7 @@ Create API entities through a form instead of CLI flags:
 - **Real-time code preview** -- rendered by the package installed in your project, so it is exactly the code that will be written: every generated file, routes and seeder included, your published stubs, badges for new, modified and unchanged files, and a diff for modified ones
 - **Agent skill** -- in Laravel projects, GitHub Copilot (VS Code 1.109+) and Cursor get the package's `laravel-api-generator` skill, so they generate APIs with `make:fullapi` instead of writing the files by hand
 - **MCP server for agents** -- with package 3.12 or later and `laravel/mcp` in the project, Copilot's agent mode (VS Code 1.101+) lists a Laravel API Generator server, and Cursor gets the same server with no `mcp.json` to write: the agent lists your entities, previews a generation, then generates the API or adds fields itself, and never overwrites a file you edited. It runs with your PHP command, Sail and Docker included. The sidebar's **Agents** block installs `laravel/mcp` when it is missing, and copies the command that adds the server to Claude Code
+- **MCP tools for your API** -- with package 4.2 or later, the **MCP tools** option of the builder and of the review screen writes one tool per action for each entity and a server for your application. Copilot's agent mode and Cursor then list `<folder> API` on their own, and the **Agents** block copies the command for Claude Code: the agent lists, reads, creates, updates and deletes records through the services, validation rules and policies of the REST API
 - **Schema file autocompletion** -- `api-schema.yaml`, `.yml` and `.json` are checked against the package's JSON Schema: completion for keys and types, typos flagged before you generate (YAML needs the Red Hat YAML extension)
 - **Your edits are safe** -- with package 3.11 or later, regenerating keeps the files you edited by hand; a modal names them and lets you overwrite them or keep your changes (older packages: a modal lists every file that will be overwritten)
 - **Auto-open generated files** -- after a successful generation, the new Model and Controller open in the editor
@@ -296,6 +297,7 @@ database/seeders/DatabaseSeeder.php             -- Seeder auto-registered
 | `laravelApiGenerator.phpPath` | `php` | Path to the PHP executable |
 | `laravelApiGenerator.phpCommand` | `[]` | Full command that runs PHP, one argument per item (Sail, Docker). Wins over `phpPath` when set. |
 | `laravelApiGenerator.mcp.enabled` | `true` | Offer the package's MCP server to Copilot's agent mode and to Cursor (needs `laravel/mcp` and package 3.12+) |
+| `laravelApiGenerator.mcp.apiServer` | `true` | Offer the MCP server of your generated API to Copilot's agent mode and to Cursor, once `make:fullapi --mcp` has written it (package 4.2+) |
 | `laravelApiGenerator.locale` | `auto` | UI language: `auto` (follow VS Code), `en`, or `fr` |
 
 ---

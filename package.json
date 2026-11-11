@@ -2,7 +2,7 @@
   "name": "laravel-api-generator",
   "displayName": "Laravel API Generator",
   "description": "%description%",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "publisher": "Nameless0l",
   "license": "MIT",
   "icon": "media/icon-marketplace.png",
@@ -500,6 +500,11 @@
           "type": "boolean",
           "default": true,
           "markdownDescription": "%config.mcpEnabled%"
+        },
+        "laravelApiGenerator.mcp.apiServer": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "%config.mcpApiServer%"
         },
         "laravelApiGenerator.locale": {
           "type": "string",

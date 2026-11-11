@@ -64,20 +64,40 @@ export class LaravelDetector {
         }
     }
 
-    private static hasComposerPackage(workspaceRoot: string, packageName: string): boolean {
+    /** Agents need laravel/mcp to start the generated server. Non-blocking, like the QueryBuilder prompt. */
+    static async promptMcpInstallIfMissing(workspaceRoot: string): Promise<void> {
+        const dependency = this.composerDependency(workspaceRoot, 'laravel/mcp');
+        if (dependency === 'require') {
+            return;
+        }
+        const devOnly = dependency === 'require-dev';
+        const label = devOnly ? t('package.mcpMoveToRequire') : t('package.installViaComposer');
+        const action = await vscode.window.showWarningMessage(t(devOnly ? 'package.mcpDevOnly' : 'package.mcpMissing'), label);
+        if (action === label) {
+            const terminal = vscode.window.createTerminal({ name: 'Laravel API Generator', cwd: workspaceRoot });
+            terminal.sendText(devOnly ? 'composer require laravel/mcp --no-interaction' : 'composer require laravel/mcp');
+            terminal.show();
+        }
+    }
+
+    static composerDependency(workspaceRoot: string, packageName: string): 'require' | 'require-dev' | undefined {
         const composerPath = path.join(workspaceRoot, 'composer.json');
         if (!fs.existsSync(composerPath)) {
-            return false;
+            return undefined;
         }
         try {
-            const content = fs.readFileSync(composerPath, 'utf-8');
-            const composer = JSON.parse(content);
-            const require = composer.require || {};
-            const requireDev = composer['require-dev'] || {};
-            return packageName in require || packageName in requireDev;
+            const composer = JSON.parse(fs.readFileSync(composerPath, 'utf-8'));
+            if (packageName in (composer.require || {})) {
+                return 'require';
+            }
+            return packageName in (composer['require-dev'] || {}) ? 'require-dev' : undefined;
         } catch {
-            return false;
+            return undefined;
         }
+    }
+
+    private static hasComposerPackage(workspaceRoot: string, packageName: string): boolean {
+        return this.composerDependency(workspaceRoot, packageName) !== undefined;
     }
 
     private static cachedRoot: string | undefined;

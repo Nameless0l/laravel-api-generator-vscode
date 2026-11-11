@@ -35,6 +35,7 @@
   "config.phpPath": "Chemin de l'exécutable PHP. Ignoré quand phpCommand est défini.",
   "config.phpCommand": "Commande complète qui lance PHP, un argument par élément, pour les projets où PHP tourne dans un conteneur. Exemples : `[\"./vendor/bin/sail\", \"php\"]` ou `[\"docker\", \"compose\", \"exec\", \"-T\", \"app\", \"php\"]`. Si elle est vide, `phpPath` est utilisé.",
   "config.mcpEnabled": "Propose le serveur MCP du package au mode agent de Copilot et à Cursor quand le projet a `laravel/mcp`. Il lance `php artisan api-generator:mcp` avec la commande PHP ci-dessus.",
+  "config.mcpApiServer": "Propose le serveur MCP de votre API générée au mode agent de Copilot et à Cursor, une fois écrit par `make:fullapi --mcp`. Il lance `php artisan mcp:start api` avec la commande PHP ci-dessus.",
   "config.locale": "Langue d'affichage de l'interface et des messages de Laravel API Generator",
   "config.locale.auto": "Suivre la langue d'affichage de VS Code",
   "config.locale.en": "English",

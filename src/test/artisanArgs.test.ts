@@ -9,13 +9,13 @@ test('entity generation passes fields, primary keys and every enabled option', (
             { name: 'code', type: 'string', primary: true },
             { name: 'name', type: 'string' },
         ],
-        options: { softDeletes: true, auth: true, postman: true, queryBuilder: true, pest: true, jsonApi: true },
+        options: { softDeletes: true, auth: true, postman: true, queryBuilder: true, pest: true, jsonApi: true, mcp: true },
     });
 
     assert.deepEqual(args, [
         'artisan', 'make:fullapi', 'Country',
         '--fields=code:string:primary,name:string',
-        '--soft-deletes', '--auth', '--postman', '--query-builder', '--pest', '--json-api',
+        '--soft-deletes', '--auth', '--postman', '--query-builder', '--pest', '--json-api', '--mcp',
     ]);
 });
 
@@ -29,8 +29,8 @@ test('entity generation passes --only only when some files were deselected', () 
 });
 
 test('source generation forwards the shared options after the source flag', () => {
-    assert.deepEqual(sourceArgs(['--schema=api-schema.yaml'], { queryBuilder: true, pest: true, jsonApi: true }), [
-        'artisan', 'make:fullapi', '--schema=api-schema.yaml', '--query-builder', '--pest', '--json-api',
+    assert.deepEqual(sourceArgs(['--schema=api-schema.yaml'], { queryBuilder: true, pest: true, jsonApi: true, mcp: true }), [
+        'artisan', 'make:fullapi', '--schema=api-schema.yaml', '--query-builder', '--pest', '--json-api', '--mcp',
     ]);
     assert.deepEqual(sourceArgs([]), ['artisan', 'make:fullapi']);
 });

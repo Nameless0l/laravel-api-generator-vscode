@@ -22,6 +22,9 @@ import {
     requirePackageCommand,
     usesLegacyLine,
     versionSupport,
+    MCP_TOOLS_MIN_VERSION,
+    supportsFieldModifiers,
+    supportsMcpTools,
 } from '../services/packageState';
 import { flagsFromConfig, schemaFromConfig } from '../services/schemaBuilder';
 import { StubRow, stubLine } from '../services/stubReport';
@@ -120,7 +123,7 @@ export class GeneratorPanel {
             return;
         }
 
-        const panel = vscode.window.createWebviewPanel('laravelApiGenerator', t('builder.tabTitle'), vscode.ViewColumn.One, {
+        const panel = vscode.window.createWebviewPanel('laravelApiGenerator', edit ? t('builder.editTabTitle', edit.name) : t('builder.tabTitle'), vscode.ViewColumn.One, {
             enableScripts: true,
             retainContextWhenHidden: true,
             localResourceRoots: [vscode.Uri.joinPath(extensionUri, 'media')],
@@ -130,13 +133,27 @@ export class GeneratorPanel {
         GeneratorPanel.currentPanel.onDidGenerate = onDidGenerate;
     }
 
+    /** A deleted entity takes no new fields: the builder goes back to a new API. */
+    static forget(workspaceRoot: string, entity: string): void {
+        GeneratorPanel.drafts?.writeEntry('edit', workspaceRoot, entity, null);
+        const current = GeneratorPanel.currentPanel;
+        if (current?.edit?.name === entity) {
+            current.setEdit(undefined);
+        }
+    }
+
     private setEdit(edit: EditableEntity | undefined): void {
         if (this.disposed) {
             return;
         }
         this.edit = edit;
         this.panel.title = edit ? t('builder.editTabTitle', edit.name) : t('builder.tabTitle');
-        void this.panel.webview.postMessage({ type: 'mode', edit: edit ?? null });
+        void this.panel.webview.postMessage({
+            type: 'mode',
+            edit: edit ?? null,
+            modifiers: supportsFieldModifiers(this.workspaceRoot),
+            drafts: GeneratorPanel.drafts?.read('edit', this.workspaceRoot) ?? {},
+        });
     }
 
     /** After its fields were added, the entity shows them locked like the others. */
@@ -164,8 +181,11 @@ export class GeneratorPanel {
                 fieldTypes: [...FIELD_TYPES],
                 models: this.listModelNames(),
                 modifiers: this.packageState.kind === 'installed' && this.packageState.preview !== 'tooOld',
+                mcp: supportsMcpTools(this.workspaceRoot) ? { supported: true } : { supported: false, reason: t('builder.mcpNeedsPackage', MCP_TOOLS_MIN_VERSION) },
                 draft: GeneratorPanel.drafts?.read('builder', this.workspaceRoot) ?? null,
                 edit: this.edit ?? null,
+                editModifiers: supportsFieldModifiers(this.workspaceRoot),
+                editDrafts: GeneratorPanel.drafts?.read('edit', this.workspaceRoot) ?? {},
             },
         });
     }
@@ -232,7 +252,11 @@ export class GeneratorPanel {
                 }
                 break;
             case 'draft':
-                GeneratorPanel.drafts?.write('builder', this.workspaceRoot, message.state);
+                if (message.entity) {
+                    GeneratorPanel.drafts?.writeEntry('edit', this.workspaceRoot, message.entity, message.state);
+                } else {
+                    GeneratorPanel.drafts?.write('builder', this.workspaceRoot, message.state);
+                }
                 break;
             case 'reviewAddFields':
                 if (message.entity && message.fields) {
@@ -280,7 +304,7 @@ export class GeneratorPanel {
     }
 
     private reviewAddFields(entity: string, fields: Field[]): void {
-        const spec = addFieldsSpec(fields);
+        const spec = addFieldsSpec(fields, supportsFieldModifiers(this.workspaceRoot));
         if (spec === '') {
             return;
         }
@@ -370,6 +394,9 @@ export class GeneratorPanel {
 
         if (config.options.queryBuilder) {
             void LaravelDetector.promptQueryBuilderInstallIfMissing(this.workspaceRoot);
+        }
+        if (config.options.mcp) {
+            void LaravelDetector.promptMcpInstallIfMissing(this.workspaceRoot);
         }
 
         const legacyRelations = !this.usesSchemaGeneration() && (config.relationships?.length ?? 0) > 0;
@@ -547,6 +574,7 @@ export class GeneratorPanel {
             queryBuilder: config.options.queryBuilder,
             pest: config.options.pest,
             jsonApi: config.options.jsonApi,
+            mcp: config.options.mcp,
         });
     }
 
@@ -961,6 +989,7 @@ export class GeneratorPanel {
             type: 'capabilities',
             fieldTypes: handshake.capabilities.fieldTypes,
             jsonApi: handshake.capabilities.options.json_api,
+            mcp: handshake.capabilities.options.mcp ? { supported: true } : { supported: false, reason: t('builder.mcpNeedsPackage', MCP_TOOLS_MIN_VERSION) },
             modifiers: this.usesSchemaGeneration(),
         });
     }

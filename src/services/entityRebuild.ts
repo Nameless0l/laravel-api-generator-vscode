@@ -4,7 +4,7 @@ import { ApiSchema, ApiSchemaEntity, ApiSchemaField, FlowOptions } from '../type
 import { Column, migrationColumns, modelRelations, usesSoftDeletes } from './modelSource';
 import { pluralize } from './planView';
 
-export type RebuiltOptions = Pick<FlowOptions, 'pest' | 'queryBuilder' | 'jsonApi'>;
+export type RebuiltOptions = Pick<FlowOptions, 'pest' | 'queryBuilder' | 'jsonApi' | 'mcp'>;
 
 export interface RebuiltEntity {
     entity: ApiSchemaEntity;
@@ -70,6 +70,9 @@ export function rebuiltSchema(name: string, entity: ApiSchemaEntity, options: Re
     if (options.jsonApi) {
         flags.json_api = true;
     }
+    if (options.mcp) {
+        flags.mcp = true;
+    }
     return Object.keys(flags).length > 0 ? { options: flags, entities: { [name]: entity } } : { entities: { [name]: entity } };
 }
 
@@ -109,6 +112,7 @@ function generatedOptions(root: string, name: string): RebuiltOptions {
         pest: /^\s*(?:it|test)\s*\(/m.test(read(path.join(root, 'tests', 'Feature', `${name}ControllerTest.php`))),
         queryBuilder: /\bQueryBuilder\b/.test(read(path.join(root, 'app', 'Services', `${name}Service.php`))),
         jsonApi: /\bJsonApiResource\b/.test(read(path.join(root, 'app', 'Http', 'Resources', `${name}Resource.php`))),
+        mcp: fs.existsSync(path.join(root, 'app', 'Mcp', 'Tools', name)),
     };
 }
 

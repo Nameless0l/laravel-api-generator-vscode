@@ -15,13 +15,13 @@ const base: EntityConfig = {
         { type: 'belongsTo', target: 'Customer', role: 'buyer' },
         { type: 'belongsToMany', target: 'Tag', role: '' },
     ],
-    options: { auth: true, postman: false, softDeletes: true, queryBuilder: true, pest: false, jsonApi: true },
+    options: { auth: true, postman: false, softDeletes: true, queryBuilder: true, pest: false, jsonApi: true, mcp: true },
     onlyTypes: ['Model', 'Controller'],
 };
 
 test('the form becomes an api-schema document', () => {
     assert.deepEqual(schemaFromConfig(base), {
-        options: { query_builder: true, json_api: true },
+        options: { query_builder: true, json_api: true, mcp: true },
         entities: {
             Invoice: {
                 fields: {

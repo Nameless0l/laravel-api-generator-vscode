@@ -14,10 +14,11 @@
         auth: 'builder.optAuth',
         queryBuilder: 'builder.optQueryBuilder',
         jsonApi: 'builder.optJsonApi',
+        mcp: 'builder.optMcp',
         withMigrations: 'flow.optWithMigrations',
         force: 'flow.optForce',
     };
-    const KIND_ORDER = ['Model', 'Enum', 'Controller', 'Service', 'DTO', 'Request', 'Resource', 'Policy', 'Migration', 'Factory', 'Seeder', 'Test'];
+    const KIND_ORDER = ['Model', 'Enum', 'Controller', 'Service', 'DTO', 'Request', 'Resource', 'Policy', 'Migration', 'Factory', 'Seeder', 'Test', 'Mcp'];
     const mac = /Mac|iPhone|iPad/.test(navigator.platform || '');
 
     const saved = vscode.getState() || {};
@@ -635,6 +636,9 @@
         if (kind === 'FeatureTest' || kind === 'UnitTest') {
             return 'Test';
         }
+        if (kind === 'McpTool' || kind === 'McpServer' || kind === 'McpRoutes') {
+            return 'Mcp';
+        }
         return kind === 'PivotMigration' ? 'Migration' : kind;
     }
 
@@ -644,6 +648,9 @@
         }
         if (group === 'Test') {
             return count > 1 ? t('flow.tests', count) : 'Test';
+        }
+        if (group === 'Mcp') {
+            return count > 1 ? t('flow.mcpTools', count) : 'MCP';
         }
         return count > 1 ? `${count} ${group}` : group;
     }
@@ -738,7 +745,10 @@
         if (plan.view) {
             column.appendChild(summaryCard(plan.view));
         }
-        column.appendChild(optionsCard(plan));
+        const options = optionsCard(plan);
+        if (options) {
+            column.appendChild(options);
+        }
         column.appendChild(h('div', { class: 'grow' }));
         column.appendChild(actions(plan));
         return column;
@@ -791,7 +801,8 @@
                     )
                 )
             ),
-            view.sharedEntries ? h('div', { class: 'msg msg-info' }, svg('info'), h('span', { class: 'msg-body', text: t('flow.removeShared', view.entity) })) : null
+            view.sharedEntries ? h('div', { class: 'msg msg-info' }, svg('info'), h('span', { class: 'msg-body', text: t('flow.removeShared', view.entity) })) : null,
+            view.mcpTools ? h('div', { class: 'msg msg-info' }, svg('info'), h('span', { class: 'msg-body', text: t('flow.removeMcp', view.entity) })) : null
         );
         const column = h(
             'aside',
@@ -830,6 +841,9 @@
         const hasKept = plan.view && plan.view.totals.kept > 0;
         if (hasKept || values.force) {
             keys.push('force');
+        }
+        if (keys.length === 0) {
+            return null;
         }
         return h(
             'div',
@@ -925,7 +939,7 @@
                 }
                 break;
             case 'removal':
-                st.removal = { entity: message.entity, files: message.files || [], sharedEntries: !!message.sharedEntries, running: false, error: '' };
+                st.removal = { entity: message.entity, files: message.files || [], sharedEntries: !!message.sharedEntries, mcpTools: !!message.mcpTools, running: false, error: '' };
                 renderRemoval();
                 show('removal');
                 break;

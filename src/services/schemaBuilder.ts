@@ -50,6 +50,9 @@ export function schemaFromConfig(config: EntityConfig): ApiSchema {
     if (config.options.jsonApi) {
         options.json_api = true;
     }
+    if (config.options.mcp) {
+        options.mcp = true;
+    }
 
     const schema: ApiSchema = { entities: { [config.name]: entity } };
     if (Object.keys(options).length > 0) {

@@ -10,7 +10,7 @@ import { DraftStore } from '../services/drafts';
 import { EntityScanner } from '../services/entityScanner';
 import { analyzeProtocolErrors, presentSuggestion } from '../services/errorAnalyzer';
 import { LaravelDetector } from '../services/laravelDetector';
-import { PREVIEW_MIN_VERSION, readInstalledVersion, versionSupport } from '../services/packageState';
+import { PREVIEW_MIN_VERSION, readInstalledVersion, supportsMcpTools, versionSupport } from '../services/packageState';
 import { openPlanned, openPlannedDiff, openPlannedDiffs, rememberPlanned } from '../services/plannedContent';
 import { planView } from '../services/planView';
 import { parseSchemaDraft } from '../services/schemaDraft';
@@ -329,7 +329,7 @@ export class FlowPanel {
         this.source = undefined;
         this.removal = { entity, plan };
         this.panel.title = t('flow.panelDelete', entity);
-        this.post({ type: 'removal', entity, files: plan.files, sharedEntries: plan.sharedEntries });
+        this.post({ type: 'removal', entity, files: plan.files, sharedEntries: plan.sharedEntries, mcpTools: plan.mcpTools });
     }
 
     private async remove(entity?: string): Promise<void> {
@@ -587,7 +587,14 @@ export class FlowPanel {
         if (source.kind === 'addFields') {
             return { values: this.options, available: [] };
         }
-        return { values: this.options, available: [...OPTION_KEYS, ...(source.kind === 'database' ? (['withMigrations'] as const) : [])] };
+        return {
+            values: this.options,
+            available: [
+                ...OPTION_KEYS,
+                ...(supportsMcpTools(this.root) ? (['mcp'] as const) : []),
+                ...(source.kind === 'database' ? (['withMigrations'] as const) : []),
+            ],
+        };
     }
 
     private header(source: GenerationSource, document?: GenerationDocument): PlanHeader {
@@ -640,6 +647,9 @@ export class FlowPanel {
         }
         if (this.options.queryBuilder) {
             void LaravelDetector.promptQueryBuilderInstallIfMissing(this.root);
+        }
+        if (this.options.mcp) {
+            void LaravelDetector.promptMcpInstallIfMissing(this.root);
         }
 
         this.generating = true;

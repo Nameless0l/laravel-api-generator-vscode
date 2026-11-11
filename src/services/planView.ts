@@ -47,7 +47,7 @@ export interface RouteRow {
 /** Skipped schemas get their own bar and kept files their own notice. */
 const SHOWN_ELSEWHERE = new Set(['openapi_schema_skipped', 'modified_file_kept']);
 
-const KIND_ORDER = ['Model', 'Enum', 'Controller', 'Service', 'DTO', 'Request', 'Resource', 'Policy', 'Migration', 'PivotMigration', 'Factory', 'Seeder', 'FeatureTest', 'UnitTest'];
+const KIND_ORDER = ['Model', 'Enum', 'Controller', 'Service', 'DTO', 'Request', 'Resource', 'Policy', 'Migration', 'PivotMigration', 'Factory', 'Seeder', 'FeatureTest', 'UnitTest', 'McpTool', 'McpServer', 'McpRoutes'];
 
 export function planView(document: GenerationDocument): PlanView {
     const groups = new Map<string, PlannedFile[]>();

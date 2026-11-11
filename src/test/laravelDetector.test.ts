@@ -24,6 +24,15 @@ test('Scramble named in composer.json but not in vendor is not installed yet', (
     assert.equal(LaravelDetector.isScrambleInstalled(project(['laravel/framework'])), false);
 });
 
+test('laravel/mcp is told apart between require and require-dev', () => {
+    const root = project();
+    assert.equal(LaravelDetector.composerDependency(root, 'laravel/mcp'), undefined);
+    fs.writeFileSync(path.join(root, 'composer.json'), JSON.stringify({ 'require-dev': { 'laravel/mcp': '^0.5' } }));
+    assert.equal(LaravelDetector.composerDependency(root, 'laravel/mcp'), 'require-dev');
+    fs.writeFileSync(path.join(root, 'composer.json'), JSON.stringify({ require: { 'laravel/mcp': '^0.5' }, 'require-dev': { 'laravel/mcp': '^0.5' } }));
+    assert.equal(LaravelDetector.composerDependency(root, 'laravel/mcp'), 'require');
+});
+
 test('Scramble in vendor is installed', () => {
     assert.equal(LaravelDetector.isScrambleInstalled(project(['laravel/framework', 'dedoc/scramble'])), true);
 });

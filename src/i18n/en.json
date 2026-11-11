@@ -17,7 +17,10 @@
     "sanctumMissing": "Auth option requires Laravel Sanctum (laravel/sanctum) which is not installed in this project.",
     "generateWithoutAuth": "Generate without Auth",
     "sanctumInstallStarted": "Sanctum installation started. Re-run generation once it completes.",
-    "queryBuilderMissing": "The QueryBuilder option requires spatie/laravel-query-builder, which is not installed in this project. Generated list endpoints will fail until it is installed."
+    "queryBuilderMissing": "The QueryBuilder option requires spatie/laravel-query-builder, which is not installed in this project. Generated list endpoints will fail until it is installed.",
+    "mcpMissing": "The MCP tools option requires laravel/mcp, which is not installed in this project. The tools are written, and agents can use them once it is installed.",
+    "mcpDevOnly": "The MCP tools need laravel/mcp in production, but this project lists it in require-dev.",
+    "mcpMoveToRequire": "Move to require"
   },
   "detector": {
     "noWorkspace": "No folder is open.",
@@ -151,12 +154,17 @@
     "agentsReadyCopilot": "Copilot's agent mode can plan and generate APIs in this project.",
     "agentsReadyCursor": "Cursor's agent can plan and generate APIs in this project.",
     "agentsReadyOther": "The MCP server is ready: add php artisan api-generator:mcp to your agent.",
+    "agentsApiCopilot": "Copilot's agent mode can use your API through its MCP tools.",
+    "agentsApiCursor": "Cursor's agent can use your API through its MCP tools.",
+    "agentsApiOther": "Your API has an MCP server: add php artisan mcp:start api to your agent.",
     "agentsMissingMcp": "Install laravel/mcp so Copilot, Cursor and Claude Code can generate APIs in this project.",
     "agentsTooOld": "Agents need package {0} or later.",
     "agentsDisabled": "The MCP server is turned off in the settings.",
     "installMcp": "Install",
     "copyClaude": "Copy the command for Claude Code",
     "copiedClaude": "Command copied. Run it in a terminal at the project root, then start Claude Code there.",
+    "copyClaudeApi": "Copy the command for your API",
+    "copiedClaudeApi": "Command copied. Run it in a terminal at the project root, and Claude Code gets the MCP tools of your API.",
     "installPackage": "Install the package",
     "notLaravelHint": "This folder has no artisan file. Open the root of a Laravel project, or create one with laravel new.",
     "openFolder": "Open a folder",
@@ -173,7 +181,8 @@
       "projectActions": "Run the migrations, the tests and the seeders, open the API documentation",
       "snippets": "Insert a ready-made Laravel snippet",
       "docs": "Open the documentation in the browser",
-      "copyClaude": "Copy the claude mcp add command that registers the MCP server"
+      "copyClaude": "Copy the claude mcp add command that registers the MCP server",
+      "copyClaudeApi": "Copy the claude mcp add command that registers the MCP server of your API"
     }
   },
   "tree": {
@@ -263,6 +272,8 @@
     "optAuth": "Sanctum auth",
     "optQueryBuilder": "Spatie QueryBuilder",
     "optJsonApi": "JSON:API resources",
+    "optMcp": "MCP tools",
+    "mcpNeedsPackage": "MCP tools need package {0} or later.",
     "optPostman": "Postman collection",
     "softDeletesHint": "Soft deletes add the {0} and {1} routes.",
     "onlySome": "Only some files",
@@ -279,7 +290,8 @@
       "Factory": "Factory",
       "Seeder": "Seeder",
       "FeatureTest": "Feature test",
-      "UnitTest": "Unit test"
+      "UnitTest": "Unit test",
+      "McpTool": "MCP tools"
     },
     "preview": "Live preview",
     "previewHint": "computed by the package, nothing is written",
@@ -372,6 +384,7 @@
     "routesRegistered_one": "{0} route registered",
     "routesRegistered_other": "{0} routes registered",
     "summary": "{0} and {1} in {2} s.",
+    "summaryFiles": "{0} in {1} s.",
     "manifestNote": "The manifest keeps track of every file.",
     "actionsSubtitle": "The usual commands of the project, with their result right here.",
     "openController": "Open {0}",
@@ -497,6 +510,7 @@
     "files": "Files",
     "requests": "{0} Requests",
     "tests": "{0} Tests",
+    "mcpTools": "{0} MCP tools",
     "viewDiffs": "View the diffs",
     "keptOne": "{0} was edited by hand since the last generation. It stays as is.",
     "keptMany": "{0} files were edited by hand since the last generation. They stay as they are.",
@@ -550,6 +564,7 @@
     "toRemove_one": "file to delete",
     "toRemove_other": "files to delete",
     "removeShared": "routes/api.php and DatabaseSeeder.php lose the {0} entries.",
+    "removeMcp": "app/Mcp/Servers/ApiServer.php loses the {0} tools.",
     "removeConfirm": "Delete {0}",
     "removing": "Deleting..."
   },

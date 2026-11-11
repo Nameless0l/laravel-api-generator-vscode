@@ -4,6 +4,7 @@ import { ArtisanRunner } from '../services/artisanRunner';
 import { DeletePlan, deletePlanFromFiles, parseDeleteDryRun } from '../services/deletePlan';
 import { EntityScanner } from '../services/entityScanner';
 import { FlowPanel } from '../webview/flowPanel';
+import { GeneratorPanel } from '../webview/webviewPanel';
 import { deleteWithProgress } from './generationShared';
 import { pickEntity } from './entityPick';
 import { t } from '../i18n';
@@ -20,6 +21,10 @@ export function registerDeleteCommand(extensionUri: vscode.Uri, onDidDelete: () 
         if (!entity) {
             return;
         }
+        const deleted = (): void => {
+            GeneratorPanel.forget(root, entity);
+            onDidDelete();
+        };
 
         const dryRun = await vscode.window.withProgress(
             { location: vscode.ProgressLocation.Notification, title: t('delete.checking', entity), cancellable: false },
@@ -27,7 +32,7 @@ export function registerDeleteCommand(extensionUri: vscode.Uri, onDidDelete: () 
         );
         const plan = dryRun.success ? (parseDeleteDryRun(dryRun.output) ?? scannedPlan(root, entity)) : null;
         if (plan && plan.files.length > 0) {
-            FlowPanel.remove(extensionUri, root, entity, plan, onDidDelete);
+            FlowPanel.remove(extensionUri, root, entity, plan, deleted);
             return;
         }
 
@@ -41,7 +46,7 @@ export function registerDeleteCommand(extensionUri: vscode.Uri, onDidDelete: () 
         const result = await deleteWithProgress(root, entity);
         if (result.success) {
             vscode.window.showInformationMessage(t('delete.success', entity));
-            onDidDelete();
+            deleted();
         } else {
             vscode.window.showErrorMessage(t('delete.failed', entity, result.errors.join(', ')));
         }

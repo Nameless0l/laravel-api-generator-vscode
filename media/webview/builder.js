@@ -11,6 +11,7 @@
         ['auth', 'builder.optAuth'],
         ['queryBuilder', 'builder.optQueryBuilder'],
         ['jsonApi', 'builder.optJsonApi'],
+        ['mcp', 'builder.optMcp'],
         ['postman', 'builder.optPostman'],
     ];
     const RESERVED_NAMES = ['User', 'Auth', 'Admin', 'App', 'Config', 'Cache', 'Session', 'Request', 'Response', 'Route', 'View', 'Event', 'Job', 'Mail', 'Queue', 'Log', 'Gate', 'Policy', 'Middleware', 'Kernel', 'Console', 'Http', 'Provider', 'Test'];
@@ -104,7 +105,7 @@
             preset: null,
             fields: [blankField()],
             relations: [],
-            options: { softDeletes: false, pest: false, auth: false, queryBuilder: false, jsonApi: false, postman: false },
+            options: { softDeletes: false, pest: false, auth: false, queryBuilder: false, jsonApi: false, mcp: false, postman: false },
             onlySome: false,
             kinds: KINDS.slice(),
         };
@@ -128,7 +129,11 @@
         models: boot.models || [],
         fieldTypes: (boot.fieldTypes || ['string']).slice(),
         jsonApi: { supported: true },
+        mcp: boot.mcp || { supported: true },
         modifiers: boot.modifiers !== false,
+        editModifiers: !!boot.editModifiers,
+        editDrafts: boot.editDrafts || {},
+        typed: {},
         exists: false,
         touched: false,
         preview: { state: 'idle' },
@@ -148,8 +153,30 @@
         post({ type: 'draft', state: form && dirty(form) ? form : null });
     }, 600);
 
+    const editTimers = {};
+
+    function storeEditDraft(entity, fields) {
+        rt.typed[entity] = JSON.parse(JSON.stringify(fields));
+        clearTimeout(editTimers[entity]);
+        editTimers[entity] = setTimeout(() => post({ type: 'draft', entity, state: rt.typed[entity].length > 0 ? rt.typed[entity] : null }), 600);
+    }
+
+    function editRows(edit) {
+        const saved = edit.name in rt.typed ? rt.typed[edit.name] : rt.editDrafts[edit.name];
+        if (!Array.isArray(saved) || saved.length === 0) {
+            return [blankField()];
+        }
+        const taken = new Set(edit.fields.map((field) => field.name));
+        const rows = saved.filter((field) => !taken.has(String(field.name || '').trim()));
+        if (rows.length !== saved.length) {
+            storeEditDraft(edit.name, rows);
+        }
+        return rows.length > 0 ? rows.map((field) => blankField(field)) : [blankField()];
+    }
+
     function persist() {
         if (rt.edit) {
+            storeEditDraft(rt.edit.name, state.fields.filter((field) => field.name.trim() !== ''));
             return;
         }
         vscode.setState(state);
@@ -352,7 +379,11 @@
             .filter((relation) => relation.target.trim() !== '')
             .map((relation) => ({ type: relation.type, target: relation.target.trim(), role: relation.role.trim() || defaultRole(relation) }));
         const onlyTypes = state.onlySome && state.kinds.length < KINDS.length ? state.kinds.slice() : undefined;
-        return { name: state.name.trim(), fields, relationships, options: Object.assign({}, state.options), onlyTypes };
+        const options = Object.assign({}, state.options);
+        if (rt.mcp && rt.mcp.supported === false) {
+            options.mcp = false;
+        }
+        return { name: state.name.trim(), fields, relationships, options, onlyTypes };
     }
 
     const requestPreview = debounce(() => {
@@ -594,13 +625,17 @@
         }
     }
 
-    function setMode(edit) {
+    function setMode(edit, drafts) {
+        if (drafts) {
+            rt.editDrafts = drafts;
+        }
         if (edit) {
             if (!rt.edit) {
                 rt.parked = state;
             }
             rt.edit = edit;
             state = blankForm();
+            state.fields = editRows(edit);
         } else if (rt.edit) {
             rt.edit = null;
             state = rt.parked || freshState();
@@ -628,7 +663,7 @@
         state.name = preset.name;
         state.fields = preset.fields.map((field) => blankField(field));
         state.relations = [];
-        state.options = Object.assign({ softDeletes: false, pest: false, auth: false, queryBuilder: false, jsonApi: false, postman: false }, state.options, { softDeletes: false }, preset.options || {});
+        state.options = Object.assign({ softDeletes: false, pest: false, auth: false, queryBuilder: false, jsonApi: false, mcp: false, postman: false }, state.options, { softDeletes: false }, preset.options || {});
         state.preset = key;
         rt.exists = false;
         rt.touched = true;
@@ -825,7 +860,7 @@
             grip,
             name,
             type.wrap,
-            rt.edit ? null : h('div', { class: 'mods' }, modChip(field, 'nullable'), modChip(field, 'unique'), defaultChip(field)),
+            rt.edit && !rt.editModifiers ? null : h('div', { class: 'mods' }, modChip(field, 'nullable'), modChip(field, 'unique'), rt.edit ? null : defaultChip(field)),
             h('span', { class: 'spacer' }),
             rt.edit ? null : pk,
             remove
@@ -1079,7 +1114,8 @@
     function renderOptions() {
         clear(els.options);
         OPTIONS.forEach(([key, label]) => {
-            const disabled = key === 'jsonApi' && rt.jsonApi && rt.jsonApi.supported === false;
+            const gate = key === 'jsonApi' ? rt.jsonApi : key === 'mcp' ? rt.mcp : null;
+            const disabled = !!gate && gate.supported === false;
             const on = !!state.options[key] && !disabled;
             els.options.appendChild(
                 h(
@@ -1088,7 +1124,7 @@
                         class: `chip${on ? ' chip-on' : ''}`,
                         'aria-pressed': String(on),
                         disabled,
-                        title: disabled ? rt.jsonApi.reason || '' : '',
+                        title: disabled ? gate.reason || '' : '',
                         onclick: () => {
                             state.options[key] = !on;
                             changed({ options: true });
@@ -1388,7 +1424,7 @@
         }
         hideBanner();
         if (rt.edit) {
-            post({ type: 'reviewAddFields', entity: rt.edit.name, fields: config().fields.map((field) => ({ name: field.name, type: field.type })) });
+            post({ type: 'reviewAddFields', entity: rt.edit.name, fields: config().fields.map((field) => ({ name: field.name, type: field.type, nullable: !!field.nullable, unique: !!field.unique })) });
             return;
         }
         rt.generating = true;
@@ -1574,6 +1610,9 @@
                 if (message.jsonApi) {
                     rt.jsonApi = message.jsonApi;
                 }
+                if (message.mcp) {
+                    rt.mcp = message.mcp;
+                }
                 if (typeof message.modifiers === 'boolean') {
                     rt.modifiers = message.modifiers;
                 }
@@ -1604,7 +1643,8 @@
                 showBanner('info', '', message.text || '');
                 break;
             case 'mode':
-                setMode(message.edit);
+                rt.editModifiers = !!message.modifiers;
+                setMode(message.edit, message.drafts);
                 break;
             case 'showReady':
                 rt.generating = false;

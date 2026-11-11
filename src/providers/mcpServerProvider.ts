@@ -1,6 +1,16 @@
 import * as vscode from 'vscode';
 import { ArtisanRunner } from '../services/artisanRunner';
-import { CursorServer, cursorServer, MCP_PROVIDER_ID, MCP_SERVER_LABEL, MCP_SERVER_NAME, mcpLaunch } from '../services/mcpServer';
+import {
+    apiServerLabel,
+    apiServerLaunch,
+    cursorApiServer,
+    CursorServer,
+    cursorServer,
+    MCP_PROVIDER_ID,
+    MCP_SERVER_LABEL,
+    McpLaunch,
+    mcpLaunch,
+} from '../services/mcpServer';
 
 interface StdioServerDefinition {
     readonly label: string;
@@ -59,13 +69,16 @@ export function registerAgents(root: string, extensionPath: string): vscode.Disp
 }
 
 function onServerInputs(root: string, fire: () => void): vscode.Disposable[] {
-    const installed = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(root, 'vendor/composer/installed.json'));
-    installed.onDidCreate(fire);
-    installed.onDidChange(fire);
-    installed.onDidDelete(fire);
+    const watchers = ['vendor/composer/installed.json', 'routes/ai.php', 'app/Mcp/Servers/ApiServer.php'].map((file) => {
+        const watcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(root, file));
+        watcher.onDidCreate(fire);
+        watcher.onDidChange(fire);
+        watcher.onDidDelete(fire);
+        return watcher;
+    });
 
     return [
-        installed,
+        ...watchers,
         vscode.workspace.onDidChangeConfiguration((e) => {
             if (
                 e.affectsConfiguration('laravelApiGenerator.mcp') ||
@@ -82,7 +95,11 @@ function mcpEnabled(): boolean {
     return vscode.workspace.getConfiguration('laravelApiGenerator').get<boolean>('mcp.enabled', true);
 }
 
-/** The skill folder and the server, registered while the server can start. */
+export function apiServerEnabled(): boolean {
+    return vscode.workspace.getConfiguration('laravelApiGenerator').get<boolean>('mcp.apiServer', true);
+}
+
+/** The skill folder and the servers, registered while they can start. */
 function registerCursorAgents(root: string, extensionPath: string): vscode.Disposable[] {
     const cursor = (vscode as unknown as CursorApi).cursor;
     const disposables: vscode.Disposable[] = [];
@@ -98,31 +115,28 @@ function registerCursorAgents(root: string, extensionPath: string): vscode.Dispo
         return disposables;
     }
     const { registerServer, unregisterServer } = mcp;
-    let registered = false;
+    let registered: string[] = [];
+    const clear = (): void => {
+        registered.forEach((name) => unregisterServer(name));
+        registered = [];
+    };
     const sync = (): void => {
-        if (registered) {
-            unregisterServer(MCP_SERVER_NAME);
-            registered = false;
-        }
+        clear();
         const php = new ArtisanRunner(root).phpCommand();
-        if (mcpEnabled() && mcpLaunch(root, php)) {
-            registerServer(cursorServer(root, php));
-            registered = true;
+        const servers = [
+            mcpEnabled() && mcpLaunch(root, php) ? cursorServer(root, php) : null,
+            apiServerEnabled() && apiServerLaunch(root, php) ? cursorApiServer(root, php) : null,
+        ];
+        for (const server of servers) {
+            if (server) {
+                registerServer(server);
+                registered.push(server.name);
+            }
         }
     };
     sync();
 
-    return [
-        ...disposables,
-        ...onServerInputs(root, sync),
-        {
-            dispose: () => {
-                if (registered) {
-                    unregisterServer(MCP_SERVER_NAME);
-                }
-            },
-        },
-    ];
+    return [...disposables, ...onServerInputs(root, sync), { dispose: clear }];
 }
 
 function registerMcpServerProvider(root: string): vscode.Disposable[] {
@@ -140,19 +154,19 @@ function registerMcpServerProvider(root: string): vscode.Disposable[] {
     const provider = lm.registerMcpServerDefinitionProvider(MCP_PROVIDER_ID, {
         onDidChangeMcpServerDefinitions: changed.event,
         provideMcpServerDefinitions: () => {
-            if (!mcpEnabled()) {
-                return [];
-            }
+            const php = new ArtisanRunner(root).phpCommand();
+            const servers: StdioServerDefinition[] = [];
+            const offer = (label: string, launch: McpLaunch | null): void => {
+                if (launch) {
+                    const server = new Definition(label, launch.command, launch.args, {}, launch.version);
+                    server.cwd = vscode.Uri.file(root);
+                    servers.push(server);
+                }
+            };
+            offer(MCP_SERVER_LABEL, mcpEnabled() ? mcpLaunch(root, php) : null);
+            offer(apiServerLabel(root), apiServerEnabled() ? apiServerLaunch(root, php) : null);
 
-            const launch = mcpLaunch(root, new ArtisanRunner(root).phpCommand());
-            if (!launch) {
-                return [];
-            }
-
-            const server = new Definition(MCP_SERVER_LABEL, launch.command, launch.args, {}, launch.version);
-            server.cwd = vscode.Uri.file(root);
-
-            return [server];
+            return servers;
         },
     });
 

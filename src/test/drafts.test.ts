@@ -39,3 +39,18 @@ test('clearing a draft leaves the others and forgets an empty project', () => {
     store.write('describe', '/shop', null);
     assert.deepEqual([...state.values.values()], [{}]);
 });
+
+test('edit drafts are kept per entity', () => {
+    const state = memento();
+    const store = new DraftStore(state);
+    store.writeEntry('edit', '/shop', 'Product', [{ name: 'sku' }]);
+    store.writeEntry('edit', '/shop', 'Order', [{ name: 'note' }]);
+    store.write('builder', '/shop', { name: 'Customer' });
+
+    store.writeEntry('edit', '/shop', 'Product', null);
+    assert.deepEqual(store.read('edit', '/shop'), { Order: [{ name: 'note' }] });
+
+    store.writeEntry('edit', '/shop', 'Order', undefined);
+    assert.equal(store.read('edit', '/shop'), undefined);
+    assert.deepEqual(store.read('builder', '/shop'), { name: 'Customer' });
+});

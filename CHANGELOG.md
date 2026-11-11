@@ -2,6 +2,27 @@
 
 All notable changes to the Laravel API Generator VS Code extension will be documented in this file.
 
+## [1.4.0] - 2026-11-11
+
+Pairs with `nameless/laravel-api-generator` 4.2 and still works with 3.9 or later.
+
+### Added
+- **MCP tools for the generated API.** With package 4.2 and `laravel/mcp`, the builder has an **MCP tools** option, and so does the review screen of a schema file, a Mermaid diagram, an OpenAPI spec, a description or a database. The package then writes one tool per action for each entity and a server for your application, so an agent lists, reads, creates, updates and deletes records through the same services, validation rules and policies as the REST API. When `laravel/mcp` is missing, generating offers to install it, and with an older package the option says which version it needs.
+- **Your API in the agent of the editor.** Once the server exists, Copilot's agent mode lists it as `<folder> API` and Cursor gets it with no `mcp.json` to write. It runs `php artisan mcp:start api` with your PHP command, Sail and Docker included, and the tools are listed again when an entity joins or leaves the server. The sidebar's **Agents** block says so and copies the command that adds it to Claude Code. The `laravelApiGenerator.mcp.apiServer` setting turns it off.
+- **Nullable and unique on the fields you add.** With package 4.2, the new fields of **Edit Entity** take **nullable** and **unique**, so a column can join a table that already has rows.
+- The fields you type in **Edit Entity** are kept per entity until they are added, so closing the builder loses nothing.
+- The MCP tools of an entity appear with its files in the entities view, in the live preview and on the review screen, **Regenerate File(s)** offers them, and the delete review says that they leave `app/Mcp/Servers/ApiServer.php`.
+
+### Changed
+- The bundled agent skill and schema follow package 4.2: the `mcp` option, and the `:nullable` and `:unique` modifiers of `--fields` and `--add-fields`.
+- The **Agents** block installs `laravel/mcp` as a regular dependency, since the MCP tools of your API need it in production. Generating MCP tools while `laravel/mcp` sits in `require-dev` offers to move it.
+
+### Fixed
+- **Edit Entity** names its tab after the entity when it opens a new builder, instead of "New API".
+- The review of added fields no longer shows an empty **Generation options** card.
+- After fields are added or files regenerated, the API ready screen lists the routes the entity already has, instead of "0 routes registered".
+- Deleting an entity that is open in **Edit Entity** takes the builder back to a new API and forgets the fields typed for it.
+
 ## [1.3.0] - 2026-11-11
 
 Pairs with `nameless/laravel-api-generator` 4.1 and still works with 3.9 or later.

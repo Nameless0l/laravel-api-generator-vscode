@@ -3,7 +3,17 @@ import * as assert from 'node:assert/strict';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { claudeCodeCommand, cursorServer, mcpLaunch, mcpState } from '../services/mcpServer';
+import {
+    apiServerLabel,
+    apiServerLaunch,
+    apiServerName,
+    claudeCodeApiCommand,
+    claudeCodeCommand,
+    cursorApiServer,
+    cursorServer,
+    mcpLaunch,
+    mcpState,
+} from '../services/mcpServer';
 
 function project(packages: Record<string, string> | null): string {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'lag-mcp-'));
@@ -72,6 +82,51 @@ test('Cursor gets the full path of artisan, or a command that runs from the proj
         env: {},
     });
     assert.equal(cursorServer(root, php).name, 'laravel-api-generator');
+});
+
+function withApiServer(root: string, routes = "<?php\n\nMcp::local('api', ApiServer::class);\n"): string {
+    fs.mkdirSync(path.join(root, 'routes'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'app', 'Mcp', 'Servers'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'routes', 'ai.php'), routes);
+    fs.writeFileSync(path.join(root, 'app', 'Mcp', 'Servers', 'ApiServer.php'), '<?php');
+    return root;
+}
+
+test('the server of the generated API starts once routes/ai.php registers it', () => {
+    const root = withApiServer(project({ 'laravel/mcp': 'v1.1.2' }));
+    const launch = apiServerLaunch(root, { command: './vendor/bin/sail', args: ['php'] });
+
+    assert.equal(launch?.command, './vendor/bin/sail');
+    assert.deepEqual(launch?.args, ['php', 'artisan', 'mcp:start', 'api']);
+    assert.match(launch?.version ?? '', /^\d+$/);
+});
+
+test('its version follows the server file, so new tools are listed again', () => {
+    const root = withApiServer(project({ 'laravel/mcp': 'v1.1.2' }));
+    const before = apiServerLaunch(root, php)?.version;
+    const later = new Date(Date.now() + 60000);
+    fs.utimesSync(path.join(root, 'app', 'Mcp', 'Servers', 'ApiServer.php'), later, later);
+
+    assert.notEqual(apiServerLaunch(root, php)?.version, before);
+});
+
+test('no API server without laravel/mcp, the server file or its local registration', () => {
+    assert.equal(apiServerLaunch(withApiServer(project({ 'nameless/laravel-api-generator': '4.2.0' })), php), null);
+    assert.equal(apiServerLaunch(project({ 'laravel/mcp': '1.1.2' }), php), null);
+    assert.equal(apiServerLaunch(withApiServer(project({ 'laravel/mcp': '1.1.2' }), "<?php\n\nMcp::web('/mcp/api', ApiServer::class);\n"), php), null);
+});
+
+test('the API server is named after the project folder', () => {
+    const root = path.join(path.sep, 'work', 'My Shop');
+
+    assert.equal(apiServerLabel(root), 'My Shop API');
+    assert.equal(apiServerName(root), 'my-shop-api');
+    assert.equal(apiServerName(path.join(path.sep, 'work', '___')), 'laravel-api');
+    assert.equal(claudeCodeApiCommand(root, php), 'claude mcp add -s project my-shop-api -- php artisan mcp:start api');
+    assert.deepEqual(cursorApiServer(root, php, 'linux'), {
+        name: 'my-shop-api',
+        server: { command: 'php', args: [path.join(root, 'artisan'), 'mcp:start', 'api'], env: {} },
+    });
 });
 
 test('the Claude Code command adds the server with the configured PHP', () => {

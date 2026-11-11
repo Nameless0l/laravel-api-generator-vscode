@@ -5,6 +5,7 @@ export interface SourceOptions {
     queryBuilder?: boolean;
     pest?: boolean;
     jsonApi?: boolean;
+    mcp?: boolean;
 }
 
 export function generateArgs(config: EntityConfig): string[] {
@@ -35,6 +36,9 @@ export function generateArgs(config: EntityConfig): string[] {
     }
     if (options.jsonApi) {
         args.push('--json-api');
+    }
+    if (options.mcp) {
+        args.push('--mcp');
     }
 
     if (config.onlyTypes && config.onlyTypes.length > 0) {
@@ -136,6 +140,9 @@ export function sourceArgs(sourceFlags: string[], options?: SourceOptions): stri
     }
     if (options?.jsonApi) {
         args.push('--json-api');
+    }
+    if (options?.mcp) {
+        args.push('--mcp');
     }
 
     return args;

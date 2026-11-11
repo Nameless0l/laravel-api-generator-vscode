@@ -90,6 +90,14 @@ test('new fields are written the way --add-fields reads them', () => {
         'subtitle:string,state:enum(open,closed)'
     );
     assert.equal(addFieldsSpec([]), '');
+
+    const modified = [
+        { name: 'subtitle', type: 'string', nullable: true },
+        { name: 'code', type: 'enum(a,b)', nullable: true, unique: true },
+        { name: 'rank', type: 'integer' },
+    ];
+    assert.equal(addFieldsSpec(modified, true), 'subtitle:string:nullable,code:enum(a,b):nullable:unique,rank:integer');
+    assert.equal(addFieldsSpec(modified), 'subtitle:string,code:enum(a,b),rank:integer');
 });
 
 test('an entity is summed up by its files and its edited ones', () => {

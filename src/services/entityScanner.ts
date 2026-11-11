@@ -6,9 +6,9 @@ import { enumClasses, fillableColumns } from './modelSource';
 
 const ENTITY_KINDS = new Set(['Model', 'Controller', 'Service', 'DTO', 'Request', 'Resource', 'Policy', 'Enum', 'Factory', 'Seeder', 'FeatureTest', 'UnitTest', 'Migration']);
 
-const KIND_ORDER = [...ENTITY_KINDS, 'PivotMigration'];
+const KIND_ORDER = [...ENTITY_KINDS, 'PivotMigration', 'McpTool'];
 
-const KIND_LABELS: Record<string, string> = { FeatureTest: 'Feature Test', UnitTest: 'Unit Test', PivotMigration: 'Pivot Migration' };
+const KIND_LABELS: Record<string, string> = { FeatureTest: 'Feature Test', UnitTest: 'Unit Test', PivotMigration: 'Pivot Migration', McpTool: 'MCP Tool' };
 
 export class EntityScanner {
     private workspaceRoot: string;

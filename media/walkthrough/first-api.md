@@ -6,7 +6,7 @@ Click **New API** and describe your entity:
 2. **Fields** with their types and modifiers (nullable, unique, default, enum values)
 3. **Relations** to other entities (belongsTo, hasMany, hasOne, belongsToMany)
 4. **Options**: Sanctum auth, Postman collection, soft deletes, Pest tests,
-   Spatie QueryBuilder, JSON:API resources
+   Spatie QueryBuilder, JSON:API resources, MCP tools for agents
 
 The **live preview** shows every file the package would write, computed by
 the package itself, before anything touches the disk. Your form is saved

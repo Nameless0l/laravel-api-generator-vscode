@@ -9,6 +9,8 @@ export const MCP_MIN_VERSION = '3.12.0';
 
 export const OPENAPI_MIN_VERSION = '3.13.0';
 
+export const MCP_TOOLS_MIN_VERSION = '4.2.0';
+
 export type PreviewSupport = 'supported' | 'tooOld' | 'unknown';
 
 export type PackageState =
@@ -81,6 +83,17 @@ export function versionSupport(version: string, minimum: string): PreviewSupport
 
 export function previewSupport(version: string): PreviewSupport {
     return versionSupport(version, PREVIEW_MIN_VERSION);
+}
+
+/** `make:fullapi --mcp` exists since 4.2; development versions are trusted. */
+export function supportsMcpTools(root: string): boolean {
+    const version = readInstalledVersion(root);
+    return version !== null && versionSupport(version, MCP_TOOLS_MIN_VERSION) !== 'tooOld';
+}
+
+/** `--add-fields` reads `:nullable` and `:unique` since 4.2. */
+export function supportsFieldModifiers(root: string): boolean {
+    return supportsMcpTools(root);
 }
 
 export function detectPackageState(root: string, declared: boolean): PackageState {

@@ -46,11 +46,11 @@ test('a spec outside the project goes through stdin', () => {
 });
 
 test('options follow the source flags', () => {
-    const options = { ...DEFAULT_FLOW_OPTIONS, pest: true, auth: true, postman: true, withMigrations: true, force: true, queryBuilder: true };
+    const options = { ...DEFAULT_FLOW_OPTIONS, pest: true, auth: true, postman: true, withMigrations: true, force: true, queryBuilder: true, mcp: true };
     const { args } = flowArgs({ kind: 'database', tables: ['posts', 'tags'] }, options, false, inside);
 
     assert.deepEqual(args.slice(2, 5), ['--from-database', '--tables=posts,tags', '--with-migrations']);
-    for (const flag of ['--pest', '--query-builder', '--auth', '--postman', '--force', '--json']) {
+    for (const flag of ['--pest', '--query-builder', '--mcp', '--auth', '--postman', '--force', '--json']) {
         assert.ok(args.includes(flag), `${flag} is missing from ${args.join(' ')}`);
     }
     assert.deepEqual(flowArgs({ kind: 'database', tables: [] }, DEFAULT_FLOW_OPTIONS, true, inside).args.slice(2), ['--from-database', '--dry-run', '--json']);
