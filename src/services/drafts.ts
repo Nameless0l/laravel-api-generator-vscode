@@ -1,4 +1,4 @@
-export type DraftKind = 'builder' | 'describe';
+export type DraftKind = 'builder' | 'describe' | 'edit';
 
 export interface DraftMemento {
     get<T>(key: string, fallback: T): T;
@@ -30,6 +30,16 @@ export class DraftStore {
             all[root] = project;
         }
         void this.memento.update(KEY, all);
+    }
+
+    writeEntry(kind: DraftKind, root: string, key: string, value: unknown): void {
+        const entries = { ...(this.read<Record<string, unknown>>(kind, root) ?? {}) };
+        if (value === undefined || value === null) {
+            delete entries[key];
+        } else {
+            entries[key] = value;
+        }
+        this.write(kind, root, Object.keys(entries).length > 0 ? entries : undefined);
     }
 
     clear(kind: DraftKind, root: string): void {

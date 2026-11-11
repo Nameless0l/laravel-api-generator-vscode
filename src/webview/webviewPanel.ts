@@ -139,7 +139,12 @@ export class GeneratorPanel {
         }
         this.edit = edit;
         this.panel.title = edit ? t('builder.editTabTitle', edit.name) : t('builder.tabTitle');
-        void this.panel.webview.postMessage({ type: 'mode', edit: edit ?? null, modifiers: supportsFieldModifiers(this.workspaceRoot) });
+        void this.panel.webview.postMessage({
+            type: 'mode',
+            edit: edit ?? null,
+            modifiers: supportsFieldModifiers(this.workspaceRoot),
+            drafts: GeneratorPanel.drafts?.read('edit', this.workspaceRoot) ?? {},
+        });
     }
 
     /** After its fields were added, the entity shows them locked like the others. */
@@ -171,6 +176,7 @@ export class GeneratorPanel {
                 draft: GeneratorPanel.drafts?.read('builder', this.workspaceRoot) ?? null,
                 edit: this.edit ?? null,
                 editModifiers: supportsFieldModifiers(this.workspaceRoot),
+                editDrafts: GeneratorPanel.drafts?.read('edit', this.workspaceRoot) ?? {},
             },
         });
     }
@@ -237,7 +243,11 @@ export class GeneratorPanel {
                 }
                 break;
             case 'draft':
-                GeneratorPanel.drafts?.write('builder', this.workspaceRoot, message.state);
+                if (message.entity) {
+                    GeneratorPanel.drafts?.writeEntry('edit', this.workspaceRoot, message.entity, message.state);
+                } else {
+                    GeneratorPanel.drafts?.write('builder', this.workspaceRoot, message.state);
+                }
                 break;
             case 'reviewAddFields':
                 if (message.entity && message.fields) {

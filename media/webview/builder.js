@@ -132,6 +132,8 @@
         mcp: boot.mcp || { supported: true },
         modifiers: boot.modifiers !== false,
         editModifiers: !!boot.editModifiers,
+        editDrafts: boot.editDrafts || {},
+        typed: {},
         exists: false,
         touched: false,
         preview: { state: 'idle' },
@@ -151,8 +153,30 @@
         post({ type: 'draft', state: form && dirty(form) ? form : null });
     }, 600);
 
+    const editTimers = {};
+
+    function storeEditDraft(entity, fields) {
+        rt.typed[entity] = JSON.parse(JSON.stringify(fields));
+        clearTimeout(editTimers[entity]);
+        editTimers[entity] = setTimeout(() => post({ type: 'draft', entity, state: rt.typed[entity].length > 0 ? rt.typed[entity] : null }), 600);
+    }
+
+    function editRows(edit) {
+        const saved = edit.name in rt.typed ? rt.typed[edit.name] : rt.editDrafts[edit.name];
+        if (!Array.isArray(saved) || saved.length === 0) {
+            return [blankField()];
+        }
+        const taken = new Set(edit.fields.map((field) => field.name));
+        const rows = saved.filter((field) => !taken.has(String(field.name || '').trim()));
+        if (rows.length !== saved.length) {
+            storeEditDraft(edit.name, rows);
+        }
+        return rows.length > 0 ? rows.map((field) => blankField(field)) : [blankField()];
+    }
+
     function persist() {
         if (rt.edit) {
+            storeEditDraft(rt.edit.name, state.fields.filter((field) => field.name.trim() !== ''));
             return;
         }
         vscode.setState(state);
@@ -601,13 +625,17 @@
         }
     }
 
-    function setMode(edit) {
+    function setMode(edit, drafts) {
+        if (drafts) {
+            rt.editDrafts = drafts;
+        }
         if (edit) {
             if (!rt.edit) {
                 rt.parked = state;
             }
             rt.edit = edit;
             state = blankForm();
+            state.fields = editRows(edit);
         } else if (rt.edit) {
             rt.edit = null;
             state = rt.parked || freshState();
@@ -1616,7 +1644,7 @@
                 break;
             case 'mode':
                 rt.editModifiers = !!message.modifiers;
-                setMode(message.edit);
+                setMode(message.edit, message.drafts);
                 break;
             case 'showReady':
                 rt.generating = false;
